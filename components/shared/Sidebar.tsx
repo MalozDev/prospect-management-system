@@ -1,5 +1,10 @@
+"use client";
+
 import Link from "next/link";
 import { Bell, LayoutDashboard, LogOut, Settings, ShoppingCart, UserRound, Users2 } from "lucide-react";
+import { useEffect, useState } from "react";
+
+import { getProfileInitials, getStoredProfile } from "@/utils/profile";
 
 const items = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -11,11 +16,36 @@ const items = [
 ];
 
 export function Sidebar() {
+  const [profileName, setProfileName] = useState("Nalu Mwansa");
+
+  useEffect(() => {
+    setProfileName(getStoredProfile().name);
+
+    const handleProfileUpdate = () => {
+      setProfileName(getStoredProfile().name);
+    };
+
+    window.addEventListener("profile-updated", handleProfileUpdate);
+    return () => window.removeEventListener("profile-updated", handleProfileUpdate);
+  }, []);
+
+  const initials = getProfileInitials(profileName);
+
   return (
     <aside className="hidden h-screen w-72 flex-col border-r border-gray-200 bg-white p-6 md:flex">
       <div className="mb-8">
         <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[#E60012]">Airtel Prospect Manager</p>
         <p className="mt-2 text-sm text-gray-500">Direct Sales Executive CRM</p>
+      </div>
+
+      <div className="mb-6 flex items-center gap-3 rounded-2xl border border-gray-200 bg-[#fff8f8] p-3">
+        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#E60012] text-sm font-semibold text-white">
+          {initials}
+        </div>
+        <div>
+          <p className="text-sm font-semibold text-gray-900">{profileName}</p>
+          <p className="text-xs text-gray-500">Active profile</p>
+        </div>
       </div>
 
       <nav className="space-y-2">

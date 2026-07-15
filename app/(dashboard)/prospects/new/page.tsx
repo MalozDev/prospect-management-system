@@ -26,6 +26,7 @@ export default function NewProspectPage() {
       location: form.location,
       address: form.address,
       expectedPurchaseDate: form.expectedPurchaseDate,
+      createdAt: new Date().toISOString().slice(0, 10),
       status: "NEW",
       assignedDse: "Nalu",
       notes: "New prospect added today",

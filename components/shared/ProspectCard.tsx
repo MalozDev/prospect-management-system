@@ -9,7 +9,7 @@ interface ProspectCardProps {
 
 export function ProspectCard({ prospect }: ProspectCardProps) {
   return (
-    <Link href={`/prospects/${prospect.id}`} className="block rounded-2xl border border-gray-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+    <Link href="/followups" className="block rounded-2xl border border-gray-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
       <div className="flex items-start justify-between gap-3">
         <div>
           <h3 className="font-semibold text-gray-900">{prospect.name}</h3>
