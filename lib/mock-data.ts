@@ -57,10 +57,10 @@ export const prospects: Prospect[] = [
     location: "Lusaka CBD",
     address: "Plot 42, Longacres",
     expectedPurchaseDate: "2026-07-15",
-    createdAt: "2026-07-16",
+    createdAt: "2026-07-17",
     status: "NEW",
     assignedDse: "Nalu",
-    notes: "Interested in a family package",
+    notes: "Interested in ODU home connection",
   },
   {
     id: "P-002",
@@ -69,7 +69,7 @@ export const prospects: Prospect[] = [
     location: "Ndola",
     address: "House 12, Chifubu",
     expectedPurchaseDate: "2026-07-15",
-    createdAt: "2026-07-16",
+    createdAt: "2026-07-17",
     status: "CONTACTED",
     assignedDse: "Nalu",
     notes: "Needs time before purchase",
@@ -117,10 +117,10 @@ export const prospects: Prospect[] = [
     location: "Kabwe",
     address: "Plot 16, Makululu",
     expectedPurchaseDate: "2026-07-15",
-    createdAt: "2026-07-16",
+    createdAt: "2026-07-17",
     status: "NEW",
-    assignedDse: "Nalu",
-    notes: "Looking for business connection",
+    assignedDse: "Tebo",
+    notes: "Looking for ODU business connection",
   },
   {
     id: "P-007",
@@ -246,16 +246,16 @@ export const followUps: FollowUp[] = [
 ];
 
 export const sales: Sale[] = [
-  { id: "S-001", customer: "Daniel Sinyangwe", packageName: "Home Broadband", amount: 1290, soldBy: "Tebo", date: "2026-07-15" },
-  { id: "S-002", customer: "Grace Simukoko", packageName: "Mobile Money Plus", amount: 850, soldBy: "Nalu", date: "2026-07-14" },
-  { id: "S-003", customer: "Moses Chanda", packageName: "Business Fibre", amount: 2100, soldBy: "Tebo", date: "2026-07-13" },
-  { id: "S-004", customer: "Patricia Tembo", packageName: "Family Pack", amount: 980, soldBy: "Nalu", date: "2026-07-12" },
-  { id: "S-005", customer: "Ruth Mweemba", packageName: "Airtel Xstream", amount: 1500, soldBy: "Tebo", date: "2026-07-11" },
-  { id: "S-006", customer: "Bright Mulenga", packageName: "Mobile Voice", amount: 650, soldBy: "Nalu", date: "2026-07-10" },
-  { id: "S-007", customer: "Emmanuel Phiri", packageName: "Home Broadband", amount: 1290, soldBy: "Tebo", date: "2026-07-09" },
-  { id: "S-008", customer: "Martha Banda", packageName: "Family Pack", amount: 940, soldBy: "Nalu", date: "2026-07-08" },
-  { id: "S-009", customer: "Henry Kafunda", packageName: "Business Fibre", amount: 1800, soldBy: "Tebo", date: "2026-07-07" },
-  { id: "S-010", customer: "Oscar Kalaluka", packageName: "Airtel Xstream", amount: 1020, soldBy: "Nalu", date: "2026-07-06" },
+  { id: "S-001", customer: "Daniel Sinyangwe", packageName: "ODU", amount: 200, soldBy: "Tebo", date: "2026-07-17" },
+  { id: "S-002", customer: "Grace Simukoko", packageName: "ODU", amount: 200, soldBy: "Nalu", date: "2026-07-17" },
+  { id: "S-003", customer: "Moses Chanda", packageName: "ODU", amount: 200, soldBy: "Tebo", date: "2026-07-15" },
+  { id: "S-004", customer: "Patricia Tembo", packageName: "ODU", amount: 200, soldBy: "Nalu", date: "2026-07-14" },
+  { id: "S-005", customer: "Ruth Mweemba", packageName: "ODU", amount: 200, soldBy: "Tebo", date: "2026-07-11" },
+  { id: "S-006", customer: "Bright Mulenga", packageName: "ODU", amount: 200, soldBy: "Nalu", date: "2026-07-10" },
+  { id: "S-007", customer: "Emmanuel Phiri", packageName: "ODU", amount: 200, soldBy: "Tebo", date: "2026-07-09" },
+  { id: "S-008", customer: "Martha Banda", packageName: "ODU", amount: 200, soldBy: "Nalu", date: "2026-07-08" },
+  { id: "S-009", customer: "Henry Kafunda", packageName: "ODU", amount: 200, soldBy: "Tebo", date: "2026-07-07" },
+  { id: "S-010", customer: "Oscar Kalaluka", packageName: "ODU", amount: 200, soldBy: "Nalu", date: "2026-07-06" },
 ];
 
 export const activities: ActivityItem[] = [

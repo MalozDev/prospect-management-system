@@ -22,10 +22,18 @@ export function TodayProspects() {
   const [todayProspects, setTodayProspects] = useState<Prospect[]>([]);
 
   useEffect(() => {
-    const stored = loadStoredProspects();
-    const all = [...stored, ...mockProspects];
-    const filtered = all.filter((prospect) => prospect.expectedPurchaseDate === TODAY);
-    setTodayProspects(filtered.slice(0, 6));
+    let active = true;
+    setTimeout(() => {
+      if (active) {
+        const stored = loadStoredProspects();
+        const all = [...stored, ...mockProspects];
+        const filtered = all.filter((prospect) => prospect.expectedPurchaseDate === TODAY);
+        setTodayProspects(filtered.slice(0, 6));
+      }
+    }, 0);
+    return () => {
+      active = false;
+    };
   }, []);
 
   if (todayProspects.length === 0) {

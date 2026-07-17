@@ -3,10 +3,11 @@
 import Link from "next/link";
 import { Bell, LayoutDashboard, LogOut, Settings, ShoppingCart, UserRound, Users2 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 
-import { getProfileInitials, getStoredProfile } from "@/utils/profile";
+import { getProfileInitials, getStoredProfile, type ProfileInfo, DEFAULT_PROFILE } from "@/utils/profile";
 
-const items = [
+const dseItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/prospects", label: "Prospects", icon: Users2 },
   { href: "/followups", label: "Follow Ups", icon: UserRound },
@@ -15,27 +16,53 @@ const items = [
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
+const supervisorItems = [
+  { href: "/supervisor/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/supervisor/prospects", label: "All Prospects", icon: Users2 },
+  { href: "/supervisor/sales", label: "All Sales", icon: ShoppingCart },
+  { href: "/supervisor/settings", label: "Settings", icon: Settings },
+];
+
 export function Sidebar() {
-  const [profileName, setProfileName] = useState("Nalu Mwansa");
+  const router = useRouter();
+  const [profile, setProfile] = useState<ProfileInfo>(DEFAULT_PROFILE);
 
   useEffect(() => {
-    setProfileName(getStoredProfile().name);
+    let active = true;
+    setTimeout(() => {
+      if (active) {
+        setProfile(getStoredProfile());
+      }
+    }, 0);
 
     const handleProfileUpdate = () => {
-      setProfileName(getStoredProfile().name);
+      setProfile(getStoredProfile());
     };
 
     window.addEventListener("profile-updated", handleProfileUpdate);
-    return () => window.removeEventListener("profile-updated", handleProfileUpdate);
+    return () => {
+      active = false;
+      window.removeEventListener("profile-updated", handleProfileUpdate);
+    };
   }, []);
 
-  const initials = getProfileInitials(profileName);
+  const handleLogout = () => {
+    // Clear profile and redirect to login
+    localStorage.removeItem("crm-profile");
+    router.push("/login");
+  };
+
+  const initials = getProfileInitials(profile.name);
+  const isSupervisor = profile.role.toLowerCase().includes("supervisor");
+  const items = isSupervisor ? supervisorItems : dseItems;
 
   return (
     <aside className="hidden h-screen w-72 flex-col border-r border-gray-200 bg-white p-6 md:flex">
       <div className="mb-8">
         <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[#E60012]">Airtel Prospect Manager</p>
-        <p className="mt-2 text-sm text-gray-500">Direct Sales Executive CRM</p>
+        <p className="mt-2 text-sm text-gray-500">
+          {isSupervisor ? "Supervisor CRM" : "Direct Sales Executive CRM"}
+        </p>
       </div>
 
       <div className="mb-6 flex items-center gap-3 rounded-2xl border border-gray-200 bg-[#fff8f8] p-3">
@@ -43,8 +70,8 @@ export function Sidebar() {
           {initials}
         </div>
         <div>
-          <p className="text-sm font-semibold text-gray-900">{profileName}</p>
-          <p className="text-xs text-gray-500">Active profile</p>
+          <p className="text-sm font-semibold text-gray-900">{profile.name}</p>
+          <p className="text-xs text-gray-500">{profile.role}</p>
         </div>
       </div>
 
@@ -59,8 +86,13 @@ export function Sidebar() {
 
       <div className="mt-auto rounded-2xl border border-gray-200 bg-[#fff8f8] p-4">
         <p className="text-sm font-semibold text-gray-900">Need support?</p>
-        <p className="mt-1 text-sm text-gray-500">Contact your supervisor for help.</p>
-        <button className="mt-3 inline-flex items-center gap-2 rounded-lg bg-[#E60012] px-3 py-2 text-sm font-medium text-white">
+        <p className="mt-1 text-sm text-gray-500">
+          {isSupervisor ? "Contact IT support helpdesk." : "Contact your supervisor for help."}
+        </p>
+        <button 
+          onClick={handleLogout}
+          className="mt-3 inline-flex items-center gap-2 rounded-lg bg-[#E60012] px-3 py-2 text-sm font-medium text-white hover:bg-red-700 w-full justify-center"
+        >
           <LogOut className="h-4 w-4" />
           Logout
         </button>
@@ -68,3 +100,4 @@ export function Sidebar() {
     </aside>
   );
 }
+

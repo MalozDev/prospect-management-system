@@ -16,14 +16,22 @@ export function PageShell({ title, description, children }: PageShellProps) {
   const [profileName, setProfileName] = useState("Nalu Mwansa");
 
   useEffect(() => {
-    setProfileName(getStoredProfile().name);
+    let active = true;
+    setTimeout(() => {
+      if (active) {
+        setProfileName(getStoredProfile().name);
+      }
+    }, 0);
 
     const handleProfileUpdate = () => {
       setProfileName(getStoredProfile().name);
     };
 
     window.addEventListener("profile-updated", handleProfileUpdate);
-    return () => window.removeEventListener("profile-updated", handleProfileUpdate);
+    return () => {
+      active = false;
+      window.removeEventListener("profile-updated", handleProfileUpdate);
+    };
   }, []);
 
   const initials = getProfileInitials(profileName);

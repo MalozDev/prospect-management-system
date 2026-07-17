@@ -5,10 +5,14 @@ import { supervisors } from "@/constants/supervisors";
 
 interface Props {
   label?: string;
+  value?: string;
+  onChange?: (value: string) => void;
 }
 
 export default function SupervisorSelect({
   label = "Supervisor",
+  value,
+  onChange,
 }: Props) {
   return (
     <div>
@@ -16,7 +20,11 @@ export default function SupervisorSelect({
         {label}
       </label>
 
-      <Select className="h-12 rounded-xl">
+      <Select 
+        value={value}
+        onChange={(e) => onChange?.(e.target.value)}
+        className="h-12 rounded-xl"
+      >
         <option value="">Select a supervisor</option>
         {supervisors.map((name) => (
           <option key={name} value={name}>
@@ -27,3 +35,4 @@ export default function SupervisorSelect({
     </div>
   );
 }
+

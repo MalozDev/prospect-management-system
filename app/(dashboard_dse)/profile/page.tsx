@@ -2,15 +2,25 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 
 import { PageShell } from "@/components/shared/PageShell";
 import { DEFAULT_PROFILE, getProfileInitials, getStoredProfile, saveProfile, type ProfileInfo } from "@/utils/profile";
 
 export default function ProfilePage() {
+  const router = useRouter();
   const [profile, setProfile] = useState<ProfileInfo>(DEFAULT_PROFILE);
 
   useEffect(() => {
-    setProfile(getStoredProfile());
+    let active = true;
+    setTimeout(() => {
+      if (active) {
+        setProfile(getStoredProfile());
+      }
+    }, 0);
+    return () => {
+      active = false;
+    };
   }, []);
 
   function handleChange(field: keyof ProfileInfo, value: string) {
@@ -20,6 +30,11 @@ export default function ProfilePage() {
   function handleSave() {
     saveProfile(profile);
     window.dispatchEvent(new Event("profile-updated"));
+  }
+
+  function handleLogout() {
+    localStorage.removeItem("crm-profile");
+    router.push("/login");
   }
 
   return (
@@ -82,6 +97,13 @@ export default function ProfilePage() {
           <Link href="/settings" className="rounded-full border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700">
             Open settings
           </Link>
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="rounded-full bg-gray-50 hover:bg-gray-100 border border-gray-300 px-4 py-2 text-sm font-medium text-red-600 transition"
+          >
+            Logout
+          </button>
         </div>
       </div>
     </PageShell>

@@ -2,7 +2,12 @@
 
 import { Input } from "@/components/ui/input";
 
-export default function CugInput() {
+interface Props {
+  value?: string;
+  onChange?: (value: string) => void;
+}
+
+export default function CugInput({ value, onChange }: Props) {
   return (
     <div>
       <label className="mb-2 block text-sm font-medium">
@@ -16,6 +21,8 @@ export default function CugInput() {
         </div>
 
         <Input
+          value={value}
+          onChange={(e) => onChange?.(e.target.value)}
           placeholder="1234"
           maxLength={4}
           className="h-12 border-0 shadow-none focus-visible:ring-0"

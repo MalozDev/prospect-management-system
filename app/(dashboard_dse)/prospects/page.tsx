@@ -13,9 +13,17 @@ export default function ProspectsPage() {
   const [showList, setShowList] = useState(false);
 
   useEffect(() => {
-    const stored = typeof window !== "undefined" ? localStorage.getItem("mockProspects") : null;
-    const savedProspects = stored ? (JSON.parse(stored) as Prospect[]) : [];
-    setProspects([...savedProspects, ...mockProspects]);
+    let active = true;
+    setTimeout(() => {
+      if (active) {
+        const stored = typeof window !== "undefined" ? localStorage.getItem("mockProspects") : null;
+        const savedProspects = stored ? (JSON.parse(stored) as Prospect[]) : [];
+        setProspects([...savedProspects, ...mockProspects]);
+      }
+    }, 0);
+    return () => {
+      active = false;
+    };
   }, []);
 
   const today = new Date().toISOString().slice(0, 10);

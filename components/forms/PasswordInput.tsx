@@ -6,10 +6,14 @@ import { Input } from "@/components/ui/input";
 
 interface Props {
   label?: string;
+  value?: string;
+  onChange?: (value: string) => void;
 }
 
 export default function PasswordInput({
   label = "Password",
+  value,
+  onChange,
 }: Props) {
   const [show, setShow] = useState(false);
 
@@ -23,6 +27,8 @@ export default function PasswordInput({
 
         <Input
           type={show ? "text" : "password"}
+          value={value}
+          onChange={(e) => onChange?.(e.target.value)}
           placeholder="••••••••"
           className="h-12 rounded-xl pr-12"
         />

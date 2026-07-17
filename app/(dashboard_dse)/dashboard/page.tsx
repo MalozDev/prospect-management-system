@@ -23,11 +23,19 @@ export default function DashboardPage() {
   const [todayProspects, setTodayProspects] = useState<Prospect[]>([]);
 
   useEffect(() => {
-    const today = new Date().toISOString().slice(0, 10);
-    const stored = getStoredProspects();
-    const allProspects = [...stored, ...prospects];
-    const todayList = allProspects.filter((item) => [today, TODAY_FALLBACK].includes(item.expectedPurchaseDate));
-    setTodayProspects(todayList.slice(0, 6));
+    let active = true;
+    setTimeout(() => {
+      if (active) {
+        const today = new Date().toISOString().slice(0, 10);
+        const stored = getStoredProspects();
+        const allProspects = [...stored, ...prospects];
+        const todayList = allProspects.filter((item) => [today, TODAY_FALLBACK].includes(item.expectedPurchaseDate));
+        setTodayProspects(todayList.slice(0, 6));
+      }
+    }, 0);
+    return () => {
+      active = false;
+    };
   }, []);
 
   const todayFollowUps = followUps.filter((item) => item.status === "TODAY").length;
