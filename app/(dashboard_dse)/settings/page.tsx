@@ -3,10 +3,13 @@
 import { useEffect, useState } from "react";
 
 import { PageShell } from "@/components/shared/PageShell";
+import { apiFetch, getStoredApiUser } from "@/lib/api-client";
 import { DEFAULT_PROFILE, getStoredProfile, saveProfile, type ProfileInfo } from "@/utils/profile";
 
 export default function SettingsPage() {
   const [profile, setProfile] = useState<ProfileInfo>(DEFAULT_PROFILE);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -22,11 +25,28 @@ export default function SettingsPage() {
 
   function handleChange(field: keyof ProfileInfo, value: string) {
     setProfile((current) => ({ ...current, [field]: value }));
+    setSaved(false);
   }
 
-  function handleSave() {
+  async function handleSave() {
+    setSaving(true);
     saveProfile(profile);
+    // Sync with backend
+    const apiUser = getStoredApiUser();
+    if (apiUser) {
+      try {
+        await apiFetch("/api/users/me", {
+          method: "PATCH",
+          body: JSON.stringify({ name: profile.name, region: profile.region }),
+        });
+      } catch {
+        // Local save is enough if server is unreachable
+      }
+    }
+    setSaving(false);
+    setSaved(true);
     window.dispatchEvent(new Event("profile-updated"));
+    setTimeout(() => setSaved(false), 2000);
   }
 
   return (
@@ -74,9 +94,10 @@ export default function SettingsPage() {
           <button
             type="button"
             onClick={handleSave}
-            className="mt-4 rounded-full bg-[#E60012] px-4 py-2 text-sm font-medium text-white"
+            disabled={saving}
+            className="mt-4 rounded-full bg-[#E60012] px-4 py-2 text-sm font-medium text-white transition hover:bg-red-700 disabled:opacity-50"
           >
-            Save profile
+            {saving ? "Saving..." : saved ? "Saved!" : "Save profile"}
           </button>
         </div>
 

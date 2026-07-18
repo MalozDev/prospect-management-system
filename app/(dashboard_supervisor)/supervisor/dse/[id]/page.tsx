@@ -1,24 +1,16 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, Users, ShoppingCart, TrendingUp, DollarSign, Calendar } from "lucide-react";
 
 import { PageShell } from "@/components/shared/PageShell";
 import { StatusBadge } from "@/components/shared/StatusBadge";
-import { prospects as mockProspects, sales as mockSales, type Prospect, type Sale } from "@/lib/mock-data";
+import { useApiData } from "@/lib/use-api-data";
+import type { IProspect } from "@/lib/models/Prospect";
+import type { ISale } from "@/lib/models/Sale";
 
 const COMMISSION_PER_SALE = 200;
-
-function getStoredProspects(): Prospect[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const raw = localStorage.getItem("mockProspects");
-    return raw ? (JSON.parse(raw) as Prospect[]) : [];
-  } catch {
-    return [];
-  }
-}
 
 interface PageProps {
   params: Promise<{ id: string }> | { id: string };
@@ -26,38 +18,25 @@ interface PageProps {
 
 export default function DseDetailPage({ params }: PageProps) {
   const [dseName, setDseName] = useState<string>("");
-  const [prospects, setProspects] = useState<Prospect[]>([]);
-  const [sales, setSales] = useState<Sale[]>([]);
 
+  // Safely unwrap Next.js 15/16 async params
   useEffect(() => {
-    // Safely unwrap Next.js 15/16 async params
     Promise.resolve(params).then((resolved) => {
       setDseName(decodeURIComponent(resolved.id));
     });
   }, [params]);
 
-  useEffect(() => {
-    let active = true;
-    setTimeout(() => {
-      if (active) {
-        const stored = getStoredProspects();
-        setProspects([...stored, ...mockProspects]);
-        setSales(mockSales);
-      }
-    }, 0);
-    return () => {
-      active = false;
-    };
-  }, []);
+  const { data: prospectsData } = useApiData<{ prospects: IProspect[] }>(
+    dseName ? `/api/prospects?assignedDse=${encodeURIComponent(dseName)}` : null,
+    { prospects: [] }
+  );
+  const { data: salesData } = useApiData<{ sales: ISale[] }>(
+    dseName ? `/api/sales?soldBy=${encodeURIComponent(dseName)}` : null,
+    { sales: [] }
+  );
 
-  // Filter down to this DSE's records
-  const dseProspects = useMemo(() => {
-    return prospects.filter((p) => p.assignedDse === dseName);
-  }, [prospects, dseName]);
-
-  const dseSales = useMemo(() => {
-    return sales.filter((s) => s.soldBy === dseName);
-  }, [sales, dseName]);
+  const dseProspects = prospectsData.prospects;
+  const dseSales = salesData.sales;
 
   const stats = useMemo(() => {
     const pCount = dseProspects.length;
@@ -74,11 +53,21 @@ export default function DseDetailPage({ params }: PageProps) {
     };
   }, [dseProspects, dseSales]);
 
+  if (!dseName) {
+    return (
+      <PageShell title="Loading..." description="Loading DSE details.">
+        <div className="flex items-center justify-center py-12">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-gray-200 border-t-[#E60012]" />
+        </div>
+      </PageShell>
+    );
+  }
+
   return (
     <PageShell title={`${dseName}'s Performance`} description="Detailed breakdown of field activities and sales conversion.">
       <div className="mb-6">
-        <Link 
-          href="/supervisor/dashboard" 
+        <Link
+          href="/supervisor/dashboard"
           className="inline-flex items-center gap-2 text-sm font-semibold text-gray-600 hover:text-[#E60012]"
         >
           <ArrowLeft className="h-4 w-4" /> Back to Dashboard
@@ -86,7 +75,7 @@ export default function DseDetailPage({ params }: PageProps) {
       </div>
 
       {/* Metrics Row */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-6">
+      <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-red-50 text-[#E60012]">
@@ -139,49 +128,51 @@ export default function DseDetailPage({ params }: PageProps) {
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Prospects List */}
         <div className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
-          <h3 className="font-semibold text-gray-900 mb-4">Assigned Prospects</h3>
+          <h3 className="mb-4 font-semibold text-gray-900">Assigned Prospects</h3>
           <div className="space-y-3">
             {dseProspects.map((prospect) => (
-              <div key={prospect.id} className="rounded-2xl border border-gray-100 bg-gray-50/50 p-4 hover:border-gray-200 transition">
-                <div className="flex justify-between items-start">
+              <div key={String(prospect._id)} className="rounded-2xl border border-gray-100 bg-gray-50/50 p-4 transition hover:border-gray-200">
+                <div className="flex items-start justify-between">
                   <div>
                     <h4 className="font-semibold text-gray-900">{prospect.name}</h4>
-                    <p className="text-xs text-gray-500 mt-0.5">{prospect.location}</p>
+                    <p className="mt-0.5 text-xs text-gray-500">{prospect.location}</p>
                   </div>
                   <StatusBadge status={prospect.status} />
                 </div>
                 <div className="mt-3 flex items-center gap-4 text-xs text-gray-500">
                   <span>Phone: {prospect.phone}</span>
-                  <span className="flex items-center gap-1"><Calendar className="h-3 w-3" /> {prospect.expectedPurchaseDate}</span>
+                  <span className="flex items-center gap-1">
+                    <Calendar className="h-3 w-3" /> {prospect.expectedPurchaseDate}
+                  </span>
                 </div>
               </div>
             ))}
             {dseProspects.length === 0 && (
-              <p className="text-sm text-gray-500 text-center py-6">No prospects assigned to this DSE.</p>
+              <p className="py-6 text-center text-sm text-gray-500">No prospects assigned to this DSE.</p>
             )}
           </div>
         </div>
 
         {/* Sales List */}
         <div className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
-          <h3 className="font-semibold text-gray-900 mb-4">Sales Records</h3>
+          <h3 className="mb-4 font-semibold text-gray-900">Sales Records</h3>
           <div className="space-y-3">
             {dseSales.map((sale) => (
-              <div key={sale.id} className="rounded-2xl border border-gray-100 bg-gray-50/50 p-4 hover:border-gray-200 transition">
-                <div className="flex justify-between items-center">
+              <div key={String(sale._id)} className="rounded-2xl border border-gray-100 bg-gray-50/50 p-4 transition hover:border-gray-200">
+                <div className="flex items-center justify-between">
                   <div>
                     <h4 className="font-semibold text-gray-900">{sale.customer}</h4>
-                    <p className="text-xs text-gray-500 mt-0.5">ODU</p>
+                    <p className="mt-0.5 text-xs text-gray-500">ODU</p>
                   </div>
                   <div className="text-right">
                     <p className="font-bold text-gray-900">K{COMMISSION_PER_SALE}</p>
-                    <p className="text-[10px] text-gray-400 mt-0.5">{sale.date}</p>
+                    <p className="mt-0.5 text-[10px] text-gray-400">{sale.date}</p>
                   </div>
                 </div>
               </div>
             ))}
             {dseSales.length === 0 && (
-              <p className="text-sm text-gray-500 text-center py-6">No sales logged by this DSE.</p>
+              <p className="py-6 text-center text-sm text-gray-500">No sales logged by this DSE.</p>
             )}
           </div>
         </div>

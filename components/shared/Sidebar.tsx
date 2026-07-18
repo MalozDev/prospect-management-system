@@ -5,6 +5,7 @@ import { Bell, LayoutDashboard, LogOut, Settings, ShoppingCart, UserRound, Users
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
+import { clearToken } from "@/lib/api-client";
 import { getProfileInitials, getStoredProfile, type ProfileInfo, DEFAULT_PROFILE } from "@/utils/profile";
 
 const dseItems = [
@@ -47,7 +48,7 @@ export function Sidebar() {
   }, []);
 
   const handleLogout = () => {
-    // Clear profile and redirect to login
+    clearToken();
     localStorage.removeItem("crm-profile");
     router.push("/login");
   };

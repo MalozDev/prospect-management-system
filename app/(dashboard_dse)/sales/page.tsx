@@ -3,7 +3,8 @@
 import { useMemo, useState } from "react";
 import { PageShell } from "@/components/shared/PageShell";
 import { StatCard } from "@/components/shared/StatCard";
-import { sales } from "@/lib/mock-data";
+import { useApiData } from "@/lib/use-api-data";
+import type { ISale } from "@/lib/models/Sale";
 
 const COMMISSION_PER_SALE = 200;
 const MONTHLY_TARGET = 25;
@@ -19,25 +20,30 @@ function monthLabel(monthKey: string) {
 export default function SalesPage() {
   const today = new Date().toISOString().slice(0, 10);
   const currentMonth = today.slice(0, 7);
-  const weekStart = new Date();
-  weekStart.setDate(weekStart.getDate() - 6);
-  const weekStartIso = weekStart.toISOString().slice(0, 10);
+  const weekStart = useMemo(() => {
+    const ws = new Date();
+    ws.setDate(ws.getDate() - 6);
+    return ws.toISOString().slice(0, 10);
+  }, []);
+
+  const { data } = useApiData<{ sales: ISale[] }>("/api/sales", { sales: [] });
+  const sales = data.sales;
 
   const uniqueMonths = useMemo(() => {
     return Array.from(new Set(sales.map((sale) => sale.date.slice(0, 7))))
       .sort((a, b) => b.localeCompare(a));
-  }, []);
+  }, [sales]);
 
   const [selectedMonth, setSelectedMonth] = useState(currentMonth);
   const [showHistory, setShowHistory] = useState(false);
 
-  const todaySales = sales.filter((sale) => sale.date === today);
-  const weekSales = sales.filter((sale) => sale.date >= weekStartIso && sale.date <= today);
-  const monthSales = sales.filter((sale) => sale.date.slice(0, 7) === currentMonth);
-  const selectedMonthSales = sales.filter((sale) => sale.date.slice(0, 7) === selectedMonth);
+  const todaySales = useMemo(() => sales.filter((sale) => sale.date === today), [sales, today]);
+  const weekSales = useMemo(() => sales.filter((sale) => sale.date >= weekStart && sale.date <= today), [sales, weekStart, today]);
+  const monthSales = useMemo(() => sales.filter((sale) => sale.date.slice(0, 7) === currentMonth), [sales, currentMonth]);
+  const selectedMonthSales = useMemo(() => sales.filter((sale) => sale.date.slice(0, 7) === selectedMonth), [sales, selectedMonth]);
+
   const commissionThisMonth = monthSales.length * COMMISSION_PER_SALE;
   const targetProgress = Math.min(100, Math.round((monthSales.length / MONTHLY_TARGET) * 100));
-  const statusSteps = [6, 12, 18, 25];
   const currentAmount = Math.min(MONTHLY_TARGET, monthSales.length);
   const currentProgress = Math.min(100, Math.round((currentAmount / MONTHLY_TARGET) * 100));
   const getRingColor = (amount: number) => {
@@ -90,34 +96,20 @@ export default function SalesPage() {
             <div className="rounded-3xl border border-gray-200 bg-gray-50 p-4">
               <p className="text-sm font-semibold text-gray-700">Target levels</p>
               <div className="mt-3 space-y-2 sm:mt-4 sm:space-y-3">
-                <div className="flex items-center gap-3 rounded-2xl bg-white p-2.5 shadow-sm sm:p-3">
-                  <span className="inline-flex h-3 w-3 rounded-full bg-red-600" />
-                  <div>
-                    <p className="text-sm font-semibold text-gray-900">Level 1</p>
-                    <p className="text-sm text-gray-500">0–6 sales — red zone</p>
+                {[
+                  { color: "bg-red-600", label: "Level 1", desc: "0–6 sales — red zone" },
+                  { color: "bg-yellow-400", label: "Level 2", desc: "7–12 sales — yellow zone" },
+                  { color: "bg-orange-500", label: "Level 3", desc: "13–18 sales — orange zone" },
+                  { color: "bg-emerald-600", label: "Level 4", desc: "19–25 sales — green zone" },
+                ].map((level) => (
+                  <div key={level.label} className="flex items-center gap-3 rounded-2xl bg-white p-2.5 shadow-sm sm:p-3">
+                    <span className={`inline-flex h-3 w-3 rounded-full ${level.color}`} />
+                    <div>
+                      <p className="text-sm font-semibold text-gray-900">{level.label}</p>
+                      <p className="text-sm text-gray-500">{level.desc}</p>
+                    </div>
                   </div>
-                </div>
-                <div className="flex items-center gap-3 rounded-2xl bg-white p-2.5 shadow-sm sm:p-3">
-                  <span className="inline-flex h-3 w-3 rounded-full bg-yellow-400" />
-                  <div>
-                    <p className="text-sm font-semibold text-gray-900">Level 2</p>
-                    <p className="text-sm text-gray-500">7–12 sales — yellow zone</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3 rounded-2xl bg-white p-2.5 shadow-sm sm:p-3">
-                  <span className="inline-flex h-3 w-3 rounded-full bg-orange-500" />
-                  <div>
-                    <p className="text-sm font-semibold text-gray-900">Level 3</p>
-                    <p className="text-sm text-gray-500">13–18 sales — orange zone</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3 rounded-2xl bg-white p-2.5 shadow-sm sm:p-3">
-                  <span className="inline-flex h-3 w-3 rounded-full bg-emerald-600" />
-                  <div>
-                    <p className="text-sm font-semibold text-gray-900">Level 4</p>
-                    <p className="text-sm text-gray-500">19–25 sales — green zone</p>
-                  </div>
-                </div>
+                ))}
               </div>
             </div>
             <div className="rounded-3xl border border-gray-200 bg-white p-4">
@@ -176,16 +168,16 @@ export default function SalesPage() {
                 </thead>
                 <tbody>
                   {selectedMonthSales.map((sale) => (
-                    <tr key={sale.id} className="border-t border-gray-100">
+                    <tr key={String(sale._id)} className="border-t border-gray-100">
                       <td className="px-4 py-3 font-medium text-gray-900">{sale.customer}</td>
-                      <td className="px-4 py-3 text-gray-600">ODU</td>
+                      <td className="px-4 py-3 text-gray-600">{sale.packageName}</td>
                       <td className="px-4 py-3 text-gray-600">K {COMMISSION_PER_SALE}</td>
                       <td className="px-4 py-3 text-gray-600">{sale.date}</td>
                     </tr>
                   ))}
                   {selectedMonthSales.length === 0 && (
                     <tr>
-                      <td colSpan={5} className="px-4 py-8 text-center text-sm text-gray-500">
+                      <td colSpan={4} className="px-4 py-8 text-center text-sm text-gray-500">
                         No sales recorded for {monthLabel(selectedMonth)}.
                       </td>
                     </tr>

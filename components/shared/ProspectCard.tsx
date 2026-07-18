@@ -1,13 +1,25 @@
 import Link from "next/link";
 
 import { StatusBadge } from "@/components/shared/StatusBadge";
-import type { Prospect } from "@/lib/mock-data";
+
+interface ProspectCardProspect {
+  _id?: unknown;
+  id?: string;
+  name: string;
+  location: string;
+  phone: string;
+  expectedPurchaseDate: string;
+  assignedDse: string;
+  status: string;
+}
 
 interface ProspectCardProps {
-  prospect: Prospect;
+  prospect: ProspectCardProspect;
 }
 
 export function ProspectCard({ prospect }: ProspectCardProps) {
+  const prospectId = prospect._id ?? prospect.id ?? "";
+  
   return (
     <Link href="/followups" className="block rounded-2xl border border-gray-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
       <div className="flex items-start justify-between gap-3">

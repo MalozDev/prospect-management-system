@@ -2,45 +2,49 @@
 
 import Link from "next/link";
 import { CalendarDays, ChartNoAxesCombined, Users, Sparkles } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
 
 import { PageShell } from "@/components/shared/PageShell";
 import { ProspectCard } from "@/components/shared/ProspectCard";
-import { prospects as mockProspects, type Prospect } from "@/lib/mock-data";
+import { useApiData } from "@/lib/use-api-data";
+import type { IProspect } from "@/lib/models/Prospect";
 
 export default function ProspectsPage() {
-  const [prospects, setProspects] = useState<Prospect[]>([]);
+  const { data } = useApiData<{ prospects: IProspect[] }>("/api/prospects", { prospects: [] });
   const [showList, setShowList] = useState(false);
 
-  useEffect(() => {
-    let active = true;
-    setTimeout(() => {
-      if (active) {
-        const stored = typeof window !== "undefined" ? localStorage.getItem("mockProspects") : null;
-        const savedProspects = stored ? (JSON.parse(stored) as Prospect[]) : [];
-        setProspects([...savedProspects, ...mockProspects]);
-      }
-    }, 0);
-    return () => {
-      active = false;
-    };
+  const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
+  const currentMonth = today.slice(0, 7);
+  const weekStart = useMemo(() => {
+    const ws = new Date();
+    ws.setDate(ws.getDate() - 6);
+    return ws.toISOString().slice(0, 10);
   }, []);
 
-  const today = new Date().toISOString().slice(0, 10);
-  const currentMonth = today.slice(0, 7);
-  const weekStart = new Date();
-  weekStart.setDate(weekStart.getDate() - 6);
-  const weekStartIso = weekStart.toISOString().slice(0, 10);
+  const prospects = data.prospects;
 
-  const createdToday = prospects.filter((prospect) => prospect.createdAt === today).length;
-  const createdThisWeek = prospects.filter(
-    (prospect) => prospect.createdAt && prospect.createdAt >= weekStartIso && prospect.createdAt <= today,
-  ).length;
-  const createdThisMonth = prospects.filter(
-    (prospect) => prospect.createdAt && prospect.createdAt.slice(0, 7) === currentMonth,
-  ).length;
+  const createdToday = useMemo(
+    () => prospects.filter((prospect) => prospect.createdAt === today).length,
+    [prospects, today]
+  );
+  const createdThisWeek = useMemo(
+    () =>
+      prospects.filter(
+        (prospect) => prospect.createdAt && prospect.createdAt >= weekStart && prospect.createdAt <= today
+      ).length,
+    [prospects, weekStart, today]
+  );
+  const createdThisMonth = useMemo(
+    () =>
+      prospects.filter((prospect) => prospect.createdAt && prospect.createdAt.slice(0, 7) === currentMonth).length,
+    [prospects, currentMonth]
+  );
   const totalProspects = prospects.length;
-  const todaysProspects = prospects.filter((prospect) => prospect.createdAt === today).slice(0, 3);
+
+  const todaysProspects = useMemo(
+    () => prospects.filter((prospect) => prospect.createdAt === today).slice(0, 3),
+    [prospects, today]
+  );
 
   return (
     <PageShell title="Prospects" description="Track the customers you are engaging across the field.">
@@ -107,12 +111,12 @@ export default function ProspectsPage() {
         <div className="mt-4 grid gap-3 md:grid-cols-3">
           {todaysProspects.length > 0 ? (
             todaysProspects.map((prospect) => (
-              <Link href="/followups" key={prospect.id} className="rounded-2xl border border-gray-200 bg-gray-50 p-3">
+              <div key={String(prospect._id)} className="rounded-2xl border border-gray-200 bg-gray-50 p-3">
                 <p className="text-sm font-semibold text-gray-900">{prospect.name}</p>
                 <p className="mt-1 text-xs text-gray-500">{prospect.phone}</p>
                 <p className="mt-1 text-xs text-gray-500">{prospect.location}</p>
                 <p className="mt-2 text-xs text-[#E60012]">Status: {prospect.status}</p>
-              </Link>
+              </div>
             ))
           ) : (
             <p className="text-sm text-gray-500">No prospects added today yet.</p>
@@ -122,7 +126,7 @@ export default function ProspectsPage() {
         {showList && (
           <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {prospects.map((prospect) => (
-              <ProspectCard key={prospect.id} prospect={prospect} />
+              <ProspectCard key={String(prospect._id)} prospect={prospect} />
             ))}
           </div>
         )}

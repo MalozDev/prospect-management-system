@@ -14,6 +14,7 @@ import PrimaryButton from "@/components/forms/PrimaryButton";
 
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
+import { registerApi, setToken, setStoredApiUser } from "@/lib/api-client";
 import { saveProfile } from "@/utils/profile";
 
 export default function RegisterPage() {
@@ -26,8 +27,9 @@ export default function RegisterPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [region, setRegion] = useState("Lusaka");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
@@ -52,49 +54,42 @@ export default function RegisterPage() {
       return;
     }
 
-    // Save to list of registered users in localStorage
-    const storedUsersRaw = localStorage.getItem("crm-registered-users") || "[]";
-    let users: { cugSuffix: string }[] = [];
+    setLoading(true);
     try {
-      users = JSON.parse(storedUsersRaw);
-    } catch {
-      users = [];
-    }
+      const data = await registerApi({
+        name: name.trim(),
+        cugSuffix: cugSuffix.trim(),
+        password,
+        role,
+        region,
+        supervisor: role === "DSE" ? supervisor : undefined,
+      });
 
-    // Check if CUG already registered
-    if (users.some((u) => u.cugSuffix === cugSuffix)) {
-      setError("This CUG suffix is already registered.");
-      return;
-    }
+      // Store auth token
+      setToken(data.token);
+      setStoredApiUser(data.user);
 
-    const newUser = {
-      name,
-      cugSuffix,
-      role,
-      supervisor: role === "DSE" ? supervisor : undefined,
-      region,
-      createdAt: new Date().toISOString(),
-    };
+      // Save profile for UI
+      const roleLabel = data.user.role === "SUPERVISOR" ? "Supervisor" : "Direct Sales Executive";
+      saveProfile({
+        name: data.user.name,
+        role: roleLabel,
+        phone: `097898${data.user.cugSuffix}`,
+        region: data.user.region,
+        cug: `097898${data.user.cugSuffix}`,
+        avatarUrl: "",
+      });
+      window.dispatchEvent(new Event("profile-updated"));
 
-    users.push(newUser);
-    localStorage.setItem("crm-registered-users", JSON.stringify(users));
-
-    // Save as active profile
-    saveProfile({
-      name,
-      role: role === "SUPERVISOR" ? "Supervisor" : "Direct Sales Executive",
-      phone: `097898${cugSuffix}`,
-      region,
-      cug: `097898${cugSuffix}`,
-      avatarUrl: "",
-    });
-    window.dispatchEvent(new Event("profile-updated"));
-
-    // Redirect based on role
-    if (role === "SUPERVISOR") {
-      router.push("/supervisor/dashboard");
-    } else {
-      router.push("/dashboard");
+      if (data.user.role === "SUPERVISOR") {
+        router.push("/supervisor/dashboard");
+      } else {
+        router.push("/dashboard");
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Registration failed. Please try again.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -106,7 +101,7 @@ export default function RegisterPage() {
           Create your account
         </h1>
         <p className="mt-2 text-sm text-gray-500">
-          Join the crm platform in just a few steps
+          Join the CRM platform in just a few steps
         </p>
       </div>
 
@@ -170,8 +165,8 @@ export default function RegisterPage() {
 
         <PasswordInput label="Confirm Password" value={confirmPassword} onChange={setConfirmPassword} />
 
-        <PrimaryButton type="submit">
-          Create Account
+        <PrimaryButton type="submit" disabled={loading}>
+          {loading ? "Creating account..." : "Create Account"}
         </PrimaryButton>
 
         <p className="text-center text-sm text-gray-600">

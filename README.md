@@ -1,36 +1,162 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Airtel Prospect Management System
+
+A CRM for managing ODU sales prospects, follow-ups, and team performance tracking. Built with Next.js 16 and MongoDB.
+
+## Features
+
+- **DSE Dashboard** — View today's prospects, follow-ups, sales targets, and commission tracking
+- **Prospect Management** — Create and track prospects through the sales pipeline
+- **Follow-up Workflow** — Full lifecycle: contact → feedback → sold/lost/schedule visit/postpone
+- **Visit Scheduling** — Schedule in-person visits with automatic reminders
+- **Sales Tracking** — Log ODU sales, track monthly targets, calculate commissions
+- **Notifications** — Automated notifications for due follow-ups, scheduled visits, and sales
+- **Supervisor Console** — Team performance dashboard, DSE oversight, activity feed
+- **Authentication** — JWT-based auth with registration and login via CUG number
+
+## Tech Stack
+
+- **Framework**: Next.js 16 (App Router)
+- **Language**: TypeScript
+- **Database**: MongoDB (via Mongoose)
+- **Auth**: JWT (jsonwebtoken) + bcryptjs
+- **Styling**: Tailwind CSS v4
+- **Icons**: Lucide React
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
+
+- Node.js 18+ (recommended: 20 LTS or 22 LTS)
+- MongoDB instance (local or Atlas)
+
+### 1. Clone and install
+
+```bash
+git clone <your-repo-url>
+cd prospect-management-system
+npm install
+```
+
+### 2. Set up environment variables
+
+```bash
+cp .env.local.example .env.local
+```
+
+Edit `.env.local`:
+
+```env
+MONGODB_URI=mongodb://localhost:27017/prospect-management
+JWT_SECRET=your-random-secret-here-change-this
+```
+
+### 3. Seed the database (initial users)
+
+```bash
+npm run seed
+```
+
+This creates:
+- **3 Supervisors**: Grace Mulenga (8888), Peter Banda (7777), Abigail Tembo (6666)
+- **5 DSEs**: Nalu Mwansa (2288), Tebo Chanda (3344), Moses Phiri (1122), Chanda Bwalya (5566), Mutale Kangwa (9900)
+- **Sample prospects** with linked follow-ups
+- **Sample sales** records
+- **Password for all accounts**: `password123`
+
+### 4. Start development server
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 5. Login
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Role | Name | CUG Suffix | Password |
+|------|------|-----------|----------|
+| Supervisor | Grace Mulenga | 8888 | password123 |
+| Supervisor | Peter Banda | 7777 | password123 |
+| Supervisor | Abigail Tembo | 6666 | password123 |
+| DSE | Nalu Mwansa | 2288 | password123 |
+| DSE | Tebo Chanda | 3344 | password123 |
+| DSE | Moses Phiri | 1122 | password123 |
+| DSE | Chanda Bwalya | 5566 | password123 |
+| DSE | Mutale Kangwa | 9900 | password123 |
 
-## Learn More
+## Production Deployment
 
-To learn more about Next.js, take a look at the following resources:
+### Deploy to Vercel (recommended)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+1. Push your code to GitHub/GitLab/Bitbucket
+2. Go to [vercel.com](https://vercel.com) and import the repo
+3. Add these environment variables in Vercel dashboard:
+   - `MONGODB_URI` — Your MongoDB Atlas connection string
+   - `JWT_SECRET` — A random secret string (use: `openssl rand -hex 32`)
+4. Deploy
+5. After deployment, run the seed script to populate initial data:
+   ```bash
+   # Install Vercel CLI and run the seed via a local tunnel, or
+   # Create and run a one-off Node.js script that connects to your Atlas cluster
+   npx tsx scripts/seed.ts
+   ```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### Deploy to other platforms (Railway, Render, Fly.io)
 
-## Deploy on Vercel
+Same process: Set `MONGODB_URI` and `JWT_SECRET` as environment variables, then run `npm run build && npm start`.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### MongoDB Atlas Setup
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1. Create a free cluster at [mongodb.com/atlas](https://mongodb.com/atlas)
+2. Under **Network Access**, add `0.0.0.0/0` (allow all) for production, or whitelist your server's IP
+3. Under **Database Access**, create a database user with read/write permissions
+4. Get your connection string and set it as `MONGODB_URI`
+
+### Important: JWT Secret
+
+Generate a strong secret:
+```bash
+openssl rand -hex 32
+```
+
+## API Routes
+
+| Method | Route | Description |
+|--------|-------|-------------|
+| POST | `/api/auth/register` | Register new user |
+| POST | `/api/auth/login` | Login with CUG + password |
+| GET/PATCH | `/api/users/me` | Get/update current user |
+| GET/POST | `/api/prospects` | List/create prospects |
+| GET/PATCH/DELETE | `/api/prospects/[id]` | Single prospect CRUD |
+| GET/POST | `/api/followups` | List/create follow-ups |
+| PATCH | `/api/followups/[id]` | Update follow-up status/outcome |
+| GET/POST | `/api/sales` | List/create sales |
+| DELETE | `/api/sales/[id]` | Delete sale |
+| GET/POST | `/api/notifications` | List/create notifications |
+| PATCH/DELETE | `/api/notifications/[id]` | Update/delete notification |
+| GET | `/api/activities` | List activity feed |
+| GET | `/api/supervisors` | List supervisor users |
+
+## Project Structure
+
+```
+├── app/
+│   ├── (auth)/          # Login & register pages
+│   ├── (dashboard_dse)/ # DSE dashboard pages
+│   ├── (dashboard_supervisor)/ # Supervisor console
+│   └── api/            # All API routes
+├── components/
+│   ├── forms/          # Form components
+│   ├── layout/         # Layout components
+│   ├── shared/         # Shared UI components
+│   ├── supervisor/     # Supervisor-specific components
+│   └── ui/            # Base UI components
+├── lib/
+│   ├── models/         # Mongoose models
+│   ├── auth.ts         # JWT helpers
+│   ├── mongodb.ts      # Database connection
+│   ├── api-client.ts   # Client-side API helper
+│   └── use-api-data.ts # Data fetching hook
+└── scripts/
+    └── seed.ts         # Database seed script
+```

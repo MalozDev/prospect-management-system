@@ -3,7 +3,15 @@
 import { useMemo, useState } from "react";
 
 import { StatCard } from "@/components/shared/StatCard";
-import type { Sale } from "@/lib/mock-data";
+interface SalePreview {
+  _id?: unknown;
+  id?: string;
+  customer: string;
+  packageName?: string;
+  amount?: number;
+  soldBy: string;
+  date: string;
+}
 import {
   COMMISSION_PER_SALE,
   getCurrentMonth,
@@ -15,7 +23,7 @@ import {
 
 interface DseSalesPanelProps {
   dseName: string;
-  sales: Sale[];
+  sales: SalePreview[];
   defaultExpanded?: boolean;
 }
 
@@ -103,7 +111,7 @@ export function DseSalesPanel({ dseName, sales, defaultExpanded = false }: DseSa
           <div className="mt-3 space-y-2">
             {recentSales.length > 0 ? (
               recentSales.map((sale) => (
-                <div key={sale.id} className="flex items-center justify-between rounded-2xl border border-gray-200 bg-gray-50 p-3">
+                <div key={String(sale._id ?? sale.id ?? sale.customer)} className="flex items-center justify-between rounded-2xl border border-gray-200 bg-gray-50 p-3">
                   <div className="min-w-0">
                     <p className="truncate text-sm font-semibold text-gray-900">{sale.customer}</p>
                     <p className="text-xs text-gray-500">ODU · {sale.date}</p>

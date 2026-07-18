@@ -2,46 +2,45 @@
 
 import Link from "next/link";
 import { BellRing, CalendarDays, PhoneCall, PlusCircle, Target, TrendingUp } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useMemo } from "react";
 
 import { PageShell } from "@/components/shared/PageShell";
-import { followUps, prospects, sales, type Prospect } from "@/lib/mock-data";
+import { useApiData } from "@/lib/use-api-data";
+import type { IProspect } from "@/lib/models/Prospect";
+import type { ISale } from "@/lib/models/Sale";
+import type { IFollowUp } from "@/lib/models/FollowUp";
 
-const TODAY_FALLBACK = "2026-07-15";
-
-function getStoredProspects() {
-  if (typeof window === "undefined") return [];
-  try {
-    const raw = localStorage.getItem("mockProspects");
-    return raw ? (JSON.parse(raw) as Prospect[]) : [];
-  } catch {
-    return [];
-  }
-}
+const MONTHLY_TARGET = 25;
 
 export default function DashboardPage() {
-  const [todayProspects, setTodayProspects] = useState<Prospect[]>([]);
+  const { data: prospectsData } = useApiData<{ prospects: IProspect[] }>("/api/prospects", { prospects: [] });
+  const { data: salesData } = useApiData<{ sales: ISale[] }>("/api/sales", { sales: [] });
+  const { data: followUpsData } = useApiData<{ followUps: IFollowUp[] }>("/api/followups", { followUps: [] });
 
-  useEffect(() => {
-    let active = true;
-    setTimeout(() => {
-      if (active) {
-        const today = new Date().toISOString().slice(0, 10);
-        const stored = getStoredProspects();
-        const allProspects = [...stored, ...prospects];
-        const todayList = allProspects.filter((item) => [today, TODAY_FALLBACK].includes(item.expectedPurchaseDate));
-        setTodayProspects(todayList.slice(0, 6));
-      }
-    }, 0);
-    return () => {
-      active = false;
-    };
-  }, []);
+  const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
 
-  const todayFollowUps = followUps.filter((item) => item.status === "TODAY").length;
-  const overdueFollowUps = followUps.filter((item) => item.status === "OVERDUE").length;
-  const salesThisMonth = sales.length;
-  const MONTHLY_TARGET = 25;
+  const todayProspects = useMemo(
+    () => prospectsData.prospects.filter((p) => p.expectedPurchaseDate === today).slice(0, 6),
+    [prospectsData.prospects, today]
+  );
+
+  const todayFollowUps = useMemo(
+    () => followUpsData.followUps.filter((item) => item.status === "TODAY").length,
+    [followUpsData.followUps]
+  );
+
+  const overdueFollowUps = useMemo(
+    () => followUpsData.followUps.filter((item) => item.status === "OVERDUE").length,
+    [followUpsData.followUps]
+  );
+
+  // For monthly target, filter sales by current month
+  const currentMonth = today.slice(0, 7);
+  const salesThisMonth = useMemo(
+    () => salesData.sales.filter((s) => s.date.slice(0, 7) === currentMonth).length,
+    [salesData.sales, currentMonth]
+  );
+
   const targetProgress = Math.min(100, Math.round((salesThisMonth / MONTHLY_TARGET) * 100));
   const getRingColor = (amount: number) => {
     if (amount >= 19) return "#16a34a";
@@ -89,7 +88,7 @@ export default function DashboardPage() {
               <TrendingUp className="mb-1 h-4 w-4 text-[#E60012]" />
               Sales
             </Link>
-            <Link href="/followups" className="flex flex-col items-center justify-center rounded-2xl border border-gray-200 bg-gray-50 p-3 text-center text-sm font-medium text-gray-700">
+            <Link href="/notifications" className="flex flex-col items-center justify-center rounded-2xl border border-gray-200 bg-gray-50 p-3 text-center text-sm font-medium text-gray-700">
               <BellRing className="mb-1 h-4 w-4 text-[#E60012]" />
               Alerts
             </Link>
@@ -111,7 +110,7 @@ export default function DashboardPage() {
         <div className="mt-3 grid gap-2 sm:grid-cols-3">
           {todayProspects.length > 0 ? (
             todayProspects.map((prospect) => (
-              <Link href="/followups" key={prospect.id} className="rounded-2xl border border-gray-200 bg-gray-50 p-3">
+              <Link href="/followups" key={String(prospect._id)} className="rounded-2xl border border-gray-200 bg-gray-50 p-3">
                 <p className="text-sm font-semibold text-gray-900">{prospect.name}</p>
                 <p className="mt-1 text-xs text-gray-500">{prospect.location}</p>
                 <p className="mt-2 flex items-center gap-1 text-xs text-[#E60012]">

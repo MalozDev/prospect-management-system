@@ -5,34 +5,39 @@ import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
+import { apiFetch } from "@/lib/api-client";
 
 export default function NewProspectPage() {
   const router = useRouter();
   const [form, setForm] = useState({ name: "", phone: "", location: "", address: "", expectedPurchaseDate: "" });
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const handleChange = (key: string, value: string) => {
     setForm((current) => ({ ...current, [key]: value }));
   };
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const saved = localStorage.getItem("mockProspects") || "[]";
-    const data = JSON.parse(saved);
-    data.unshift({
-      id: `P-${Date.now()}`,
-      name: form.name,
-      phone: form.phone,
-      location: form.location,
-      address: form.address,
-      expectedPurchaseDate: form.expectedPurchaseDate,
-      createdAt: new Date().toISOString().slice(0, 10),
-      status: "NEW",
-      assignedDse: "Nalu",
-      notes: "New prospect added today",
-    });
-    localStorage.setItem("mockProspects", JSON.stringify(data));
-    router.push("/prospects");
+    setError("");
+
+    if (!form.name.trim() || !form.phone.trim() || !form.location.trim() || !form.expectedPurchaseDate) {
+      setError("Please fill in all required fields.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await apiFetch("/api/prospects", {
+        method: "POST",
+        body: JSON.stringify(form),
+      });
+      router.push("/prospects");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to create prospect.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -40,6 +45,13 @@ export default function NewProspectPage() {
       <div className="mx-auto max-w-2xl rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
         <h1 className="text-2xl font-semibold text-gray-900">New Prospect</h1>
         <p className="mt-2 text-sm text-gray-500">Capture the prospect details quickly so follow-up is easy.</p>
+
+        {error && (
+          <div className="mt-4 rounded-xl bg-red-50 p-3 text-sm text-red-600 border border-red-100">
+            {error}
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="mt-6 space-y-4">
           <div>
             <label className="mb-2 block text-sm font-semibold text-gray-700">Full Name</label>
@@ -61,7 +73,9 @@ export default function NewProspectPage() {
             <label className="mb-2 block text-sm font-semibold text-gray-700">Follow-up Date</label>
             <Input value={form.expectedPurchaseDate} onChange={(event) => handleChange("expectedPurchaseDate", event.target.value)} type="date" />
           </div>
-          <Button type="submit" className="w-full">Save Prospect</Button>
+          <Button type="submit" className="w-full" disabled={loading}>
+            {loading ? "Saving..." : "Save Prospect"}
+          </Button>
         </form>
       </div>
     </main>

@@ -4,12 +4,24 @@ import { CalendarDays, ChartNoAxesCombined, Sparkles, Users } from "lucide-react
 import { useMemo, useState } from "react";
 
 import { StatusBadge } from "@/components/shared/StatusBadge";
-import type { Prospect } from "@/lib/mock-data";
+interface ProspectPreview {
+  _id?: unknown;
+  id?: string;
+  name: string;
+  phone: string;
+  location: string;
+  address?: string;
+  expectedPurchaseDate: string;
+  createdAt?: string;
+  status: string;
+  assignedDse: string;
+  notes?: string;
+}
 import { getTodayIso, getWeekStartIso, getCurrentMonth } from "@/lib/supervisor-utils";
 
 interface DseProspectPanelProps {
   dseName: string;
-  prospects: Prospect[];
+  prospects: ProspectPreview[];
   defaultExpanded?: boolean;
 }
 
@@ -94,7 +106,7 @@ export function DseProspectPanel({ dseName, prospects, defaultExpanded = false }
           <div className="mt-3 space-y-2">
             {visibleProspects.length > 0 ? (
               visibleProspects.map((prospect) => (
-                <div key={prospect.id} className="rounded-2xl border border-gray-200 bg-gray-50 p-3">
+                <div key={String(prospect._id ?? prospect.id ?? prospect.name)} className="rounded-2xl border border-gray-200 bg-gray-50 p-3">
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
                       <p className="truncate text-sm font-semibold text-gray-900">{prospect.name}</p>
@@ -114,9 +126,9 @@ export function DseProspectPanel({ dseName, prospects, defaultExpanded = false }
             <div className="mt-4 space-y-2">
               <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">All prospects</p>
               {prospects
-                .filter((p) => !todaysProspects.some((t) => t.id === p.id))
+                .filter((p) => !todaysProspects.some((t) => String(t._id ?? t.id) === String(p._id ?? p.id)))
                 .map((prospect) => (
-                  <div key={prospect.id} className="rounded-2xl border border-gray-200 bg-white p-3">
+                  <div key={String(prospect._id ?? prospect.id ?? prospect.name)} className="rounded-2xl border border-gray-200 bg-white p-3">
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
                         <p className="truncate text-sm font-semibold text-gray-900">{prospect.name}</p>

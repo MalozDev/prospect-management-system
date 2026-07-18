@@ -10,6 +10,7 @@ import Logo from "@/components/layout/Logo";
 import CugInput from "@/components/forms/CugInput";
 import PasswordInput from "@/components/forms/PasswordInput";
 import PrimaryButton from "@/components/forms/PrimaryButton";
+import { loginApi, setToken, setStoredApiUser } from "@/lib/api-client";
 import { saveProfile } from "@/utils/profile";
 
 export default function LoginPage() {
@@ -17,8 +18,9 @@ export default function LoginPage() {
   const [cug, setCug] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
@@ -26,90 +28,41 @@ export default function LoginPage() {
       setError("Please enter a valid 4-digit CUG number.");
       return;
     }
-
-    // Default Pre-configured users
-    if (cug === "8888") {
-      saveProfile({
-        name: "Grace Mulenga",
-        role: "Supervisor",
-        phone: "0978988888",
-        region: "Copperbelt",
-        cug: "0978988888",
-        avatarUrl: "",
-      });
-      window.dispatchEvent(new Event("profile-updated"));
-      router.push("/supervisor/dashboard");
+    if (!password || password.length < 6) {
+      setError("Please enter your password.");
       return;
     }
 
-    if (cug === "2288") {
-      saveProfile({
-        name: "Nalu Mwansa",
-        role: "Direct Sales Executive",
-        phone: "0978982288",
-        region: "Lusaka",
-        cug: "0978982288",
-        avatarUrl: "",
-      });
-      window.dispatchEvent(new Event("profile-updated"));
-      router.push("/dashboard");
-      return;
-    }
-
-    if (cug === "3344") {
-      saveProfile({
-        name: "Tebo Chanda",
-        role: "Direct Sales Executive",
-        phone: "0978983344",
-        region: "Kitwe",
-        cug: "0978983344",
-        avatarUrl: "",
-      });
-      window.dispatchEvent(new Event("profile-updated"));
-      router.push("/dashboard");
-      return;
-    }
-
-    // Check custom registered users in localStorage
+    setLoading(true);
     try {
-      const storedUsersRaw = localStorage.getItem("crm-registered-users");
-      if (storedUsersRaw) {
-        const users = JSON.parse(storedUsersRaw) as { cugSuffix: string; name: string; role: string; region?: string }[];
-        const matchedUser = users.find((u) => u.cugSuffix === cug);
-        if (matchedUser) {
-          saveProfile({
-            name: matchedUser.name,
-            role: matchedUser.role === "SUPERVISOR" ? "Supervisor" : "Direct Sales Executive",
-            phone: `097898${cug}`,
-            region: matchedUser.region || "Lusaka",
-            cug: `097898${cug}`,
-            avatarUrl: "",
-          });
-          window.dispatchEvent(new Event("profile-updated"));
-          
-          if (matchedUser.role === "SUPERVISOR") {
-            router.push("/supervisor/dashboard");
-          } else {
-            router.push("/dashboard");
-          }
-          return;
-        }
-      }
-    } catch (e) {
-      console.error("Failed to parse custom users", e);
-    }
+      const data = await loginApi(cug, password);
 
-    // Default fallback if not matched: treat as DSE with this CUG
-    saveProfile({
-      name: `User ${cug}`,
-      role: "Direct Sales Executive",
-      phone: `097898${cug}`,
-      region: "Lusaka",
-      cug: `097898${cug}`,
-      avatarUrl: "",
-    });
-    window.dispatchEvent(new Event("profile-updated"));
-    router.push("/dashboard");
+      // Store auth token
+      setToken(data.token);
+      setStoredApiUser(data.user);
+
+      // Also save profile for UI components that still use it
+      const roleLabel = data.user.role === "SUPERVISOR" ? "Supervisor" : "Direct Sales Executive";
+      saveProfile({
+        name: data.user.name,
+        role: roleLabel,
+        phone: `097898${data.user.cugSuffix}`,
+        region: data.user.region,
+        cug: `097898${data.user.cugSuffix}`,
+        avatarUrl: "",
+      });
+      window.dispatchEvent(new Event("profile-updated"));
+
+      if (data.user.role === "SUPERVISOR") {
+        router.push("/supervisor/dashboard");
+      } else {
+        router.push("/dashboard");
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Login failed. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -144,8 +97,8 @@ export default function LoginPage() {
           </Link>
         </div>
 
-        <PrimaryButton type="submit">
-          Login
+        <PrimaryButton type="submit" disabled={loading}>
+          {loading ? "Signing in..." : "Login"}
         </PrimaryButton>
 
         <p className="text-center text-sm text-gray-600">
@@ -160,12 +113,7 @@ export default function LoginPage() {
       </form>
 
       <div className="mt-6 rounded-2xl border border-dashed border-gray-200 bg-gray-50 p-4 text-xs text-gray-500">
-        <p className="font-semibold text-gray-700 mb-2">Test accounts (any password):</p>
-        <div className="space-y-1">
-          <p>• <span className="font-medium text-[#E60012]">Supervisor:</span> CUG suffix <strong className="text-gray-900">8888</strong> (Grace Mulenga)</p>
-          <p>• <span className="font-medium text-[#E60012]">DSE Nalu:</span> CUG suffix <strong className="text-gray-900">2288</strong> (Nalu Mwansa)</p>
-          <p>• <span className="font-medium text-[#E60012]">DSE Tebo:</span> CUG suffix <strong className="text-gray-900">3344</strong> (Tebo Chanda)</p>
-        </div>
+        <p className="font-semibold text-gray-700 mb-2">Info: Register first, then login with your CUG suffix and password.</p>
       </div>
     </AuthCard>
   );

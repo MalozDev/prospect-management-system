@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { PageShell } from "@/components/shared/PageShell";
+import { clearToken, getStoredApiUser, apiFetch } from "@/lib/api-client";
 import { DEFAULT_PROFILE, getProfileInitials, getStoredProfile, saveProfile, type ProfileInfo } from "@/utils/profile";
 
 export default function ProfilePage() {
@@ -27,12 +28,25 @@ export default function ProfilePage() {
     setProfile((current) => ({ ...current, [field]: value }));
   }
 
-  function handleSave() {
+  async function handleSave() {
     saveProfile(profile);
+    // Also update the backend if user is logged in with API
+    const apiUser = getStoredApiUser();
+    if (apiUser) {
+      try {
+        await apiFetch("/api/users/me", {
+          method: "PATCH",
+          body: JSON.stringify({ name: profile.name, region: profile.region }),
+        });
+      } catch {
+        // Silently fail — local save is enough
+      }
+    }
     window.dispatchEvent(new Event("profile-updated"));
   }
 
   function handleLogout() {
+    clearToken();
     localStorage.removeItem("crm-profile");
     router.push("/login");
   }

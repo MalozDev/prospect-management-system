@@ -1,14 +1,13 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { PageShell } from "@/components/shared/PageShell";
 import { DseProspectPanel } from "@/components/supervisor/DseProspectPanel";
 import { StatusFilterBar, type ProspectStatusFilter } from "@/components/supervisor/StatusFilterBar";
-import { prospects as mockProspects, type Prospect } from "@/lib/mock-data";
-import { DSE_TEAM } from "@/constants/dse-team";
-import { getStoredProspects, getTodayIso } from "@/lib/supervisor-utils";
+import { useApiData } from "@/lib/use-api-data";
+import type { IProspect } from "@/lib/models/Prospect";
 
-function matchesStatusFilter(prospect: Prospect, filter: ProspectStatusFilter, today: string) {
+function matchesStatusFilter(prospect: IProspect, filter: ProspectStatusFilter, today: string) {
   switch (filter) {
     case "TODAY":
       return prospect.createdAt === today;
@@ -26,24 +25,13 @@ function matchesStatusFilter(prospect: Prospect, filter: ProspectStatusFilter, t
 }
 
 export default function SupervisorProspectsPage() {
-  const [prospects, setProspects] = useState<Prospect[]>([]);
+  const { data } = useApiData<{ prospects: IProspect[] }>("/api/prospects", { prospects: [] });
   const [selectedDse, setSelectedDse] = useState("ALL");
   const [statusFilter, setStatusFilter] = useState<ProspectStatusFilter>("ALL");
 
-  useEffect(() => {
-    let active = true;
-    setTimeout(() => {
-      if (active) {
-        const stored = getStoredProspects();
-        setProspects([...stored, ...mockProspects]);
-      }
-    }, 0);
-    return () => {
-      active = false;
-    };
-  }, []);
+  const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
 
-  const today = getTodayIso();
+  const prospects = data.prospects;
 
   const filteredProspects = useMemo(() => {
     return prospects.filter((p) => {
@@ -68,7 +56,7 @@ export default function SupervisorProspectsPage() {
   const dseGroups = useMemo(() => {
     const names =
       selectedDse === "ALL"
-        ? Array.from(new Set([...DSE_TEAM, ...prospects.map((p) => p.assignedDse)])).filter(Boolean)
+        ? Array.from(new Set([...prospects.map((p) => p.assignedDse)])).filter(Boolean)
         : [selectedDse];
 
     return names
@@ -81,66 +69,53 @@ export default function SupervisorProspectsPage() {
 
   return (
     <PageShell title="Team Prospects" description="Filter and review ODU prospect performance per DSE.">
-      {/* Status filter — single compact row on mobile */}
-      <div className="mb-4 rounded-2xl border border-gray-200 bg-white p-3 shadow-sm">
-        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">Filter by status</p>
-        <StatusFilterBar value={statusFilter} onChange={setStatusFilter} counts={filterCounts} />
-      </div>
+      <StatusFilterBar
+        counts={filterCounts}
+        value={statusFilter}
+        onChange={setStatusFilter}
+      />
 
-      {/* DSE filter */}
-      <div className="mb-4 rounded-2xl border border-gray-200 bg-white p-3 shadow-sm">
-        <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500">
-          Filter by DSE
-        </label>
-        <select
-          value={selectedDse}
-          onChange={(e) => setSelectedDse(e.target.value)}
-          className="w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:border-[#E60012]"
-        >
-          <option value="ALL">All DSEs ({DSE_TEAM.length} on board)</option>
-          {Array.from(new Set([...DSE_TEAM, ...prospects.map((p) => p.assignedDse)]))
-            .filter(Boolean)
-            .map((name) => (
-              <option key={name} value={name}>
-                {name}
-              </option>
-            ))}
-        </select>
-      </div>
-
-      {/* Summary strip */}
-      <div className="mb-4 flex items-center justify-between rounded-2xl border border-gray-200 bg-[#fff1f1] px-4 py-3">
-        <p className="text-sm font-semibold text-gray-900">
-          {filteredProspects.length} prospect{filteredProspects.length !== 1 ? "s" : ""} matching filters
-        </p>
-        {statusFilter !== "ALL" && (
+      <div className="mt-4 flex items-center gap-3">
+        <label className="text-xs font-semibold uppercase tracking-wider text-gray-500">DSE</label>
+        <div className="flex flex-wrap gap-2">
           <button
             type="button"
-            onClick={() => setStatusFilter("ALL")}
-            className="text-xs font-semibold text-[#E60012]"
+            onClick={() => setSelectedDse("ALL")}
+            className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+              selectedDse === "ALL" ? "bg-[#E60012] text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+            }`}
           >
-            Clear status
+            All
           </button>
-        )}
-      </div>
-
-      {/* DSE groups — DSE account layout on demand */}
-      {dseGroups.length > 0 ? (
-        <div className="space-y-3">
-          {dseGroups.map((group, index) => (
-            <DseProspectPanel
-              key={group.name}
-              dseName={group.name}
-              prospects={group.prospects}
-              defaultExpanded={selectedDse !== "ALL" || index === 0}
-            />
+          {Array.from(new Set(prospects.map((p) => p.assignedDse))).filter(Boolean).map((dse) => (
+            <button
+              key={dse}
+              type="button"
+              onClick={() => setSelectedDse(dse)}
+              className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+                selectedDse === dse ? "bg-[#E60012] text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+              }`}
+            >
+              {dse}
+            </button>
           ))}
         </div>
-      ) : (
-        <div className="rounded-3xl border border-dashed border-gray-200 bg-white p-10 text-center text-sm text-gray-500">
-          No prospects match the selected filters.
-        </div>
-      )}
+      </div>
+
+      <div className="mt-4">
+        <p className="text-sm text-gray-500 mb-4">{filteredProspects.length} prospect{filteredProspects.length !== 1 ? "s" : ""} match{filteredProspects.length === 1 ? "es" : ""} the current filters.</p>
+      </div>
+
+      <div className="space-y-6">
+        {dseGroups.map((group) => (
+          <DseProspectPanel key={group.name} dseName={group.name} prospects={group.prospects} />
+        ))}
+        {dseGroups.length === 0 && (
+          <div className="rounded-3xl border border-dashed border-gray-200 bg-white p-8 text-center text-sm text-gray-500">
+            No prospects match the current filters.
+          </div>
+        )}
+      </div>
     </PageShell>
   );
 }

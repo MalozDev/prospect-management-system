@@ -1,8 +1,16 @@
 import { CheckCircle2, Clock, PhoneCall, MessageCircle, UserPlus, RefreshCw } from "lucide-react";
-import type { ActivityItem } from "@/lib/mock-data";
+
+interface ActivityPreview {
+  _id?: unknown;
+  id?: string;
+  title: string;
+  detail: string;
+  time: string;
+  type: string;
+}
 
 interface ActivityTimelineProps {
-  activities: ActivityItem[];
+  activities: ActivityPreview[];
   compact?: boolean;
 }
 
@@ -24,7 +32,7 @@ export function ActivityTimeline({ activities, compact = false }: ActivityTimeli
 
         return (
           <div
-            key={activity.id}
+            key={String(activity._id ?? activity.id ?? activity.title)}
             className={
               compact
                 ? "rounded-2xl border border-gray-100 bg-gray-50 p-3"
