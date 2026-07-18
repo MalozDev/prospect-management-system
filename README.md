@@ -50,20 +50,7 @@ MONGODB_URI=mongodb://localhost:27017/prospect-management
 JWT_SECRET=your-random-secret-here-change-this
 ```
 
-### 3. Seed the database (initial users)
-
-```bash
-npm run seed
-```
-
-This creates:
-- **3 Supervisors**: Grace Mulenga (8888), Peter Banda (7777), Abigail Tembo (6666)
-- **5 DSEs**: Nalu Mwansa (2288), Tebo Chanda (3344), Moses Phiri (1122), Chanda Bwalya (5566), Mutale Kangwa (9900)
-- **Sample prospects** with linked follow-ups
-- **Sample sales** records
-- **Password for all accounts**: `password123`
-
-### 4. Start development server
+### 3. Start development server
 
 ```bash
 npm run dev
@@ -71,18 +58,12 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000)
 
-### 5. Login
+### 4. Register
 
-| Role | Name | CUG Suffix | Password |
-|------|------|-----------|----------|
-| Supervisor | Grace Mulenga | 8888 | password123 |
-| Supervisor | Peter Banda | 7777 | password123 |
-| Supervisor | Abigail Tembo | 6666 | password123 |
-| DSE | Nalu Mwansa | 2288 | password123 |
-| DSE | Tebo Chanda | 3344 | password123 |
-| DSE | Moses Phiri | 1122 | password123 |
-| DSE | Chanda Bwalya | 5566 | password123 |
-| DSE | Mutale Kangwa | 9900 | password123 |
+1. Go to `/register` and create an account
+2. Choose your role (DSE or Supervisor)
+3. DSEs must select a supervisor (must exist in the database first)
+4. Login with your CUG suffix and password
 
 ## Production Deployment
 
@@ -94,12 +75,7 @@ Open [http://localhost:3000](http://localhost:3000)
    - `MONGODB_URI` — Your MongoDB Atlas connection string
    - `JWT_SECRET` — A random secret string (use: `openssl rand -hex 32`)
 4. Deploy
-5. After deployment, run the seed script to populate initial data:
-   ```bash
-   # Install Vercel CLI and run the seed via a local tunnel, or
-   # Create and run a one-off Node.js script that connects to your Atlas cluster
-   npx tsx scripts/seed.ts
-   ```
+5. Register the first supervisor account via `/register`, then DSEs can register with that supervisor assigned
 
 ### Deploy to other platforms (Railway, Render, Fly.io)
 
@@ -157,6 +133,4 @@ openssl rand -hex 32
 │   ├── mongodb.ts      # Database connection
 │   ├── api-client.ts   # Client-side API helper
 │   └── use-api-data.ts # Data fetching hook
-└── scripts/
-    └── seed.ts         # Database seed script
 ```

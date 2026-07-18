@@ -8,11 +8,11 @@ export interface ProfileInfo {
 }
 
 export const DEFAULT_PROFILE: ProfileInfo = {
-  name: "Nalu Mwansa",
-  role: "Direct Sales Executive",
-  phone: "0978982288",
-  region: "Lusaka",
-  cug: "0978982288",
+  name: "",
+  role: "",
+  phone: "",
+  region: "",
+  cug: "",
   avatarUrl: "",
 };
 
