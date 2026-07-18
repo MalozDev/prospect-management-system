@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Bell, LayoutDashboard, LogOut, Settings, ShoppingCart, UserRound, Users2 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 import { clearToken } from "@/lib/api-client";
 import { getProfileInitials, getStoredProfile, type ProfileInfo, DEFAULT_PROFILE } from "@/utils/profile";
@@ -26,6 +26,7 @@ const supervisorItems = [
 
 export function Sidebar() {
   const router = useRouter();
+  const pathname = usePathname();
   const [profile, setProfile] = useState<ProfileInfo>(DEFAULT_PROFILE);
 
   useEffect(() => {
@@ -77,12 +78,26 @@ export function Sidebar() {
       </div>
 
       <nav className="space-y-2">
-        {items.map(({ href, label, icon: Icon }) => (
-          <Link key={href} href={href} className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium text-gray-600 transition hover:bg-[#fff1f1] hover:text-[#E60012]">
-            <Icon className="h-4 w-4" />
-            <span>{label}</span>
-          </Link>
-        ))}
+        {items.map(({ href, label, icon: Icon }) => {
+          const isActive = pathname.startsWith(href);
+          return (
+            <Link
+              key={href}
+              href={href}
+              className={`flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium transition ${
+                isActive
+                  ? "bg-[#fff1f1] text-[#E60012] font-semibold"
+                  : "text-gray-600 hover:bg-[#fff8f8] hover:text-[#E60012]"
+              }`}
+            >
+              <Icon className={`h-4 w-4 ${isActive ? "text-[#E60012]" : ""}`} />
+              <span>{label}</span>
+              {isActive && (
+                <span className="ml-auto h-2 w-2 rounded-full bg-[#E60012]" />
+              )}
+            </Link>
+          );
+        })}
       </nav>
 
       <div className="mt-auto rounded-2xl border border-gray-200 bg-[#fff8f8] p-4">
