@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 import { MongoMemoryServer } from "mongodb-memory-server";
 
-const MONGODB_URI = process.env.MONGODB_URI ?? "mongodb://localhost:27017/prospect-management";
+const MONGODB_URI = process.env.MONGODB_URI ?? "";
 
 interface MongooseCache {
   conn: typeof mongoose | null;
@@ -25,13 +25,10 @@ async function startInMemoryServer(): Promise<string> {
     return cached.memServer.getUri();
   }
 
-  console.log("🔄 Starting in-memory MongoDB (no external MongoDB detected)...");
+  console.log("🔄 Starting in-memory MongoDB (no MONGODB_URI configured)...");
   console.log("   📥 This may download MongoDB binaries on first run (takes ~30-60s)");
   cached.memServer = await MongoMemoryServer.create({
-    instance: {
-      dbPath: ".mongodb-data",
-      storageEngine: "wiredTiger",
-    },
+    instance: { dbPath: ".mongodb-data", storageEngine: "wiredTiger" },
   });
 
   const uri = cached.memServer.getUri();
@@ -45,19 +42,25 @@ export async function connectToDatabase(): Promise<typeof mongoose> {
   }
 
   if (!cached.promise) {
-    // First, try connecting to the configured/external MongoDB
-    cached.promise = mongoose.connect(MONGODB_URI, {
-      bufferCommands: false,
-      serverSelectionTimeoutMS: 5000,
-      connectTimeoutMS: 10000,
-    }).catch(async (err: unknown) => {
-      // External MongoDB unavailable — fall back to in-memory
-      console.warn("⚠️ External MongoDB unavailable:", err instanceof Error ? err.message : err);
-      const memUri = await startInMemoryServer();
-      return mongoose.connect(memUri, {
+    if (MONGODB_URI.startsWith("mongodb+srv://")) {
+      // Atlas / remote — connect with longer timeout, no fallback
+      cached.promise = mongoose.connect(MONGODB_URI, {
         bufferCommands: false,
+        serverSelectionTimeoutMS: 10000,
+        connectTimeoutMS: 15000,
       });
-    });
+    } else if (MONGODB_URI.startsWith("mongodb://")) {
+      // Local MongoDB — connect with shorter timeout, no fallback
+      cached.promise = mongoose.connect(MONGODB_URI, {
+        bufferCommands: false,
+        serverSelectionTimeoutMS: 5000,
+        connectTimeoutMS: 10000,
+      });
+    } else {
+      // No URI configured — use in-memory server for development
+      const memUri = await startInMemoryServer();
+      cached.promise = mongoose.connect(memUri, { bufferCommands: false });
+    }
   }
 
   try {
@@ -70,7 +73,7 @@ export async function connectToDatabase(): Promise<typeof mongoose> {
   return cached.conn;
 }
 
-// Graceful shutdown for the in-memory server
+// Graceful shutdown for in-memory server (only used in dev with no MONGODB_URI)
 process.on("SIGINT", async () => {
   if (cached.memServer) {
     await cached.memServer.stop();
