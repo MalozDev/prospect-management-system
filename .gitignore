@@ -41,6 +41,9 @@ yarn-error.log*
 !.env.example
 !.env.local.example
 
+# mongodb-memory-server persisted data
+.mongodb-data/
+
 # vercel
 .vercel
 

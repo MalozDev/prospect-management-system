@@ -19,9 +19,7 @@ import { useApiData } from "@/lib/use-api-data";
 import type { IProspect } from "@/lib/models/Prospect";
 import type { ISale } from "@/lib/models/Sale";
 import type { IActivity } from "@/lib/models/Activity";
-
-const COMMISSION_PER_SALE = 200;
-const MONTHLY_SALES_TARGET = 25;
+import { COMMISSION_PER_SALE, DAILY_SALES_TARGET, WEEKLY_SALES_TARGET, MONTHLY_SALES_TARGET, TEAM_TARGET } from "@/lib/supervisor-utils";
 
 export default function SupervisorDashboardPage() {
   const [expandedDse, setExpandedDse] = useState<string | null>(null);
@@ -60,11 +58,11 @@ export default function SupervisorDashboardPage() {
           todaySales: todaySalesCount,
           weekSales,
           monthSales,
-          dailyRemaining: Math.max(0, 1 - todaySalesCount),
-          weeklyRemaining: Math.max(0, 6 - weekSales),
+          dailyRemaining: Math.max(0, DAILY_SALES_TARGET - todaySalesCount),
+          weeklyRemaining: Math.max(0, WEEKLY_SALES_TARGET - weekSales),
           monthlyRemaining: Math.max(0, MONTHLY_SALES_TARGET - monthSales),
-          dailyProgress: Math.min(100, Math.round((todaySalesCount / 1) * 100)),
-          weeklyProgress: Math.min(100, Math.round((weekSales / 6) * 100)),
+          dailyProgress: Math.min(100, Math.round((todaySalesCount / DAILY_SALES_TARGET) * 100)),
+          weeklyProgress: Math.min(100, Math.round((weekSales / WEEKLY_SALES_TARGET) * 100)),
           monthlyProgress: Math.min(100, Math.round((monthSales / MONTHLY_SALES_TARGET) * 100)),
           revenue: dseSales.length * COMMISSION_PER_SALE,
         };
@@ -94,7 +92,7 @@ export default function SupervisorDashboardPage() {
     const totalRevenue = salesData.sales.length * COMMISSION_PER_SALE;
     const currentMonth = today.slice(0, 7);
     const teamMonthSales = salesData.sales.filter((s) => s.date.slice(0, 7) === currentMonth).length;
-    const teamTarget = dseStats.length * MONTHLY_SALES_TARGET;
+    const teamTarget = TEAM_TARGET;
     const teamProgress = teamTarget > 0 ? Math.min(100, Math.round((teamMonthSales / teamTarget) * 100)) : 0;
 
     return { totalDse, todayProspects, todaySales: todaySalesCount, totalRevenue, teamMonthSales, teamTarget, teamProgress };

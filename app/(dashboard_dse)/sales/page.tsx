@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { ArrowDown, ArrowUp, BarChart3, TrendingUp } from "lucide-react";
 import { PageShell } from "@/components/shared/PageShell";
 import { StatCard } from "@/components/shared/StatCard";
 import { useApiData } from "@/lib/use-api-data";
@@ -17,9 +18,21 @@ function monthLabel(monthKey: string) {
   });
 }
 
+function shortMonth(monthKey: string) {
+  const [year, month] = monthKey.split("-");
+  return new Date(Number(year), Number(month) - 1, 1).toLocaleString("en-US", {
+    month: "short",
+  });
+}
+
 export default function SalesPage() {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
   const currentMonth = today.slice(0, 7);
+  const previousMonth = useMemo(() => {
+    const [y, m] = currentMonth.split("-").map(Number);
+    const prev = new Date(y, m - 2, 1);
+    return `${prev.getFullYear()}-${String(prev.getMonth() + 1).padStart(2, "0")}`;
+  }, [currentMonth]);
   const weekStart = useMemo(() => {
     const ws = new Date();
     ws.setDate(ws.getDate() - 6);
@@ -41,6 +54,25 @@ export default function SalesPage() {
   const weekSales = useMemo(() => sales.filter((sale) => sale.date >= weekStart && sale.date <= today), [sales, weekStart, today]);
   const monthSales = useMemo(() => sales.filter((sale) => sale.date.slice(0, 7) === currentMonth), [sales, currentMonth]);
   const selectedMonthSales = useMemo(() => sales.filter((sale) => sale.date.slice(0, 7) === selectedMonth), [sales, selectedMonth]);
+
+  // Month-over-month
+  const prevMonthCount = useMemo(
+    () => sales.filter((s) => s.date.slice(0, 7) === previousMonth).length,
+    [sales, previousMonth]
+  );
+  const monthChange = monthSales.length - prevMonthCount;
+
+  // Monthly aggregation
+  const monthlyStats = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const s of sales) {
+      const m = s.date.slice(0, 7);
+      map.set(m, (map.get(m) ?? 0) + 1);
+    }
+    return Array.from(map.entries())
+      .sort((a, b) => b[0].localeCompare(a[0]))
+      .map(([monthKey, count]) => ({ monthKey, count }));
+  }, [sales]);
 
   const commissionThisMonth = monthSales.length * COMMISSION_PER_SALE;
   const targetProgress = Math.min(100, Math.round((monthSales.length / MONTHLY_TARGET) * 100));
@@ -124,24 +156,112 @@ export default function SalesPage() {
         </div>
       </div>
 
+      {/* ── Month-over-Month ── */}
       <div className="mt-4 rounded-3xl border border-gray-200 bg-white p-4 shadow-sm sm:mt-6 sm:p-6">
-        <div className="mb-4 flex flex-col gap-3 sm:mb-6 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h2 className="text-lg font-semibold text-gray-900">Sales history</h2>
-            <p className="text-sm text-gray-500">Open this when you want to review specific month activity.</p>
+        <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-2">
+            <TrendingUp className="h-5 w-5 text-gray-400" />
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900">Month-over-Month</h2>
+              <p className="text-sm text-gray-500">{monthLabel(currentMonth)} vs {monthLabel(previousMonth)}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="text-right">
+              <p className="text-xs text-gray-500">This month</p>
+              <p className="text-xl font-bold text-gray-900">{monthSales.length}</p>
+            </div>
+            <div className="flex items-center gap-1 rounded-full bg-gray-100 px-3 py-1 text-sm font-semibold">
+              {monthChange > 0 ? (
+                <ArrowUp className="h-4 w-4 text-emerald-600" />
+              ) : monthChange < 0 ? (
+                <ArrowDown className="h-4 w-4 text-red-600" />
+              ) : null}
+              <span className={monthChange > 0 ? "text-emerald-600" : monthChange < 0 ? "text-red-600" : "text-gray-600"}>
+                {monthChange > 0 ? "+" : ""}{monthChange}
+              </span>
+            </div>
+            <div className="text-right">
+              <p className="text-xs text-gray-500">Previous</p>
+              <p className="text-xl font-bold text-gray-500">{prevMonthCount}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Comparison bars */}
+        <div className="mx-auto flex w-44 items-end gap-6">
+          <div className="flex flex-1 flex-col items-center gap-2">
+            <div className="flex h-28 w-full items-end justify-center rounded-xl bg-gray-100">
+              <div
+                className="h-3/5 w-3/5 rounded-xl bg-[#E60012] transition-all"
+                style={{
+                  height: `${Math.min(100, (monthSales.length / Math.max(monthSales.length, prevMonthCount, 1)) * 100)}%`,
+                }}
+              />
+            </div>
+            <p className="text-[10px] font-medium text-gray-500">Current</p>
+          </div>
+          <div className="flex flex-1 flex-col items-center gap-2">
+            <div className="flex h-28 w-full items-end justify-center rounded-xl bg-gray-100">
+              <div
+                className="h-3/5 w-3/5 rounded-xl bg-gray-400 transition-all"
+                style={{
+                  height: `${Math.min(100, (prevMonthCount / Math.max(monthSales.length, prevMonthCount, 1)) * 100)}%`,
+                }}
+              />
+            </div>
+            <p className="text-[10px] font-medium text-gray-500">Previous</p>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Monthly Bar Chart ── */}
+      <div className="mt-4 rounded-3xl border border-gray-200 bg-white p-4 shadow-sm sm:mt-6 sm:p-6">
+        <div className="mb-4 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <BarChart3 className="h-5 w-5 text-gray-400" />
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900">Sales History</h2>
+              <p className="text-sm text-gray-500">Monthly breakdown</p>
+            </div>
           </div>
           <button
             type="button"
-            onClick={() => setShowHistory((value) => !value)}
+            onClick={() => setShowHistory(!showHistory)}
             className="rounded-full border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition hover:border-[#E60012] hover:text-[#E60012]"
           >
-            {showHistory ? "Hide history" : "View history"}
+            {showHistory ? "Hide" : "View details"}
           </button>
+        </div>
+
+        {/* Bar chart */}
+        <div className="flex items-end gap-2 overflow-x-auto pb-2 sm:gap-3">
+          {monthlyStats.map(({ monthKey, count }) => {
+            const maxCount = Math.max(...monthlyStats.map((m) => m.count), 1);
+            return (
+              <div
+                key={monthKey}
+                className="flex shrink-0 flex-col items-center gap-1.5"
+                title={`${monthLabel(monthKey)}: ${count} sales`}
+              >
+                <p className="text-xs font-semibold text-gray-900">{count}</p>
+                <div className="relative flex h-28 w-8 items-end rounded-lg bg-gray-100 sm:w-10">
+                  <div
+                    className={`w-full rounded-lg transition-all ${
+                      count === maxCount ? "bg-[#E60012]" : count > 0 ? "bg-[#E60012]/60" : "bg-gray-200"
+                    }`}
+                    style={{ height: `${(count / maxCount) * 100}%` }}
+                  />
+                </div>
+                <p className="text-[10px] font-medium text-gray-500">{shortMonth(monthKey)}</p>
+              </div>
+            );
+          })}
         </div>
 
         {showHistory && (
           <>
-            <div className="mb-4 max-w-xs">
+            <div className="mb-4 mt-6 max-w-xs">
               <label className="text-sm font-medium text-gray-700">Select month</label>
               <select
                 value={selectedMonth}
@@ -156,7 +276,7 @@ export default function SalesPage() {
               </select>
             </div>
 
-            <div className="overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-sm">
+            <div className="overflow-hidden rounded-3xl border border-gray-200 shadow-sm">
               <table className="min-w-full divide-y divide-gray-200 text-sm">
                 <thead className="bg-gray-50">
                   <tr>

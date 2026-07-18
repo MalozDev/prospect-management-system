@@ -6,11 +6,10 @@ import { useMemo } from "react";
 
 import { PageShell } from "@/components/shared/PageShell";
 import { useApiData } from "@/lib/use-api-data";
+import { DAILY_SALES_TARGET, WEEKLY_SALES_TARGET, MONTHLY_SALES_TARGET } from "@/lib/supervisor-utils";
 import type { IProspect } from "@/lib/models/Prospect";
 import type { ISale } from "@/lib/models/Sale";
 import type { IFollowUp } from "@/lib/models/FollowUp";
-
-const MONTHLY_TARGET = 25;
 
 export default function DashboardPage() {
   const { data: prospectsData } = useApiData<{ prospects: IProspect[] }>("/api/prospects", { prospects: [] });
@@ -18,6 +17,12 @@ export default function DashboardPage() {
   const { data: followUpsData } = useApiData<{ followUps: IFollowUp[] }>("/api/followups", { followUps: [] });
 
   const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
+  const currentMonth = today.slice(0, 7);
+  const weekStart = useMemo(() => {
+    const ws = new Date();
+    ws.setDate(ws.getDate() - 6);
+    return ws.toISOString().slice(0, 10);
+  }, []);
 
   const todayProspects = useMemo(
     () => prospectsData.prospects.filter((p) => p.expectedPurchaseDate === today).slice(0, 6),
@@ -34,18 +39,54 @@ export default function DashboardPage() {
     [followUpsData.followUps]
   );
 
-  // For monthly target, filter sales by current month
-  const currentMonth = today.slice(0, 7);
+  // Sales stats
+  const salesToday = useMemo(
+    () => salesData.sales.filter((s) => s.date === today).length,
+    [salesData.sales, today]
+  );
+  const salesThisWeek = useMemo(
+    () => salesData.sales.filter((s) => s.date >= weekStart && s.date <= today).length,
+    [salesData.sales, weekStart, today]
+  );
   const salesThisMonth = useMemo(
     () => salesData.sales.filter((s) => s.date.slice(0, 7) === currentMonth).length,
     [salesData.sales, currentMonth]
   );
 
-  const targetProgress = Math.min(100, Math.round((salesThisMonth / MONTHLY_TARGET) * 100));
+  const targetProgress = Math.min(100, Math.round((salesThisMonth / MONTHLY_SALES_TARGET) * 100));
+
+  // Dynamic insights based on actual performance
+  const insight = useMemo(() => {
+    const dailyRemaining = Math.max(0, DAILY_SALES_TARGET - salesToday);
+    const weeklyRemaining = Math.max(0, WEEKLY_SALES_TARGET - salesThisWeek);
+    const monthlyRemaining = Math.max(0, MONTHLY_SALES_TARGET - salesThisMonth);
+
+    if (salesToday >= DAILY_SALES_TARGET) {
+      return { text: `Daily target met! ${salesToday} sold today.`, color: "text-emerald-600" };
+    }
+    if (salesToday === 1) {
+      return { text: `1 sale today — ${dailyRemaining} more to hit daily target of ${DAILY_SALES_TARGET}.`, color: "text-amber-600" };
+    }
+    if (salesToday === 0 && salesThisWeek > 0) {
+      return { text: `${salesThisWeek} sales this week — push for ${dailyRemaining > 0 ? `${dailyRemaining} more today` : "more"}.`, color: "text-gray-600" };
+    }
+    if (salesThisMonth === 0) {
+      return { text: "No sales yet this month — let's get started!", color: "text-gray-500" };
+    }
+    if (weeklyRemaining <= 3 && salesThisWeek > 0) {
+      return { text: `Only ${weeklyRemaining} away from weekly target of ${WEEKLY_SALES_TARGET}!`, color: "text-emerald-600" };
+    }
+    if (monthlyRemaining > 0) {
+      return { text: `${salesThisMonth} of ${MONTHLY_SALES_TARGET} this month — ${monthlyRemaining} remaining.`, color: "text-gray-600" };
+    }
+    return { text: `${salesThisMonth} of ${MONTHLY_SALES_TARGET} this month. Keep going!`, color: "text-gray-600" };
+  }, [salesToday, salesThisWeek, salesThisMonth]);
+
   const getRingColor = (amount: number) => {
-    if (amount >= 19) return "#16a34a";
-    if (amount >= 13) return "#fb923c";
-    if (amount >= 7) return "#facc15";
+    const pct = MONTHLY_SALES_TARGET > 0 ? (amount / MONTHLY_SALES_TARGET) * 100 : 0;
+    if (pct >= 75) return "#16a34a";
+    if (pct >= 50) return "#fb923c";
+    if (pct >= 25) return "#facc15";
     return "#dc2626";
   };
   const ringStyle = {
@@ -67,10 +108,11 @@ export default function DashboardPage() {
                 <Target className="h-4 w-4 text-[#E60012]" />
                 <p className="text-sm font-semibold text-gray-900">Monthly target</p>
               </div>
-              <p className="mt-1 text-xs text-gray-500">Good pace for this month</p>
+              <p className={`mt-1 text-xs font-medium ${insight.color}`}>{insight.text}</p>
               <div className="mt-2 flex flex-wrap gap-2">
-                <span className="rounded-full bg-white px-2 py-1 text-[11px] text-gray-600">Today {todayFollowUps}</span>
-                <span className="rounded-full bg-white px-2 py-1 text-[11px] text-gray-600">Sales {salesThisMonth}</span>
+                <span className="rounded-full bg-white px-2 py-1 text-[11px] text-gray-600">Today: {salesToday}/{DAILY_SALES_TARGET}</span>
+                <span className="rounded-full bg-white px-2 py-1 text-[11px] text-gray-600">Week: {salesThisWeek}/{WEEKLY_SALES_TARGET}</span>
+                <span className="rounded-full bg-white px-2 py-1 text-[11px] text-gray-600">Month: {salesThisMonth}/{MONTHLY_SALES_TARGET}</span>
               </div>
             </div>
           </div>

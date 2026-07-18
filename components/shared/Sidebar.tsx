@@ -1,12 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { Bell, LayoutDashboard, LogOut, Settings, ShoppingCart, UserRound, Users2 } from "lucide-react";
+import { Bell, LayoutDashboard, Settings, ShoppingCart, UserRound, Users2 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 
-import { clearToken } from "@/lib/api-client";
-import { getProfileInitials, getStoredProfile, type ProfileInfo, DEFAULT_PROFILE } from "@/utils/profile";
+import { UserDropdown } from "@/components/shared/UserDropdown";
+import { getStoredProfile, type ProfileInfo, DEFAULT_PROFILE } from "@/utils/profile";
 
 const dseItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -25,7 +25,6 @@ const supervisorItems = [
 ];
 
 export function Sidebar() {
-  const router = useRouter();
   const pathname = usePathname();
   const [profile, setProfile] = useState<ProfileInfo>(DEFAULT_PROFILE);
 
@@ -48,13 +47,6 @@ export function Sidebar() {
     };
   }, []);
 
-  const handleLogout = () => {
-    clearToken();
-    localStorage.removeItem("crm-profile");
-    router.push("/login");
-  };
-
-  const initials = getProfileInitials(profile.name);
   const isSupervisor = profile.role.toLowerCase().includes("supervisor");
   const items = isSupervisor ? supervisorItems : dseItems;
 
@@ -67,14 +59,8 @@ export function Sidebar() {
         </p>
       </div>
 
-      <div className="mb-6 flex items-center gap-3 rounded-2xl border border-gray-200 bg-[#fff8f8] p-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#E60012] text-sm font-semibold text-white">
-          {initials}
-        </div>
-        <div>
-          <p className="text-sm font-semibold text-gray-900">{profile.name}</p>
-          <p className="text-xs text-gray-500">{profile.role}</p>
-        </div>
+      <div className="mb-6">
+        <UserDropdown />
       </div>
 
       <nav className="space-y-2">
@@ -105,13 +91,6 @@ export function Sidebar() {
         <p className="mt-1 text-sm text-gray-500">
           {isSupervisor ? "Contact IT support helpdesk." : "Contact your supervisor for help."}
         </p>
-        <button 
-          onClick={handleLogout}
-          className="mt-3 inline-flex items-center gap-2 rounded-lg bg-[#E60012] px-3 py-2 text-sm font-medium text-white hover:bg-red-700 w-full justify-center"
-        >
-          <LogOut className="h-4 w-4" />
-          Logout
-        </button>
       </div>
     </aside>
   );

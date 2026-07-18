@@ -9,7 +9,6 @@ import Logo from "@/components/layout/Logo";
 
 import CugInput from "@/components/forms/CugInput";
 import PasswordInput from "@/components/forms/PasswordInput";
-import PrimaryButton from "@/components/forms/PrimaryButton";
 import { loginApi, setToken, setStoredApiUser } from "@/lib/api-client";
 import { saveProfile } from "@/utils/profile";
 
@@ -77,12 +76,6 @@ export default function LoginPage() {
         </p>
       </div>
 
-      {error && (
-        <div className="mb-4 rounded-xl bg-red-50 p-3 text-sm text-red-600 border border-red-100">
-          {error}
-        </div>
-      )}
-
       <form onSubmit={handleSubmit} className="space-y-5">
         <CugInput value={cug} onChange={setCug} />
 
@@ -97,9 +90,26 @@ export default function LoginPage() {
           </Link>
         </div>
 
-        <PrimaryButton type="submit" disabled={loading}>
-          {loading ? "Signing in..." : "Login"}
-        </PrimaryButton>
+        <button
+          type="submit"
+          disabled={loading}
+          className={`h-12 w-full rounded-xl font-medium text-white transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 ${
+            error
+              ? "bg-red-600 hover:bg-red-700"
+              : "bg-[#E60012] hover:bg-red-700"
+          }`}
+        >
+          {loading ? (
+            <>
+              <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+              Signing in...
+            </>
+          ) : error ? (
+            <span className="text-sm">{error}</span>
+          ) : (
+            "Login"
+          )}
+        </button>
 
         <p className="text-center text-sm text-gray-600">
           Don&apos;t have an account?{" "}

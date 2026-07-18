@@ -1,11 +1,13 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { PageShell } from "@/components/shared/PageShell";
-import { apiFetch, getStoredApiUser } from "@/lib/api-client";
+import { clearToken, apiFetch, getStoredApiUser } from "@/lib/api-client";
 import { DEFAULT_PROFILE, getStoredProfile, saveProfile, type ProfileInfo } from "@/utils/profile";
 
 export default function SupervisorSettingsPage() {
+  const router = useRouter();
   const [profile, setProfile] = useState<ProfileInfo>(DEFAULT_PROFILE);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -46,6 +48,12 @@ export default function SupervisorSettingsPage() {
     setSaved(true);
     window.dispatchEvent(new Event("profile-updated"));
     setTimeout(() => setSaved(false), 2000);
+  }
+
+  function handleLogout() {
+    clearToken();
+    localStorage.removeItem("crm-profile");
+    router.push("/login");
   }
 
   return (
@@ -108,6 +116,18 @@ export default function SupervisorSettingsPage() {
         <div className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
           <h3 className="font-semibold text-gray-900">About App</h3>
           <p className="mt-1 text-sm text-gray-500">Airtel Prospect Manager v1.0.0 (Supervisor Console)</p>
+        </div>
+
+        <div className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
+          <h3 className="font-semibold text-gray-900">Account</h3>
+          <p className="mt-1 text-sm text-gray-500">Sign out of your account.</p>
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="mt-3 rounded-full border border-red-200 bg-red-50 px-4 py-2 text-sm font-medium text-red-600 transition hover:bg-red-100"
+          >
+            Logout
+          </button>
         </div>
       </div>
     </PageShell>
