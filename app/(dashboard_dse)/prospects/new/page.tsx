@@ -74,7 +74,14 @@ export default function NewProspectPage() {
             <Input value={form.expectedPurchaseDate} onChange={(event) => handleChange("expectedPurchaseDate", event.target.value)} type="date" />
           </div>
           <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? "Saving..." : "Save Prospect"}
+            {loading ? (
+              <span className="flex items-center justify-center gap-2">
+                <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                Saving...
+              </span>
+            ) : (
+              "Save Prospect"
+            )}
           </Button>
         </form>
       </div>

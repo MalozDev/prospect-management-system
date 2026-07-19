@@ -84,12 +84,13 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Create notifications (avoid duplicates by checking last notification time)
+    // Create notifications (avoid duplicates by checking a hash of the content)
     for (const notif of notificationsToCreate) {
+      const messageHash = notif.message.substring(0, 80);
       const existing = await Notification.findOne({
         userId: notif.userId,
         title: notif.title,
-        message: { $regex: notif.message.split("(")[0] },
+        message: { $regex: `^${messageHash.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}` },
       }).sort({ createdAt: -1 }).lean();
 
       if (!existing) {
