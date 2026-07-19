@@ -10,6 +10,8 @@ export interface IUser extends Document {
   role: UserRole;
   region: string;
   supervisor: string;
+  avatarUrl: string;
+  avatarColor: string;
   createdAt: Date;
   updatedAt: Date;
   comparePassword(candidatePassword: string): Promise<boolean>;
@@ -23,6 +25,8 @@ const UserSchema = new Schema<IUser>(
     role: { type: String, required: true, enum: ["DSE", "SUPERVISOR", "SUPERADMIN"] },
     region: { type: String, required: true, default: "Lusaka" },
     supervisor: { type: String, default: "" },
+    avatarUrl: { type: String, default: "" },
+    avatarColor: { type: String, default: "" },
   },
   { timestamps: true }
 );

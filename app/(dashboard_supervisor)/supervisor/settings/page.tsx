@@ -1,8 +1,9 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { PageShell } from "@/components/shared/PageShell";
+import { ProfileAvatar, AVATAR_COLOR_PALETTE } from "@/components/shared/ProfileAvatar";
 import { clearToken, apiFetch, getStoredApiUser } from "@/lib/api-client";
 import { DEFAULT_PROFILE, getStoredProfile, saveProfile, type ProfileInfo } from "@/utils/profile";
 import { AlertCircle } from "lucide-react";
@@ -13,6 +14,7 @@ export default function SupervisorSettingsPage() {
   const [profile, setProfile] = useState<ProfileInfo>(DEFAULT_PROFILE);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Target config
   const [targets, setTargets] = useState<Record<string, string>>({
@@ -51,6 +53,35 @@ export default function SupervisorSettingsPage() {
     setSaved(false);
   }
 
+  function handleColorSelect(color: string) {
+    setProfile((current) => ({ ...current, avatarUrl: color }));
+    setSaved(false);
+  }
+
+  function handlePhotoUpload(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      alert("Image must be smaller than 2MB.");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const dataUrl = e.target?.result as string;
+      setProfile((current) => ({ ...current, avatarUrl: dataUrl }));
+      setSaved(false);
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function clearAvatar() {
+    setProfile((current) => ({ ...current, avatarUrl: "" }));
+    setSaved(false);
+  }
+
+  const hasPhoto = profile.avatarUrl && !profile.avatarUrl.startsWith("#");
+  const selectedColor = profile.avatarUrl?.startsWith("#") ? profile.avatarUrl : "";
+
   async function handleSave() {
     setSaving(true);
     saveProfile(profile);
@@ -58,9 +89,17 @@ export default function SupervisorSettingsPage() {
     const apiUser = getStoredApiUser();
     if (apiUser) {
       try {
+        const body: Record<string, string> = { name: profile.name, region: profile.region };
+        if (profile.avatarUrl) {
+          if (profile.avatarUrl.startsWith("#")) {
+            body.avatarColor = profile.avatarUrl;
+          } else {
+            body.avatarUrl = profile.avatarUrl;
+          }
+        }
         await apiFetch("/api/users/me", {
           method: "PATCH",
-          body: JSON.stringify({ name: profile.name, region: profile.region }),
+          body: JSON.stringify(body),
         });
       } catch {
         // Local save is enough if server is unreachable
@@ -105,6 +144,66 @@ export default function SupervisorSettingsPage() {
   return (
     <PageShell title="Supervisor Settings" description="Manage your basic profile and dashboard details.">
       <div className="grid gap-4">
+        {/* Avatar Section */}
+        <div className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
+          <h3 className="font-semibold text-gray-900">Profile Picture</h3>
+          <p className="mt-1 text-sm text-gray-500">Choose a color avatar or upload a photo.</p>
+
+          <div className="mt-4 flex flex-col items-center gap-4">
+            <ProfileAvatar
+              name={profile.name}
+              avatarUrl={hasPhoto ? profile.avatarUrl : ""}
+              avatarColor={selectedColor}
+              size="xl"
+            />
+
+            <div>
+              <p className="mb-2 text-center text-xs font-medium text-gray-500">Pick a color</p>
+              <div className="flex flex-wrap items-center justify-center gap-2">
+                {AVATAR_COLOR_PALETTE.map((color) => (
+                  <button
+                    key={color}
+                    type="button"
+                    onClick={() => handleColorSelect(color)}
+                    className={`h-8 w-8 rounded-full transition hover:scale-110 focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+                      selectedColor === color ? "ring-2 ring-gray-400 ring-offset-2 scale-110" : ""
+                    }`}
+                    style={{ backgroundColor: color }}
+                    title={color}
+                  />
+                ))}
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="rounded-full border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
+              >
+                {hasPhoto ? "Change photo" : "Upload photo"}
+              </button>
+              {profile.avatarUrl && (
+                <button
+                  type="button"
+                  onClick={clearAvatar}
+                  className="rounded-full border border-red-200 px-4 py-2 text-sm font-medium text-red-600 transition hover:bg-red-50"
+                >
+                  Remove
+                </button>
+              )}
+            </div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handlePhotoUpload}
+            />
+            <p className="text-[10px] text-gray-400">Max 2MB · JPEG, PNG, or GIF</p>
+          </div>
+        </div>
+
         <div className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
           <h3 className="font-semibold text-gray-900">Profile details</h3>
           <p className="mt-1 text-sm text-gray-500">You can update your display name and profile details here. Role and CUG stay fixed.</p>

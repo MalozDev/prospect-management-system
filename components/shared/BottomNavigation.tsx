@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BarChart3, ClipboardList, PhoneCall, Receipt, UserCircle2, Settings } from "lucide-react";
+import { BarChart3, ClipboardList, PhoneCall, Receipt, UserCircle2, Settings, Users } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { getStoredProfile, type ProfileInfo, DEFAULT_PROFILE } from "@/utils/profile";
@@ -17,6 +17,7 @@ const dseItems = [
 
 const supervisorItems = [
   { href: "/supervisor/dashboard", label: "Dashboard", icon: BarChart3 },
+  { href: "/supervisor/dse", label: "DSE Team", icon: Users },
   { href: "/supervisor/prospects", label: "Prospects", icon: ClipboardList },
   { href: "/supervisor/sales", label: "Sales", icon: Receipt },
   { href: "/supervisor/settings", label: "Settings", icon: Settings },

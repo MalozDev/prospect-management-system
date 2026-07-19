@@ -53,6 +53,7 @@ export async function PATCH(
         time: new Date().toISOString(),
         type: "followup",
         userId: user.userId,
+        dseName: user.name,
       });
 
       return Response.json({ followUp });
@@ -93,6 +94,7 @@ export async function PATCH(
         time: new Date().toISOString(),
         type: "sale",
         userId: user.userId,
+        dseName: user.name,
       });
 
       // Create notification
@@ -133,6 +135,7 @@ export async function PATCH(
         time: new Date().toISOString(),
         type: "lost",
         userId: user.userId,
+        dseName: user.name,
       });
 
       return Response.json({ followUp });
@@ -196,6 +199,7 @@ export async function PATCH(
         time: new Date().toISOString(),
         type: "visit",
         userId: user.userId,
+        dseName: user.name,
       });
 
       return Response.json({ followUp });
@@ -248,6 +252,7 @@ export async function PATCH(
         time: new Date().toISOString(),
         type: "followup",
         userId: user.userId,
+        dseName: user.name,
       });
 
       return Response.json({ followUp });

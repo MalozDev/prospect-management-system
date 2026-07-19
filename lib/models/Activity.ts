@@ -8,6 +8,7 @@ export interface IActivity extends Document {
   time: string;
   type: ActivityType;
   userId: string;
+  dseName: string;
 }
 
 const ActivitySchema = new Schema<IActivity>(
@@ -21,6 +22,7 @@ const ActivitySchema = new Schema<IActivity>(
       enum: ["prospect", "call", "followup", "whatsapp", "visit", "sale", "lost"],
     },
     userId: { type: String, default: "" },
+    dseName: { type: String, default: "" },
   },
   { timestamps: true }
 );

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Bell, LayoutDashboard, Settings, ShoppingCart, UserRound, Users2 } from "lucide-react";
+import { Bell, ClipboardList, LayoutDashboard, Settings, ShoppingCart, UserRound, Users2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 
@@ -19,7 +19,8 @@ const dseItems = [
 
 const supervisorItems = [
   { href: "/supervisor/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/supervisor/prospects", label: "All Prospects", icon: Users2 },
+  { href: "/supervisor/dse", label: "DSE Team", icon: Users2 },
+  { href: "/supervisor/prospects", label: "All Prospects", icon: ClipboardList },
   { href: "/supervisor/sales", label: "All Sales", icon: ShoppingCart },
   { href: "/supervisor/settings", label: "Settings", icon: Settings },
 ];

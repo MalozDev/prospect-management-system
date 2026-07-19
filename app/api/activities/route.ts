@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import { Activity } from "@/lib/models/Activity";
+import { User } from "@/lib/models/User";
 import { getUserFromRequest, unauthorizedResponse } from "@/lib/auth";
 import { isValidDateStr } from "@/lib/time-utils";
 
@@ -24,7 +25,7 @@ export async function GET(request: NextRequest) {
 
     const activities = await Activity.find(filter).sort({ createdAt: -1 }).limit(limit).lean();
 
-    // Migrate old "Just now" entries — use createdAt as the real timestamp
+    // Fix old "Just now" timestamps
     const fixedActivities = activities.map((a) => ({
       ...a,
       time: isValidDateStr(a.time)
@@ -34,11 +35,28 @@ export async function GET(request: NextRequest) {
           : new Date().toISOString(),
     }));
 
+    // Batch backfill dseName for old activities — single query for all missing names
+    const missingDseNames = fixedActivities.filter((a) => !a.dseName && a.userId);
+    if (missingDseNames.length > 0) {
+      const userIds = [...new Set(missingDseNames.map((a) => a.userId))];
+      const users = await User.find({ _id: { $in: userIds } }).lean();
+      const nameByUserId = new Map(users.map((u) => [String(u._id), u.name]));
+
+      for (const a of fixedActivities) {
+        if (!a.dseName && a.userId) {
+          const userName = nameByUserId.get(String(a.userId));
+          if (userName) {
+            a.dseName = userName;
+            // Persist backfill for next time (fire-and-forget)
+            Activity.findByIdAndUpdate(a._id, { $set: { dseName: userName } }).catch(() => {});
+          }
+        }
+      }
+    }
+
     return Response.json({ activities: fixedActivities });
   } catch (error) {
     console.error("Get activities error:", error);
     return Response.json({ error: "Internal server error." }, { status: 500 });
   }
 }
-
-

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { CheckCircle2, Clock, PhoneCall, UserPlus, RefreshCw, XCircle, MapPin } from "lucide-react";
+import { CheckCircle2, PhoneCall, UserPlus, RefreshCw, XCircle, MapPin } from "lucide-react";
 import { FaWhatsapp } from "react-icons/fa";
 import { formatRelativeTime } from "@/lib/time-utils";
 import { cn } from "@/lib/utils";
@@ -13,6 +13,7 @@ interface ActivityPreview {
   detail: string;
   time: string;
   type: string;
+  dseName?: string;
 }
 
 interface ActivityTimelineProps {
@@ -32,6 +33,34 @@ const typeConfig: Record<string, { icon: React.ComponentType<{ className?: strin
 };
 
 const filterOrder = ["prospect", "followup", "call", "whatsapp", "visit", "sale", "lost"];
+
+// Assign a consistent avatar color per DSE name
+const AVATAR_COLORS = [
+  { bg: "bg-red-500", ring: "ring-red-200" },
+  { bg: "bg-blue-500", ring: "ring-blue-200" },
+  { bg: "bg-emerald-500", ring: "ring-emerald-200" },
+  { bg: "bg-purple-500", ring: "ring-purple-200" },
+  { bg: "bg-amber-500", ring: "ring-amber-200" },
+  { bg: "bg-cyan-500", ring: "ring-cyan-200" },
+  { bg: "bg-pink-500", ring: "ring-pink-200" },
+  { bg: "bg-indigo-500", ring: "ring-indigo-200" },
+];
+
+function getAvatarColor(name: string) {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
+}
+
+function getInitials(name: string) {
+  const parts = name.trim().split(/\s+/);
+  if (parts.length >= 2) {
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  }
+  return name.slice(0, 2).toUpperCase();
+}
 
 export function ActivityTimeline({ activities, compact = false, filterable = false }: ActivityTimelineProps) {
   const [activeFilters, setActiveFilters] = useState<Set<string>>(new Set(filterOrder));
@@ -102,27 +131,55 @@ export function ActivityTimeline({ activities, compact = false, filterable = fal
           filteredActivities.map((activity) => {
             const cfg = typeConfig[activity.type] ?? typeConfig.prospect;
             const Icon = cfg.icon;
+            const avatarColor = activity.dseName ? getAvatarColor(activity.dseName) : null;
+            const initials = activity.dseName ? getInitials(activity.dseName) : "";
 
             return (
               <div
                 key={String(activity._id ?? activity.id ?? activity.title)}
                 className={
                   compact
-                    ? "rounded-2xl border border-gray-100 bg-gray-50 p-3"
-                    : "rounded-3xl border border-gray-200 bg-white p-4 shadow-sm"
+                    ? "rounded-2xl border border-gray-100 bg-gray-50 p-2.5"
+                    : "rounded-3xl border border-gray-200 bg-white p-3 shadow-sm sm:p-4"
                 }
               >
-                <div className="flex items-start gap-2.5 sm:gap-3">
+                <div className="flex items-start gap-2 sm:gap-3">
+                  {/* DSE Avatar column */}
+                  {activity.dseName && (
+                    <div className="flex shrink-0 flex-col items-center gap-0.5 pt-1">
+                      <div
+                        className={cn(
+                          "flex items-center justify-center rounded-full ring-2",
+                          compact ? "h-7 w-7 text-[9px]" : "h-9 w-9 text-xs",
+                          avatarColor?.bg ?? "bg-gray-400",
+                          avatarColor?.ring ?? "ring-gray-200",
+                          "text-white font-semibold"
+                        )}
+                      >
+                        {initials}
+                      </div>
+                      <span className={cn(
+                        "truncate text-center font-medium text-gray-400 max-w-[48px]",
+                        compact ? "text-[7px] leading-tight" : "text-[8px] leading-tight"
+                      )}>
+                        {activity.dseName.split(/\s+/)[0]}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Activity icon */}
                   <div
                     className={cn(
                       "flex shrink-0 items-center justify-center",
-                      compact ? "h-8 w-8 rounded-xl" : "mt-1 h-10 w-10 rounded-2xl",
+                      compact ? "h-7 w-7 rounded-xl" : "mt-0.5 h-9 w-9 rounded-2xl",
                       cfg.bg,
                       cfg.text
                     )}
                   >
-                    <Icon className={compact ? "h-4 w-4" : "h-5 w-5"} />
+                    <Icon className={compact ? "h-3.5 w-3.5" : "h-5 w-5"} />
                   </div>
+
+                  {/* Content */}
                   <div className="min-w-0 flex-1">
                     <div className="flex items-start justify-between gap-2">
                       <p className={compact ? "text-sm font-semibold text-gray-900" : "font-semibold text-gray-900"}>
@@ -132,7 +189,7 @@ export function ActivityTimeline({ activities, compact = false, filterable = fal
                         {formatRelativeTime(activity.time)}
                       </span>
                     </div>
-                    <p className={compact ? "mt-1 text-xs text-gray-600" : "mt-2 text-sm text-gray-600"}>
+                    <p className={compact ? "mt-0.5 text-xs text-gray-600" : "mt-1 text-sm text-gray-600"}>
                       {activity.detail}
                     </p>
                   </div>

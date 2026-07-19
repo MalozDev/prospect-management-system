@@ -8,6 +8,8 @@ export interface ApiUser {
   role: "DSE" | "SUPERVISOR" | "SUPERADMIN";
   region: string;
   supervisor: string;
+  avatarUrl?: string;
+  avatarColor?: string;
 }
 
 export function getToken(): string | null {

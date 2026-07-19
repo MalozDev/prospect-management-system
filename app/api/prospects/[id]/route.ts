@@ -66,6 +66,7 @@ export async function PATCH(
         time: new Date().toISOString(),
         type: updates.status === "SOLD" ? "sale" : updates.status === "LOST" ? "lost" : "prospect",
         userId: user.userId,
+        dseName: user.name,
       });
     }
 

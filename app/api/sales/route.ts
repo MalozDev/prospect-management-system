@@ -75,6 +75,7 @@ export async function POST(request: NextRequest) {
       time: new Date().toISOString(),
       type: "sale",
       userId: user.userId,
+      dseName: user.name,
     });
 
     return Response.json({ sale }, { status: 201 });

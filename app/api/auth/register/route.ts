@@ -58,6 +58,8 @@ export async function POST(request: NextRequest) {
           role: user.role,
           region: user.region,
           supervisor: user.supervisor,
+          avatarUrl: user.avatarUrl || "",
+          avatarColor: user.avatarColor || "",
         },
       },
       { status: 201 }

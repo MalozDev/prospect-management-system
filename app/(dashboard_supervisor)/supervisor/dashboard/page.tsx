@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 
 import { PageShell } from "@/components/shared/PageShell";
+import { ProfileAvatar } from "@/components/shared/ProfileAvatar";
 import { ActivityTimeline } from "@/components/shared/ActivityTimeline";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { useApiData } from "@/lib/use-api-data";
@@ -28,11 +29,21 @@ export default function SupervisorDashboardPage() {
   const targets = useTargets();
   const [expandedDse, setExpandedDse] = useState<string | null>(null);
 
+  const { data: dseUsersData } = useApiData<{ dseUsers: { name: string; cugSuffix: string; region: string; avatarUrl: string; avatarColor: string }[] }>("/api/supervisors/dse", { dseUsers: [] });
   const { data: prospectsData } = useApiData<{ prospects: IProspect[] }>("/api/prospects", { prospects: [] });
   const { data: salesData } = useApiData<{ sales: ISale[] }>("/api/sales", { sales: [] });
   const { data: activitiesData } = useApiData<{ activities: IActivity[] }>("/api/activities?limit=8", { activities: [] });
 
   const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
+
+  // Build a lookup for DSE user info (avatar etc.)
+  const dseInfoMap = useMemo(() => {
+    const map = new Map<string, { avatarUrl: string; avatarColor: string }>();
+    for (const u of dseUsersData.dseUsers) {
+      map.set(u.name, { avatarUrl: u.avatarUrl, avatarColor: u.avatarColor });
+    }
+    return map;
+  }, [dseUsersData.dseUsers]);
 
   // Compute DSE stats from the server data
   const dseStats = useMemo(() => {
@@ -54,8 +65,12 @@ export default function SupervisorDashboardPage() {
         const currentMonth = today.slice(0, 7);
         const monthSales = dseSales.filter((s) => s.date.slice(0, 7) === currentMonth).length;
 
+        const info = dseInfoMap.get(name);
+
         return {
           name,
+          avatarUrl: info?.avatarUrl || "",
+          avatarColor: info?.avatarColor || "",
           prospectsCount: dseProspects.length,
           salesCount: dseSales.length,
           todayProspects,
@@ -90,7 +105,7 @@ export default function SupervisorDashboardPage() {
 
   // Compute stats
   const stats = useMemo(() => {
-    const totalDse = dseStats.length;
+    const totalDse = dseUsersData.dseUsers.length;
     const todayProspects = prospectsData.prospects.filter((p) => p.createdAt === today).length;
     const todaySalesCount = salesData.sales.filter((s) => s.date === today).length;
     const totalRevenue = salesData.sales.length * COMMISSION_PER_SALE;
@@ -100,7 +115,7 @@ export default function SupervisorDashboardPage() {
     const teamProgress = teamTarget > 0 ? Math.min(100, Math.round((teamMonthSales / teamTarget) * 100)) : 0;
 
     return { totalDse, todayProspects, todaySales: todaySalesCount, totalRevenue, teamMonthSales, teamTarget, teamProgress };
-  }, [prospectsData.prospects, salesData.sales, today, dseStats.length, targets]);
+  }, [prospectsData.prospects, salesData.sales, today, dseUsersData.dseUsers.length, targets]);
 
   const targetZoneColor = (progress: number) => {
     if (progress >= 75) return "#16a34a";
@@ -126,7 +141,7 @@ export default function SupervisorDashboardPage() {
   return (
     <PageShell title="Supervisor Dashboard" description="ODU team performance and field activity.">
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
-        <MetricCard icon={Users} label="DSE on Board" value={String(stats.totalDse)} hint="Total team members" />
+        <MetricCard icon={Users} label="DSE on Board" value={String(stats.totalDse)} hint="Total team members" href="/supervisor/dse" />
         <MetricCard icon={ClipboardList} label="Today's Prospects" value={String(stats.todayProspects)} hint="Captured today" />
         <MetricCard icon={TrendingUp} label="Today's Sales" value={String(stats.todaySales)} hint="ODU sold today" />
         <MetricCard icon={DollarSign} label="Total Revenue" value={`K${stats.totalRevenue.toLocaleString()}`} hint="K200 per ODU sale" />
@@ -232,6 +247,7 @@ export default function SupervisorDashboardPage() {
             <table className="w-full text-left text-sm">
               <thead className="border-b border-gray-200 bg-gray-50 text-xs font-semibold uppercase tracking-wider text-gray-500">
                 <tr>
+                  <th className="px-3 py-2.5 w-10"></th>
                   <th className="px-3 py-2.5">DSE</th>
                   <th className="px-3 py-2.5 text-center">Prospects</th>
                   <th className="px-3 py-2.5 text-center">Sales</th>
@@ -245,6 +261,9 @@ export default function SupervisorDashboardPage() {
               <tbody className="divide-y divide-gray-100">
                 {dseStats.map((dse) => (
                   <tr key={dse.name} className="hover:bg-gray-50">
+                    <td className="px-3 py-3">
+                      <ProfileAvatar name={dse.name} avatarUrl={dse.avatarUrl} avatarColor={dse.avatarColor} size="sm" />
+                    </td>
                     <td className="px-3 py-3 font-semibold text-gray-900">{dse.name}</td>
                     <td className="px-3 py-3 text-center text-gray-600">
                       {dse.prospectsCount}
@@ -277,9 +296,9 @@ export default function SupervisorDashboardPage() {
   );
 }
 
-function MetricCard({ icon: Icon, label, value, hint }: { icon: typeof Users; label: string; value: string; hint: string }) {
-  return (
-    <div className="rounded-2xl border border-gray-200 bg-white p-3 shadow-sm sm:rounded-3xl sm:p-4">
+function MetricCard({ icon: Icon, label, value, hint, href }: { icon: typeof Users; label: string; value: string; hint: string; href?: string }) {
+  const inner = (
+    <div className="rounded-2xl border border-gray-200 bg-white p-3 shadow-sm transition sm:rounded-3xl sm:p-4">
       <div className="flex items-center gap-2 sm:gap-3">
         <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-red-50 text-[#E60012] sm:h-10 sm:w-10 sm:rounded-2xl">
           <Icon className="h-4 w-4 sm:h-5 sm:w-5" />
@@ -292,6 +311,12 @@ function MetricCard({ icon: Icon, label, value, hint }: { icon: typeof Users; la
       <p className="mt-1.5 hidden text-xs text-gray-500 sm:block">{hint}</p>
     </div>
   );
+
+  if (href) {
+    return <Link href={href} className="group cursor-pointer">{inner}</Link>;
+  }
+
+  return inner;
 }
 
 function TargetBarInline({ current, remaining, progress }: { current: number; remaining: number; progress: number }) {
@@ -306,13 +331,16 @@ function TargetBarInline({ current, remaining, progress }: { current: number; re
   );
 }
 
-function DsePerformanceCard({ dse }: { dse: { name: string; prospectsCount: number; salesCount: number; todayProspects: number; todaySales: number; weekSales: number; monthSales: number; dailyRemaining: number; weeklyRemaining: number; monthlyRemaining: number; dailyProgress: number; weeklyProgress: number; monthlyProgress: number; revenue: number } }) {
+function DsePerformanceCard({ dse }: { dse: { name: string; prospectsCount: number; salesCount: number; todayProspects: number; todaySales: number; weekSales: number; monthSales: number; dailyRemaining: number; weeklyRemaining: number; monthlyRemaining: number; dailyProgress: number; weeklyProgress: number; monthlyProgress: number; revenue: number; avatarUrl?: string; avatarColor?: string } }) {
   return (
     <div className="rounded-2xl border border-gray-200 bg-gray-50 p-3">
       <div className="flex items-start justify-between gap-2">
-        <div>
-          <p className="font-semibold text-gray-900">{dse.name}</p>
-          <p className="text-xs text-gray-500">{dse.prospectsCount} prospects · {dse.salesCount} ODU sales</p>
+        <div className="flex items-center gap-2">
+          <ProfileAvatar name={dse.name} avatarUrl={dse.avatarUrl} avatarColor={dse.avatarColor} size="sm" />
+          <div>
+            <p className="font-semibold text-gray-900">{dse.name}</p>
+            <p className="text-xs text-gray-500">{dse.prospectsCount} prospects · {dse.salesCount} ODU sales</p>
+          </div>
         </div>
         <Link href={`/supervisor/dse/${encodeURIComponent(dse.name)}`} className="inline-flex items-center gap-0.5 text-xs font-semibold text-[#E60012]">
           Details <ArrowUpRight className="h-3 w-3" />

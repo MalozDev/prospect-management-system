@@ -5,8 +5,9 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { PageShell } from "@/components/shared/PageShell";
+import { ProfileAvatar } from "@/components/shared/ProfileAvatar";
 import { clearToken, getStoredApiUser, apiFetch } from "@/lib/api-client";
-import { DEFAULT_PROFILE, getProfileInitials, getStoredProfile, saveProfile, type ProfileInfo } from "@/utils/profile";
+import { DEFAULT_PROFILE, getStoredProfile, saveProfile, type ProfileInfo } from "@/utils/profile";
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -55,9 +56,12 @@ export default function ProfilePage() {
     <PageShell title="Profile" description="Edit your basic account details.">
       <div className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
         <div className="flex items-center gap-4">
-          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[#fff1f1] text-lg font-semibold text-[#E60012]">
-            {getProfileInitials(profile.name)}
-          </div>
+          <ProfileAvatar
+            name={profile.name}
+            avatarUrl={profile.avatarUrl?.startsWith("#") ? "" : profile.avatarUrl}
+            avatarColor={profile.avatarUrl?.startsWith("#") ? profile.avatarUrl : ""}
+            size="xl"
+          />
           <div>
             <h2 className="text-xl font-semibold text-gray-900">{profile.name}</h2>
             <p className="text-sm text-gray-500">{profile.role}</p>

@@ -18,9 +18,13 @@ import {
   Sparkles,
   Activity,
   StickyNote,
+  Phone,
+  Hash,
+  MapPin,
 } from "lucide-react";
 
 import { PageShell } from "@/components/shared/PageShell";
+import { ProfileAvatar } from "@/components/shared/ProfileAvatar";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { ActivityTimeline } from "@/components/shared/ActivityTimeline";
 import { useApiData } from "@/lib/use-api-data";
@@ -78,6 +82,10 @@ export default function DseDetailPage({ params }: PageProps) {
     return ws.toISOString().slice(0, 10);
   }, []);
 
+  const { data: dseUsersData } = useApiData<{ dseUsers: Array<{ name: string; cugSuffix: string; region: string; avatarUrl: string; avatarColor: string }> }>(
+    "/api/supervisors/dse",
+    { dseUsers: [] }
+  );
   const { data: prospectsData } = useApiData<{ prospects: IProspect[] }>(
     dseName ? `/api/prospects?assignedDse=${encodeURIComponent(dseName)}` : null,
     { prospects: [] }
@@ -89,6 +97,11 @@ export default function DseDetailPage({ params }: PageProps) {
   const { data: activitiesData } = useApiData<{ activities: IActivity[] }>(
     dseName ? `/api/activities?limit=20` : null,
     { activities: [] }
+  );
+
+  const dseUserInfo = useMemo(
+    () => dseUsersData.dseUsers.find((u) => u.name === dseName),
+    [dseUsersData.dseUsers, dseName]
   );
 
   const dseProspects = prospectsData.prospects;
@@ -279,11 +292,44 @@ export default function DseDetailPage({ params }: PageProps) {
       {/* Back link */}
       <div className="mb-4">
         <Link
-          href="/supervisor/dashboard"
+          href="/supervisor/dse"
           className="inline-flex items-center gap-1 text-sm font-medium text-gray-500 hover:text-[#E60012] transition-colors"
         >
-          <ArrowLeft className="h-4 w-4" /> Back to Dashboard
+          <ArrowLeft className="h-4 w-4" /> Back to DSE Team
         </Link>
+      </div>
+
+      {/* ── Profile Header ── */}
+      <div className="mb-6 rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
+        <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start">
+          <ProfileAvatar
+            name={dseName}
+            avatarUrl={dseUserInfo?.avatarUrl?.startsWith("#") ? "" : dseUserInfo?.avatarUrl}
+            avatarColor={dseUserInfo?.avatarUrl?.startsWith("#") ? dseUserInfo?.avatarUrl : dseUserInfo?.avatarColor}
+            size="xl"
+          />
+          <div className="text-center sm:text-left">
+            <h1 className="text-xl font-bold text-gray-900 sm:text-2xl">{dseName}</h1>
+            <div className="mt-1 flex flex-wrap items-center justify-center gap-3 text-sm text-gray-500 sm:justify-start">
+              {dseUserInfo?.cugSuffix && (
+                <span className="inline-flex items-center gap-1">
+                  <Hash className="h-3.5 w-3.5" />
+                  CUG: {dseUserInfo.cugSuffix}
+                </span>
+              )}
+              {dseUserInfo?.region && (
+                <span className="inline-flex items-center gap-1">
+                  <MapPin className="h-3.5 w-3.5" />
+                  {dseUserInfo.region}
+                </span>
+              )}
+              <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2.5 py-0.5 text-[10px] font-semibold text-gray-600">
+                DSE
+              </span>
+            </div>
+            <p className="mt-2 text-sm text-gray-400">Full performance breakdown — sales, prospects, trends, and insights.</p>
+          </div>
+        </div>
       </div>
 
       {/* ── KPI Row ── */}

@@ -86,6 +86,7 @@ export async function POST(request: NextRequest) {
       time: new Date().toISOString(),
       type: "prospect",
       userId: user.userId,
+      dseName: user.name,
     });
 
     // Create linked follow-up

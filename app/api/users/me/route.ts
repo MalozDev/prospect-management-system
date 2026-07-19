@@ -24,6 +24,8 @@ export async function GET(request: NextRequest) {
         role: dbUser.role,
         region: dbUser.region,
         supervisor: dbUser.supervisor,
+        avatarUrl: dbUser.avatarUrl || "",
+        avatarColor: dbUser.avatarColor || "",
       },
     });
   } catch (error) {
@@ -40,7 +42,7 @@ export async function PATCH(request: NextRequest) {
     await connectToDatabase();
 
     const body = await request.json();
-    const allowedFields = ["name", "region"];
+    const allowedFields = ["name", "region", "avatarUrl", "avatarColor"];
     const updates: Record<string, unknown> = {};
 
     for (const field of allowedFields) {
@@ -67,6 +69,8 @@ export async function PATCH(request: NextRequest) {
         role: dbUser.role,
         region: dbUser.region,
         supervisor: dbUser.supervisor,
+        avatarUrl: dbUser.avatarUrl || "",
+        avatarColor: dbUser.avatarColor || "",
       },
     });
   } catch (error) {
