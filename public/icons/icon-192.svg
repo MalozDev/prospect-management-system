@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="192" height="192" viewBox="0 0 192 192">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#E60012"/>
+      <stop offset="100%" stop-color="#CC0010"/>
+    </linearGradient>
+  </defs>
+  <rect width="192" height="192" rx="32" fill="url(#bg)"/>
+  <text x="96" y="72" text-anchor="middle" font-family="Arial, sans-serif" font-weight="bold" font-size="56" fill="white">AP</text>
+  <text x="96" y="112" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" fill="rgba(255,255,255,0.85)">Prospect</text>
+  <text x="96" y="130" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" fill="rgba(255,255,255,0.85)">Manager</text>
+</svg>

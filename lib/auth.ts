@@ -3,10 +3,12 @@ import { NextRequest } from "next/server";
 
 const JWT_SECRET = process.env.JWT_SECRET ?? "prospect-management-secret-key-change-in-production";
 
+export type UserRole = "DSE" | "SUPERVISOR" | "SUPERADMIN";
+
 export interface JwtPayload {
   userId: string;
   cugSuffix: string;
-  role: "DSE" | "SUPERVISOR";
+  role: UserRole;
   name: string;
 }
 

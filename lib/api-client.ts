@@ -5,7 +5,7 @@ export interface ApiUser {
   id: string;
   name: string;
   cugSuffix: string;
-  role: "DSE" | "SUPERVISOR";
+  role: "DSE" | "SUPERVISOR" | "SUPERADMIN";
   region: string;
   supervisor: string;
 }
@@ -66,7 +66,9 @@ export async function apiFetch<T>(
     headers,
   });
 
-  if (response.status === 401) {
+  // Only handle unauthorized redirect when the user was actually authenticated
+  // (has a token). Login/register requests get 401 for invalid creds, not expired sessions.
+  if (response.status === 401 && token) {
     return handleUnauthorized() as never;
   }
 

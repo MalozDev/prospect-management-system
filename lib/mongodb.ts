@@ -1,12 +1,10 @@
 import mongoose from "mongoose";
-import { MongoMemoryServer } from "mongodb-memory-server";
 
 const MONGODB_URI = process.env.MONGODB_URI ?? "";
 
 interface MongooseCache {
   conn: typeof mongoose | null;
   promise: Promise<typeof mongoose> | null;
-  memServer: MongoMemoryServer | null;
 }
 
 declare global {
@@ -14,26 +12,10 @@ declare global {
   var mongooseCache: MongooseCache | undefined;
 }
 
-const cached: MongooseCache = global.mongooseCache ?? { conn: null, promise: null, memServer: null };
+const cached: MongooseCache = global.mongooseCache ?? { conn: null, promise: null };
 
 if (!global.mongooseCache) {
   global.mongooseCache = cached;
-}
-
-async function startInMemoryServer(): Promise<string> {
-  if (cached.memServer) {
-    return cached.memServer.getUri();
-  }
-
-  console.log("🔄 Starting in-memory MongoDB (no MONGODB_URI configured)...");
-  console.log("   📥 This may download MongoDB binaries on first run (takes ~30-60s)");
-  cached.memServer = await MongoMemoryServer.create({
-    instance: { dbPath: ".mongodb-data", storageEngine: "wiredTiger" },
-  });
-
-  const uri = cached.memServer.getUri();
-  console.log(`✅ In-memory MongoDB ready at ${uri}`);
-  return uri;
 }
 
 export async function connectToDatabase(): Promise<typeof mongoose> {
@@ -43,23 +25,35 @@ export async function connectToDatabase(): Promise<typeof mongoose> {
 
   if (!cached.promise) {
     if (MONGODB_URI.startsWith("mongodb+srv://")) {
-      // Atlas / remote — connect with longer timeout, no fallback
+      // Atlas / remote
+      // Fix local DNS resolution issues in development only
+      if (process.env.NODE_ENV !== "production") {
+        const dns = await import("dns");
+        dns.setServers(["8.8.8.8", "1.1.1.1"]);
+      }
+
       cached.promise = mongoose.connect(MONGODB_URI, {
         bufferCommands: false,
         serverSelectionTimeoutMS: 10000,
         connectTimeoutMS: 15000,
       });
     } else if (MONGODB_URI.startsWith("mongodb://")) {
-      // Local MongoDB — connect with shorter timeout, no fallback
+      // Local MongoDB — connect with shorter timeout
       cached.promise = mongoose.connect(MONGODB_URI, {
         bufferCommands: false,
         serverSelectionTimeoutMS: 5000,
         connectTimeoutMS: 10000,
       });
     } else {
-      // No URI configured — use in-memory server for development
-      const memUri = await startInMemoryServer();
-      cached.promise = mongoose.connect(memUri, { bufferCommands: false });
+      // No URI configured — dynamically load and start in-memory MongoDB (dev only)
+      console.log("🔄 No MONGODB_URI set — starting in-memory MongoDB...");
+      const { MongoMemoryServer } = await import("mongodb-memory-server");
+      const memServer = await MongoMemoryServer.create({
+        instance: { dbPath: ".mongodb-data", storageEngine: "wiredTiger" },
+      });
+      cached.promise = mongoose.connect(memServer.getUri(), {
+        bufferCommands: false,
+      });
     }
   }
 
@@ -72,18 +66,3 @@ export async function connectToDatabase(): Promise<typeof mongoose> {
 
   return cached.conn;
 }
-
-// Graceful shutdown for in-memory server (only used in dev with no MONGODB_URI)
-process.on("SIGINT", async () => {
-  if (cached.memServer) {
-    await cached.memServer.stop();
-  }
-  process.exit(0);
-});
-
-process.on("SIGTERM", async () => {
-  if (cached.memServer) {
-    await cached.memServer.stop();
-  }
-  process.exit(0);
-});

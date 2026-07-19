@@ -3,6 +3,7 @@ import { connectToDatabase } from "@/lib/mongodb";
 import { FollowUp } from "@/lib/models/FollowUp";
 import { Notification } from "@/lib/models/Notification";
 import { getUserFromRequest, unauthorizedResponse } from "@/lib/auth";
+import { sendPushToUser } from "@/lib/push-notification";
 
 export async function GET(request: NextRequest) {
   const user = getUserFromRequest(request);
@@ -99,6 +100,14 @@ export async function GET(request: NextRequest) {
           unread: true,
           userId: notif.userId,
         });
+
+        // Send browser push notification (non-blocking)
+        sendPushToUser(notif.userId, {
+          title: notif.title,
+          message: notif.message,
+          url: "/followups",
+          tag: "followup",
+        }).catch(() => {});
       }
     }
 
@@ -151,6 +160,14 @@ export async function POST(request: NextRequest) {
         unread: true,
         userId: user.userId,
       });
+
+      // Send browser push notification (non-blocking)
+      sendPushToUser(user.userId, {
+        title: "Follow-up Due Today",
+        message: `Follow-up due today for ${followUp.customerName} (${followUp.phone})`,
+        url: "/followups",
+        tag: "followup",
+      }).catch(() => {});
     }
 
     return Response.json({ followUp }, { status: 201 });

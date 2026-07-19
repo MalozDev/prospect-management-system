@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 import AuthCard from "@/components/layout/AuthCard";
@@ -16,6 +16,8 @@ import { Select } from "@/components/ui/select";
 import { registerApi, setToken, setStoredApiUser } from "@/lib/api-client";
 import { saveProfile } from "@/utils/profile";
 
+type Status = "idle" | "loading" | "success" | "error";
+
 export default function RegisterPage() {
   const router = useRouter();
   const [name, setName] = useState("");
@@ -26,34 +28,56 @@ export default function RegisterPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [region, setRegion] = useState("Lusaka");
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [status, setStatus] = useState<Status>("idle");
+
+  // Auto-reset error state after 4 seconds
+  useEffect(() => {
+    if (status === "error") {
+      const timer = setTimeout(() => {
+        setStatus("idle");
+        setError("");
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [status]);
+
+  const resetStatus = useCallback(() => {
+    setStatus("idle");
+    setError("");
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    setStatus("idle");
 
     if (!name.trim()) {
       setError("Please enter your full name.");
+      setStatus("error");
       return;
     }
     if (!cugSuffix || cugSuffix.length < 4) {
       setError("Please enter a valid 4-digit CUG number.");
+      setStatus("error");
       return;
     }
     if (role === "DSE" && !supervisor) {
       setError("Please select your supervisor.");
+      setStatus("error");
       return;
     }
     if (password.length < 6) {
       setError("Password must be at least 6 characters long.");
+      setStatus("error");
       return;
     }
     if (password !== confirmPassword) {
       setError("Passwords do not match.");
+      setStatus("error");
       return;
     }
 
-    setLoading(true);
+    setStatus("loading");
     try {
       const data = await registerApi({
         name: name.trim(),
@@ -80,15 +104,18 @@ export default function RegisterPage() {
       });
       window.dispatchEvent(new Event("profile-updated"));
 
-      if (data.user.role === "SUPERVISOR") {
-        router.push("/supervisor/dashboard");
-      } else {
-        router.push("/dashboard");
-      }
+      // Show success state before redirect
+      setStatus("success");
+      setTimeout(() => {
+        if (data.user.role === "SUPERVISOR") {
+          router.push("/supervisor/dashboard");
+        } else {
+          router.push("/dashboard");
+        }
+      }, 1500);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Registration failed. Please try again.");
-    } finally {
-      setLoading(false);
+      setStatus("error");
     }
   };
 
@@ -111,13 +138,13 @@ export default function RegisterPage() {
           </label>
           <Input
             value={name}
-            onChange={(e) => setName(e.target.value)}
+            onChange={(e) => { setName(e.target.value); resetStatus(); }}
             placeholder="Enter your full name"
             className="h-12 rounded-xl bg-white border-gray-300"
           />
         </div>
 
-        <CugInput value={cugSuffix} onChange={setCugSuffix} />
+        <CugInput value={cugSuffix} onChange={(value) => { setCugSuffix(value); resetStatus(); }} />
 
         <div>
           <label className="mb-2 block text-sm font-medium">
@@ -125,7 +152,7 @@ export default function RegisterPage() {
           </label>
           <Select
             value={role}
-            onChange={(e) => setRole(e.target.value)}
+            onChange={(e) => { setRole(e.target.value); resetStatus(); }}
             className="h-12 rounded-xl"
           >
             <option value="DSE">Direct Sales Executive (DSE)</option>
@@ -139,7 +166,7 @@ export default function RegisterPage() {
           </label>
           <Select
             value={region}
-            onChange={(e) => setRegion(e.target.value)}
+            onChange={(e) => { setRegion(e.target.value); resetStatus(); }}
             className="h-12 rounded-xl"
           >
             <option value="Lusaka">Lusaka</option>
@@ -151,29 +178,45 @@ export default function RegisterPage() {
         </div>
 
         {role === "DSE" && (
-          <SupervisorSelect value={supervisor} onChange={setSupervisor} />
+          <SupervisorSelect value={supervisor} onChange={(value) => { setSupervisor(value); resetStatus(); }} />
         )}
 
-        <PasswordInput label="Password" value={password} onChange={setPassword} />
+        <PasswordInput label="Password" value={password} onChange={(value) => { setPassword(value); resetStatus(); }} />
 
-        <PasswordInput label="Confirm Password" value={confirmPassword} onChange={setConfirmPassword} />
+        <PasswordInput label="Confirm Password" value={confirmPassword} onChange={(value) => { setConfirmPassword(value); resetStatus(); }} />
 
         <button
           type="submit"
-          disabled={loading}
-          className={`h-12 w-full rounded-xl font-medium text-white transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 ${
-            error
+          disabled={status === "loading" || status === "success"}
+          className={`h-12 w-full rounded-xl font-medium text-white transition-all duration-300 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed ${
+            status === "success"
+              ? "bg-green-600 hover:bg-green-700"
+              : status === "error"
               ? "bg-red-600 hover:bg-red-700"
               : "bg-[#E60012] hover:bg-red-700"
-          }`}
+          } ${status === "error" ? "animate-shake" : ""}`}
         >
-          {loading ? (
+          {status === "loading" ? (
             <>
-              <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-              Creating account...
+              <span className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
+              <span>Creating account...</span>
             </>
-          ) : error ? (
-            <span className="text-sm">{error}</span>
+          ) : status === "success" ? (
+            <>
+              <span className="animate-scale-in inline-flex items-center gap-2">
+                <svg className="h-5 w-5 animate-check-draw" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                </svg>
+                Account Created!
+              </span>
+            </>
+          ) : status === "error" ? (
+            <>
+              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+              <span>{error}</span>
+            </>
           ) : (
             "Create Account"
           )}
