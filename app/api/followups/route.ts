@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import { FollowUp } from "@/lib/models/FollowUp";
 import { Notification } from "@/lib/models/Notification";
+import { User } from "@/lib/models/User";
 import { getUserFromRequest, unauthorizedResponse } from "@/lib/auth";
 import { sendPushToUser } from "@/lib/push-notification";
 
@@ -17,12 +18,29 @@ export async function GET(request: NextRequest) {
     const assignedDse = searchParams.get("assignedDse");
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const limit = Number(searchParams.get("limit")) || 0;
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const filter: Record<string, any> = {};
 
     if (assignedDse) {
+      // Supervisor must verify the DSE is on their team
+      if (user.role === "SUPERVISOR") {
+        const dse = await User.findOne({ role: "DSE", name: assignedDse, supervisor: user.name }).lean();
+        if (!dse) return Response.json({ followUps: [] });
+      }
       filter.assignedDse = assignedDse;
     } else if (user.role === "DSE") {
       filter.assignedDse = user.name;
+    } else if (user.role === "SUPERVISOR") {
+      // Supervisor only sees follow-ups from DSEs on their team
+      const teamDses = await User.find({ role: "DSE", supervisor: user.name }).select("name").lean();
+      const dseNames = teamDses.map((d) => d.name);
+      if (dseNames.length > 0) {
+        filter.assignedDse = { $in: dseNames };
+      } else {
+        return Response.json({ followUps: [] });
+      }
     }
 
     if (status) {
@@ -34,81 +52,98 @@ export async function GET(request: NextRequest) {
       filter.outcome = { $nin: ["SOLD", "LOST"] };
     }
 
-    const followUps = await FollowUp.find(filter).sort({ expectedPurchaseDate: 1 }).lean();
+    let query = FollowUp.find(filter).sort({ expectedPurchaseDate: 1 });
+    if (limit > 0) query = query.limit(limit);
+    const followUps = await query.lean();
     const today = new Date().toISOString().slice(0, 10);
 
     // Auto-update statuses based on dates, and create notifications for due items
-    const bulkUpdates: { id: string; newStatus: string }[] = [];
+    // Batch all updates into a single bulkWrite operation
+    const bulkOps: import('mongoose').AnyBulkWriteOperation[] = [];
     const notificationsToCreate: { title: string; message: string; userId: string }[] = [];
 
     for (const fu of followUps) {
-      const shouldNotify = fu.status === "UPCOMING" && (
-        fu.expectedPurchaseDate === today || fu.expectedPurchaseDate < today
-      );
+      const dueNow = fu.status === "UPCOMING" && fu.expectedPurchaseDate === today;
+      const overdue = fu.status === "UPCOMING" && fu.expectedPurchaseDate < today;
 
-      if (fu.status === "UPCOMING" && fu.expectedPurchaseDate === today) {
-        bulkUpdates.push({ id: String(fu._id), newStatus: "TODAY" });
-        if (shouldNotify) {
-          notificationsToCreate.push({
-            title: "Follow-up Due Today",
-            message: `Follow-up due today for ${fu.customerName} (${fu.phone})`,
-            userId: user.userId,
-          });
-        }
-      } else if (fu.status === "UPCOMING" && fu.expectedPurchaseDate < today) {
-        bulkUpdates.push({ id: String(fu._id), newStatus: "OVERDUE" });
+      if (dueNow) {
+        bulkOps.push({
+          updateOne: {
+            filter: { _id: fu._id },
+            update: { $set: { status: "TODAY" } },
+          },
+        });
+        (fu as Record<string, unknown>).status = "TODAY";
+
+        notificationsToCreate.push({
+          title: "Follow-up Due Today",
+          message: `Follow-up due today for ${fu.customerName} (${fu.phone})`,
+          userId: user.userId,
+        });
+      } else if (overdue) {
+        bulkOps.push({
+          updateOne: {
+            filter: { _id: fu._id },
+            update: { $set: { status: "OVERDUE" } },
+          },
+        });
+        (fu as Record<string, unknown>).status = "OVERDUE";
       }
 
       // Also check if an upcoming visit is due
       if (fu.category === "VISIT" && fu.visitDate && fu.visitDate <= today && fu.status === "UPCOMING") {
-        if (fu.status !== "TODAY") {
-          bulkUpdates.push({ id: String(fu._id), newStatus: "TODAY" });
-        }
-        if (shouldNotify || fu.visitDate === today) {
-          notificationsToCreate.push({
-            title: "Visit Scheduled Today",
-            message: `Visit scheduled today for ${fu.customerName}${fu.visitDate ? ` on ${fu.visitDate}` : ""}`,
-            userId: user.userId,
-          });
-        }
+        bulkOps.push({
+          updateOne: {
+            filter: { _id: fu._id },
+            update: { $set: { status: "TODAY" } },
+          },
+        });
+        (fu as Record<string, unknown>).status = "TODAY";
+
+        notificationsToCreate.push({
+          title: "Visit Scheduled Today",
+          message: `Visit scheduled today for ${fu.customerName}${fu.visitDate ? ` on ${fu.visitDate}` : ""}`,
+          userId: user.userId,
+        });
       }
     }
 
-    // Apply bulk status updates
-    for (const update of bulkUpdates) {
-      await FollowUp.findByIdAndUpdate(update.id, { $set: { status: update.newStatus } });
-      // Update the follow-up in the result array
-      const idx = followUps.findIndex((f) => String(f._id) === update.id);
-      if (idx >= 0) {
-        (followUps[idx] as Record<string, unknown>).status = update.newStatus;
-      }
+    // Execute ALL status updates as a single database round-trip
+    if (bulkOps.length > 0) {
+      await FollowUp.bulkWrite(bulkOps);
     }
 
-    // Create notifications (avoid duplicates by checking a hash of the content)
-    for (const notif of notificationsToCreate) {
-      const messageHash = notif.message.substring(0, 80);
-      const existing = await Notification.findOne({
-        userId: notif.userId,
-        title: notif.title,
-        message: { $regex: `^${messageHash.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}` },
-      }).sort({ createdAt: -1 }).lean();
+    // Create notifications — dedup by checking existing in a single query
+    if (notificationsToCreate.length > 0) {
+      const existingNotifs = await Notification.find({
+        userId: user.userId,
+        time: today,
+      }).select('title message').lean();
 
-      if (!existing) {
-        await Notification.create({
-          title: notif.title,
-          message: notif.message,
+      const existingSet = new Set(existingNotifs.map((n) => `${n.title}|${n.message}`));
+
+      const newNotifs = notificationsToCreate
+        .filter((n) => !existingSet.has(`${n.title}|${n.message}`))
+        .map((n) => ({
+          title: n.title,
+          message: n.message,
           time: new Date().toISOString(),
           unread: true,
-          userId: notif.userId,
-        });
+          userId: n.userId,
+        }));
 
-        // Send browser push notification (non-blocking)
-        sendPushToUser(notif.userId, {
-          title: notif.title,
-          message: notif.message,
-          url: "/followups",
-          tag: "followup",
-        }).catch(() => {});
+      if (newNotifs.length > 0) {
+        await Notification.insertMany(newNotifs);
+
+        // Send browser push notifications (non-blocking, fire-and-forget)
+        for (const notif of newNotifs) {
+          sendPushToUser(notif.userId, {
+            title: notif.title,
+            message: notif.message,
+            url: "/followups",
+            tag: "followup",
+          }).catch(() => {});
+        }
       }
     }
 

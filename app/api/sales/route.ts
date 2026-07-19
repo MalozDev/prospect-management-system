@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import { Sale } from "@/lib/models/Sale";
 import { Activity } from "@/lib/models/Activity";
+import { User } from "@/lib/models/User";
 import { getUserFromRequest, unauthorizedResponse } from "@/lib/auth";
 
 export async function GET(request: NextRequest) {
@@ -16,14 +17,29 @@ export async function GET(request: NextRequest) {
     const dateFrom = searchParams.get("dateFrom");
     const dateTo = searchParams.get("dateTo");
     const month = searchParams.get("month");
+    const limit = Number(searchParams.get("limit")) || 0;
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const filter: Record<string, any> = {};
 
     if (soldBy) {
+      // Supervisor must verify the DSE is on their team
+      if (user.role === "SUPERVISOR") {
+        const dse = await User.findOne({ role: "DSE", name: soldBy, supervisor: user.name }).lean();
+        if (!dse) return Response.json({ sales: [] });
+      }
       filter.soldBy = soldBy;
     } else if (user.role === "DSE") {
       filter.soldBy = user.name;
+    } else if (user.role === "SUPERVISOR") {
+      // Supervisor only sees sales from DSEs on their team
+      const teamDses = await User.find({ role: "DSE", supervisor: user.name }).select("name").lean();
+      const dseNames = teamDses.map((d) => d.name);
+      if (dseNames.length > 0) {
+        filter.soldBy = { $in: dseNames };
+      } else {
+        return Response.json({ sales: [] });
+      }
     }
 
     if (month) {
@@ -35,7 +51,9 @@ export async function GET(request: NextRequest) {
       if (dateTo) filter.date.$lte = dateTo;
     }
 
-    const sales = await Sale.find(filter).sort({ date: -1 }).lean();
+    let query = Sale.find(filter).sort({ date: -1 });
+    if (limit > 0) query = query.limit(limit);
+    const sales = await query.lean();
 
     return Response.json({ sales });
   } catch (error) {

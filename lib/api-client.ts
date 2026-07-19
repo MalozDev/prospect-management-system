@@ -1,3 +1,5 @@
+import { invalidatePrefix, clearAllCaches } from "./api-cache";
+
 const API_TOKEN_KEY = "crm-auth-token";
 const API_USER_KEY = "crm-api-user";
 
@@ -25,6 +27,8 @@ export function clearToken(): void {
   localStorage.removeItem(API_TOKEN_KEY);
   localStorage.removeItem(API_USER_KEY);
   localStorage.removeItem("crm-profile");
+  // Clear all API caches on logout
+  clearAllCaches();
 }
 
 export function getStoredApiUser(): ApiUser | null {
@@ -39,6 +43,28 @@ export function getStoredApiUser(): ApiUser | null {
 
 export function setStoredApiUser(user: ApiUser): void {
   localStorage.setItem(API_USER_KEY, JSON.stringify(user));
+}
+
+/** Derive the cache prefix to invalidate after a write operation.
+ *  E.g. /api/prospects/xxx → /api/prospects, /api/followups/xxx → /api/followups */
+function getCachePrefix(url: string): string {
+  // Strip query params
+  const path = url.split("?")[0];
+  // Strip trailing ID segments (MongoDB ObjectId or any last segment)
+  const parts = path.split("/");
+  // If the last segment looks like an ID (24 hex chars or not a known resource name), remove it
+  const resourceNames = new Set(["prospects", "sales", "followups", "activities", "notifications", "users"]);
+  if (parts.length >= 4 && !resourceNames.has(parts[parts.length - 1])) {
+    parts.pop();
+  }
+  return parts.join("/");
+}
+
+/** Invalidate caches related to a mutation URL.
+ *  E.g. after PATCH /api/followups/abc, invalidate all /api/followups caches */
+function invalidateAfterMutation(url: string): void {
+  const prefix = getCachePrefix(url);
+  invalidatePrefix(prefix);
 }
 
 async function handleUnauthorized() {
@@ -77,6 +103,12 @@ export async function apiFetch<T>(
   if (!response.ok) {
     const errorBody = await response.json().catch(() => ({ error: "Request failed" }));
     throw new Error(errorBody.error || `HTTP ${response.status}`);
+  }
+
+  // After successful write operations, invalidate related caches
+  const method = (options.method || "GET").toUpperCase();
+  if (method !== "GET") {
+    invalidateAfterMutation(url);
   }
 
   return response.json();

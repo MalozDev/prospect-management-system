@@ -50,6 +50,7 @@ const ProspectSchema = new Schema<IProspect>(
 );
 
 ProspectSchema.index({ assignedDse: 1, createdAt: -1 });
+ProspectSchema.index({ assignedDse: 1 });
 ProspectSchema.index({ status: 1 });
 
 export const Prospect = mongoose.models.Prospect ?? mongoose.model<IProspect>("Prospect", ProspectSchema);

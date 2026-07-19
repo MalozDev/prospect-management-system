@@ -42,6 +42,9 @@ UserSchema.methods.comparePassword = async function (candidatePassword: string):
   return bcrypt.compare(candidatePassword, this.password);
 };
 
+UserSchema.index({ cugSuffix: 1 });
+UserSchema.index({ role: 1, supervisor: 1 });
+
 UserSchema.set("toJSON", {
   transform: (_doc, ret) => {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars

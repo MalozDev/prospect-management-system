@@ -34,15 +34,21 @@ export async function connectToDatabase(): Promise<typeof mongoose> {
 
       cached.promise = mongoose.connect(MONGODB_URI, {
         bufferCommands: false,
+        maxPoolSize: 10,
+        minPoolSize: 2,
         serverSelectionTimeoutMS: 10000,
         connectTimeoutMS: 15000,
+        socketTimeoutMS: 45000,
       });
     } else if (MONGODB_URI.startsWith("mongodb://")) {
       // Local MongoDB — connect with shorter timeout
       cached.promise = mongoose.connect(MONGODB_URI, {
         bufferCommands: false,
+        maxPoolSize: 10,
+        minPoolSize: 1,
         serverSelectionTimeoutMS: 5000,
         connectTimeoutMS: 10000,
+        socketTimeoutMS: 45000,
       });
     } else {
       // No URI configured — dynamically load and start in-memory MongoDB (dev only)
@@ -53,6 +59,7 @@ export async function connectToDatabase(): Promise<typeof mongoose> {
       });
       cached.promise = mongoose.connect(memServer.getUri(), {
         bufferCommands: false,
+        maxPoolSize: 5,
       });
     }
   }

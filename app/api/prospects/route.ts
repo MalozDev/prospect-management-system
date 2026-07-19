@@ -4,6 +4,7 @@ import { Prospect } from "@/lib/models/Prospect";
 import { FollowUp } from "@/lib/models/FollowUp";
 import { Notification } from "@/lib/models/Notification";
 import { Activity } from "@/lib/models/Activity";
+import { User } from "@/lib/models/User";
 import { getUserFromRequest, unauthorizedResponse } from "@/lib/auth";
 
 export async function GET(request: NextRequest) {
@@ -18,14 +19,30 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get("status");
     const createdFrom = searchParams.get("createdFrom");
     const createdTo = searchParams.get("createdTo");
+    const limit = Number(searchParams.get("limit")) || 0;
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const filter: Record<string, any> = {};
 
     if (assignedDse) {
+      // Supervisor must verify the DSE is on their team
+      if (user.role === "SUPERVISOR") {
+        const dse = await User.findOne({ role: "DSE", name: assignedDse, supervisor: user.name }).lean();
+        if (!dse) return Response.json({ prospects: [] });
+      }
       filter.assignedDse = assignedDse;
     } else if (user.role === "DSE") {
       filter.assignedDse = user.name;
+    } else if (user.role === "SUPERVISOR") {
+      // Supervisor only sees prospects from DSEs on their team
+      const teamDses = await User.find({ role: "DSE", supervisor: user.name }).select("name").lean();
+      const dseNames = teamDses.map((d) => d.name);
+      if (dseNames.length > 0) {
+        filter.assignedDse = { $in: dseNames };
+      } else {
+        // No DSEs on this team — return nothing
+        return Response.json({ prospects: [] });
+      }
     }
 
     if (status) {
@@ -38,7 +55,9 @@ export async function GET(request: NextRequest) {
       if (createdTo) filter.createdAt.$lte = createdTo;
     }
 
-    const prospects = await Prospect.find(filter).sort({ createdAt: -1 }).lean();
+    let query = Prospect.find(filter).sort({ createdAt: -1 });
+    if (limit > 0) query = query.limit(limit);
+    const prospects = await query.lean();
 
     return Response.json({ prospects });
   } catch (error) {

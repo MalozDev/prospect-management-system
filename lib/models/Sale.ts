@@ -20,6 +20,7 @@ const SaleSchema = new Schema<ISale>(
 );
 
 SaleSchema.index({ soldBy: 1, date: -1 });
+SaleSchema.index({ soldBy: 1 });
 SaleSchema.index({ date: -1 });
 
 export const Sale = mongoose.models.Sale ?? mongoose.model<ISale>("Sale", SaleSchema);

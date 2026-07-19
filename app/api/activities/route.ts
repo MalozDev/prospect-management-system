@@ -23,6 +23,19 @@ export async function GET(request: NextRequest) {
       filter.type = type;
     }
 
+    // Supervisor only sees activities from DSEs on their team
+    if (user.role === "SUPERVISOR") {
+      const teamDses = await User.find({ role: "DSE", supervisor: user.name }).select("name _id").lean();
+      const dseNames = teamDses.map((d) => d.name);
+      const dseUserIds = teamDses.map((d) => String(d._id));
+      if (dseNames.length > 0) {
+        // Use userId for reliable matching (works even before dseName backfill)
+        filter.userId = { $in: dseUserIds };
+      } else {
+        return Response.json({ activities: [] });
+      }
+    }
+
     const activities = await Activity.find(filter).sort({ createdAt: -1 }).limit(limit).lean();
 
     // Fix old "Just now" timestamps

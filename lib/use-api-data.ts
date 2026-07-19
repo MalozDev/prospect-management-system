@@ -1,5 +1,6 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { apiFetch, getToken } from "./api-client";
+import { readCache, writeCache } from "./api-cache";
 
 interface UseApiDataResult<T> {
   data: T;
@@ -12,9 +13,12 @@ export function useApiData<T>(
   url: string | null,
   defaultValue: T
 ): UseApiDataResult<T> {
-  const [data, setData] = useState<T>(defaultValue);
-  const [loading, setLoading] = useState(true);
+  // Hydrate from cache immediately if available
+  const cached = url ? readCache<T>(url) : null;
+  const [data, setData] = useState<T>(cached ?? defaultValue);
+  const [loading, setLoading] = useState(!cached); // skip loading if we have cache
   const [error, setError] = useState<string | null>(null);
+  const mountedRef = useRef(true);
 
   const refetch = useCallback(async () => {
     if (!url) {
@@ -33,18 +37,34 @@ export function useApiData<T>(
 
     try {
       const result = await apiFetch<T>(url);
-      setData(result);
+      if (mountedRef.current) {
+        setData(result);
+        // Write to cache for instant navigation next time
+        writeCache(url, result);
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to fetch data");
-      // Keep old data on error
+      if (mountedRef.current) {
+        setError(err instanceof Error ? err.message : "Failed to fetch data");
+        // Keep old data on error
+      }
     } finally {
-      setLoading(false);
+      if (mountedRef.current) {
+        setLoading(false);
+      }
     }
   }, [url]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  useEffect(() => {
     refetch();
-  }, [refetch]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [url]);
 
   return { data, loading, error, refetch };
 }
