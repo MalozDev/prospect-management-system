@@ -19,12 +19,24 @@ export default function NewProspectPage() {
     setForm((current) => ({ ...current, [key]: value }));
   };
 
+  const handlePhoneChange = (value: string) => {
+    let digits = value.replace(/\D/g, ""); // strip everything except digits
+    if (digits.startsWith("0")) digits = digits.slice(1); // drop leading 0 if typed
+    digits = digits.slice(0, 9); // cap at 9 digits
+    setForm((current) => ({ ...current, phone: digits ? `+260${digits}` : "" }));
+  };
+
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError("");
 
     if (!form.name.trim() || !form.phone.trim() || !form.location.trim() || !form.address.trim() || !form.expectedPurchaseDate) {
       setError("Please fill in all required fields (name, phone, location, address, and follow-up date).");
+      return;
+    }
+
+    if (form.phone.replace("+260", "").length !== 9) {
+      setError("Phone number must be 9 digits after +260.");
       return;
     }
 
@@ -72,7 +84,18 @@ export default function NewProspectPage() {
           </div>
           <div>
             <label className="mb-2 block text-sm font-semibold text-gray-700">Phone Number <span className="text-red-500">*</span></label>
-            <Input value={form.phone} onChange={(event) => handleChange("phone", event.target.value)} placeholder="+2609xxxxxxxx" required />
+            <div className="flex items-center rounded-xl border border-gray-300 bg-white focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500">
+              <span className="pl-3 pr-1 text-sm text-gray-500 select-none">+260</span>
+              <input
+                value={form.phone.replace("+260", "")}
+                onChange={(event) => handlePhoneChange(event.target.value)}
+                placeholder="9xxxxxxxx"
+                inputMode="numeric"
+                maxLength={9}
+                required
+                className="w-full rounded-xl bg-transparent px-1 py-2 text-sm placeholder:text-gray-400 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+              />
+            </div>
           </div>
           <div>
             <label className="mb-2 block text-sm font-semibold text-gray-700">Location <span className="text-red-500">*</span></label>
