@@ -1,12 +1,9 @@
 import { NextRequest } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import { User } from "@/lib/models/User";
-import { getUserFromRequest, unauthorizedResponse } from "@/lib/auth";
+
 
 export async function GET(request: NextRequest) {
-  const user = getUserFromRequest(request);
-  if (!user) return unauthorizedResponse();
-
   try {
     await connectToDatabase();
 

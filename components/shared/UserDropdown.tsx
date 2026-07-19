@@ -61,7 +61,7 @@ export function UserDropdown() {
         onClick={() => setOpen(!open)}
         className="flex items-center gap-2 rounded-2xl border border-gray-200 bg-white px-3 py-2 text-sm transition hover:border-gray-300 hover:bg-gray-50"
       >
-        <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[#fff1f1] text-xs font-semibold text-[#E60012]">
+        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-[#E60012] to-[#CC0010] text-xs font-bold text-white">
           {initials}
         </div>
         <span className="hidden sm:inline font-medium text-gray-900">{profile.name}</span>
@@ -75,7 +75,7 @@ export function UserDropdown() {
           <div className="absolute right-0 top-full z-50 mt-2 w-64 origin-top-right animate-in fade-in zoom-in-95 rounded-2xl border border-gray-200 bg-white p-2 shadow-lg ring-1 ring-black/5">
             {/* User info header */}
             <div className="flex items-center gap-3 rounded-xl bg-[#fff8f8] px-3 py-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#E60012] text-sm font-semibold text-white">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[#E60012] to-[#CC0010] text-sm font-bold text-white">
                 {initials}
               </div>
               <div>

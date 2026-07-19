@@ -2,13 +2,13 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Prospect Manager",
-    short_name: "ProspectMgr",
-    description: "Airtel Zambia DSE Prospect Management System",
+    name: "Prospects",
+    short_name: "Prospects",
+    description: "Sales Prospect Management System",
     start_url: "/login",
     display: "standalone",
     display_override: ["window-controls-overlay", "standalone"],
-    background_color: "#f8f8f8",
+    background_color: "#ffffff",
     theme_color: "#E60012",
     orientation: "portrait-primary",
     categories: ["business", "productivity"],
@@ -39,15 +39,6 @@ export default function manifest(): MetadataRoute.Manifest {
         sizes: "512x512",
         type: "image/svg+xml",
         purpose: "maskable",
-      },
-    ],
-    screenshots: [
-      {
-        src: "/screenshots/desktop-screenshot.svg",
-        sizes: "1280x800",
-        type: "image/svg+xml",
-        form_factor: "wide",
-        label: "Prospect Manager Dashboard",
       },
     ],
   };

@@ -6,7 +6,6 @@
     </linearGradient>
   </defs>
   <rect width="192" height="192" rx="32" fill="url(#bg)"/>
-  <text x="96" y="72" text-anchor="middle" font-family="Arial, sans-serif" font-weight="bold" font-size="56" fill="white">AP</text>
-  <text x="96" y="112" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" fill="rgba(255,255,255,0.85)">Prospect</text>
-  <text x="96" y="130" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" fill="rgba(255,255,255,0.85)">Manager</text>
+  <text x="96" y="115" text-anchor="middle" font-family="Arial, sans-serif" font-weight="900" font-size="110" fill="white">P</text>
+  <text x="96" y="158" text-anchor="middle" font-family="Arial, sans-serif" font-weight="600" font-size="13" fill="rgba(255,255,255,0.9)" letter-spacing="4">PROSPECTS</text>
 </svg>

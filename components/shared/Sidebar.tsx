@@ -53,10 +53,17 @@ export function Sidebar() {
   return (
     <aside className="hidden h-screen w-72 flex-col border-r border-gray-200 bg-white p-6 md:flex">
       <div className="mb-8">
-        <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[#E60012]">Airtel Prospect Manager</p>
-        <p className="mt-2 text-sm text-gray-500">
-          {isSupervisor ? "Supervisor CRM" : "Direct Sales Executive CRM"}
-        </p>
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#E60012] to-[#CC0010]">
+            <span className="text-xl font-black text-white">P</span>
+          </div>
+          <div>
+            <p className="text-sm font-bold uppercase tracking-[0.15em] text-[#E60012]">Prospects</p>
+            <p className="text-xs text-gray-500">
+              {isSupervisor ? "Supervisor" : "DSE"}
+            </p>
+          </div>
+        </div>
       </div>
 
       <div className="mb-6">

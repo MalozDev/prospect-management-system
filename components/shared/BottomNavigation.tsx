@@ -59,8 +59,8 @@ export function BottomNavigation() {
               href={href}
               className={`relative flex flex-col items-center gap-1 rounded-xl px-3 py-2 text-[11px] transition-colors ${
                 isActive
-                  ? "text-[#E60012]"
-                  : "text-gray-500 hover:text-[#E60012]"
+                  ? "text-[#E60012] bg-[#fff1f1] font-semibold"
+                  : "text-gray-500 hover:text-[#E60012] hover:bg-[#fff8f8]"
               }`}
             >
               <Icon className={`h-5 w-5 ${isActive ? "text-[#E60012]" : ""}`} />

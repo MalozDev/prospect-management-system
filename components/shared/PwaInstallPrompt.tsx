@@ -75,6 +75,7 @@ export function PwaInstallPrompt() {
 
     if (result.outcome === "accepted") {
       setShowBanner(false);
+      setDismissed(true);
     }
     setInstallPrompt(null);
   };
@@ -164,12 +165,13 @@ export function PwaInstallPrompt() {
   const isIdle = notificationStatus === "idle";
   const isSubscribing = notificationStatus === "subscribing";
   const showNotificationPrompt = isIdle && !showBanner;
+  const showSuccess = notificationStatus === "granted" && !showBanner;
 
   return (
-    <div className="fixed bottom-20 left-4 right-4 z-50 md:bottom-6 md:left-auto md:right-6 md:w-80">
+    <div className="fixed top-4 left-4 right-4 z-50 md:top-6 md:left-auto md:right-6 md:w-80">
       {/* Install banner */}
       {showInstallBanner && (
-        <div className="animate-scale-in rounded-2xl border border-gray-200 bg-white p-4 shadow-xl">
+        <div className="animate-slide-down rounded-2xl border border-gray-200 bg-white p-4 shadow-xl">
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#E60012]">
@@ -184,6 +186,7 @@ export function PwaInstallPrompt() {
               type="button"
               onClick={handleDismiss}
               className="flex h-6 w-6 items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+              aria-label="Dismiss"
             >
               <X className="h-4 w-4" />
             </button>
@@ -195,12 +198,19 @@ export function PwaInstallPrompt() {
           >
             Install
           </button>
+          <button
+            type="button"
+            onClick={handleDismiss}
+            className="mt-2 w-full text-center text-xs text-gray-400 hover:text-gray-600"
+          >
+            Not now
+          </button>
         </div>
       )}
 
       {/* Notification permission + push subscription prompt */}
       {showNotificationPrompt && (
-        <div className="animate-scale-in rounded-2xl border border-gray-200 bg-white p-4 shadow-xl">
+        <div className="animate-slide-down rounded-2xl border border-gray-200 bg-white p-4 shadow-xl">
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-500">
@@ -211,6 +221,14 @@ export function PwaInstallPrompt() {
                 <p className="text-xs text-gray-500">Get alerts even when you&apos;re away</p>
               </div>
             </div>
+            <button
+              type="button"
+              onClick={handleDismiss}
+              className="flex h-6 w-6 items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+              aria-label="Dismiss"
+            >
+              <X className="h-4 w-4" />
+            </button>
           </div>
           <button
             type="button"
@@ -230,21 +248,33 @@ export function PwaInstallPrompt() {
               </>
             )}
           </button>
+          <button
+            type="button"
+            onClick={handleDismiss}
+            className="mt-2 w-full text-center text-xs text-gray-400 hover:text-gray-600"
+          >
+            Dismiss
+          </button>
         </div>
       )}
 
       {/* Push subscribed successfully confirmation */}
-      {isSubscribing && !showBanner && (
-        <div className="animate-scale-in rounded-2xl border border-emerald-200 bg-emerald-50 p-4 shadow-xl">
+      {showSuccess && !showInstallBanner && (
+        <div className="animate-slide-down rounded-2xl border border-emerald-200 bg-emerald-50 p-4 shadow-xl flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+            <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0" />
             <p className="text-sm font-medium text-emerald-800">
-              Push notifications enabled!
+              Notifications enabled
             </p>
           </div>
-          <p className="mt-1 text-xs text-emerald-600">
-            You&apos;ll get alerts for follow-ups &amp; visits.
-          </p>
+          <button
+            type="button"
+            onClick={handleDismiss}
+            className="flex h-6 w-6 items-center justify-center rounded-full text-emerald-400 hover:bg-emerald-100 hover:text-emerald-600"
+            aria-label="Dismiss"
+          >
+            <X className="h-4 w-4" />
+          </button>
         </div>
       )}
     </div>

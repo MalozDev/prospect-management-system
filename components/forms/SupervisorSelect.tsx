@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Select } from "@/components/ui/select";
-import { apiFetch, getToken } from "@/lib/api-client";
+
 
 interface Supervisor {
   _id: string;
@@ -29,12 +29,9 @@ export default function SupervisorSelect({
   useEffect(() => {
     async function fetchSupervisors() {
       try {
-        const token = getToken();
-        if (!token) {
-          setLoading(false);
-          return;
-        }
-        const data = await apiFetch<{ supervisors: Supervisor[] }>("/api/supervisors");
+        const res = await fetch("/api/supervisors");
+        if (!res.ok) throw new Error("Failed to load");
+        const data = await res.json() as { supervisors: Supervisor[] };
         setSupervisors(data.supervisors);
       } catch {
         setError("Failed to load supervisors");

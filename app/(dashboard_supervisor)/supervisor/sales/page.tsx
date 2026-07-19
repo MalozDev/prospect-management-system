@@ -172,7 +172,7 @@ export default function SupervisorSalesPage() {
       </div>
 
       {/* ── Month-over-Month Comparison ── */}
-      <div className="mb-6 rounded-3xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
+      <div className="mb-6 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm sm:rounded-3xl sm:p-6">
         <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="text-lg font-semibold text-gray-900">Month-over-Month</h2>
@@ -200,36 +200,37 @@ export default function SupervisorSalesPage() {
           </div>
         </div>
 
-        {/* Comparison bars */}
-        <div className="flex items-end gap-6">            <div className="flex flex-1 flex-col items-center gap-2">
-              <p className="text-sm font-semibold text-gray-900">{thisMonthCount}</p>
-              <div className="relative h-24 w-12 overflow-hidden rounded-xl bg-gray-100">
-                <div
-                  className="absolute bottom-0 w-12 rounded-xl bg-[#E60012] transition-all"
-                  style={{
-                    height: `${Math.min(100, (thisMonthCount / Math.max(thisMonthCount, prevMonthCount, 1)) * 100)}%`,
-                  }}
-                />
-              </div>
-              <p className="text-[10px] font-medium text-gray-500">Current</p>
+        {/* Comparison bars - mobile friendly */}
+        <div className="flex items-end justify-center gap-8 sm:gap-12">
+          <div className="flex flex-1 flex-col items-center gap-2">
+            <p className="text-sm font-semibold text-gray-900">{thisMonthCount}</p>
+            <div className="relative h-24 w-14 overflow-hidden rounded-xl bg-gray-100 sm:w-16">
+              <div
+                className="absolute bottom-0 w-full rounded-xl bg-[#E60012] transition-all"
+                style={{
+                  height: `${Math.min(100, (thisMonthCount / Math.max(thisMonthCount, prevMonthCount, 1)) * 100)}%`,
+                }}
+              />
             </div>
-            <div className="flex flex-1 flex-col items-center gap-2">
-              <p className="text-sm font-semibold text-gray-500">{prevMonthCount}</p>
-              <div className="relative h-24 w-12 overflow-hidden rounded-xl bg-gray-100">
-                <div
-                  className="absolute bottom-0 w-12 rounded-xl bg-gray-400 transition-all"
-                  style={{
-                    height: `${Math.min(100, (prevMonthCount / Math.max(thisMonthCount, prevMonthCount, 1)) * 100)}%`,
-                  }}
-                />
-              </div>
-              <p className="text-[10px] font-medium text-gray-500">Previous</p>
+            <p className="text-[10px] font-medium text-gray-500">Current</p>
+          </div>
+          <div className="flex flex-1 flex-col items-center gap-2">
+            <p className="text-sm font-semibold text-gray-500">{prevMonthCount}</p>
+            <div className="relative h-24 w-14 overflow-hidden rounded-xl bg-gray-100 sm:w-16">
+              <div
+                className="absolute bottom-0 w-full rounded-xl bg-gray-400 transition-all"
+                style={{
+                  height: `${Math.min(100, (prevMonthCount / Math.max(thisMonthCount, prevMonthCount, 1)) * 100)}%`,
+                }}
+              />
             </div>
+            <p className="text-[10px] font-medium text-gray-500">Previous</p>
+          </div>
         </div>
       </div>
 
       {/* ── Monthly Performance Bar Chart ── */}
-      <div className="mb-6 rounded-3xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
+      <div className="mb-6 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm sm:rounded-3xl sm:p-6">
         <div className="mb-4 flex items-center justify-between">
           <div>
             <h2 className="text-lg font-semibold text-gray-900">Monthly Performance</h2>
@@ -263,7 +264,7 @@ export default function SupervisorSalesPage() {
       </div>
 
       {/* ── DSE Leaderboard ── */}
-      <div className="mb-6 rounded-3xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
+      <div className="mb-6 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm sm:rounded-3xl sm:p-6">
         <div className="mb-4 flex items-center justify-between">
           <div>
             <h2 className="text-lg font-semibold text-gray-900">DSE Leaderboard</h2>
@@ -276,7 +277,7 @@ export default function SupervisorSalesPage() {
           {dseLeaderboard.map((dse, idx) => (
             <div key={dse.name} className="rounded-2xl border border-gray-200 bg-gray-50 p-3">
               <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 min-w-0 flex-1">
                   <span
                     className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-sm font-bold ${
                       idx === 0
@@ -290,9 +291,9 @@ export default function SupervisorSalesPage() {
                   >
                     {idx + 1}
                   </span>
-                  <div>
-                    <p className="text-sm font-semibold text-gray-900">{dse.name}</p>
-                    <div className="flex items-center gap-2 text-xs text-gray-500">
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-gray-900 truncate">{dse.name}</p>
+                    <div className="flex items-center gap-2 text-xs text-gray-500 flex-wrap">
                       <span>{dse.monthSales} this month</span>
                       {dse.change !== 0 && (
                         <span className={dse.change > 0 ? "text-emerald-600" : "text-red-600"}>
@@ -302,7 +303,7 @@ export default function SupervisorSalesPage() {
                     </div>
                   </div>
                 </div>
-                <div className="text-right">
+                <div className="text-right shrink-0">
                   <p className="text-sm font-bold text-gray-900">{dse.totalSales}</p>
                   <p className="text-xs text-gray-500">total</p>
                 </div>
@@ -315,7 +316,7 @@ export default function SupervisorSalesPage() {
                     style={{ width: `${(dse.totalSales / Math.max(dseLeaderboard[0]?.totalSales, 1)) * 100}%` }}
                   />
                 </div>
-                <span className="text-xs font-medium text-gray-600">K{dse.revenue.toLocaleString()}</span>
+                <span className="text-xs font-medium text-gray-600 whitespace-nowrap">K{dse.revenue.toLocaleString()}</span>
               </div>
 
               <button
@@ -338,8 +339,11 @@ export default function SupervisorSalesPage() {
                     .slice(0, 5)
                     .map((sale) => (
                       <div key={String(sale._id)} className="flex items-center justify-between rounded-xl bg-white px-3 py-2 text-sm">
-                        <span className="font-medium text-gray-900">{sale.customer}</span>
-                        <span className="text-xs text-gray-500">{sale.date}</span>
+                        <div className="min-w-0 flex-1 mr-2">
+                          <p className="font-medium text-gray-900 truncate">{sale.customer}</p>
+                          <p className="text-xs text-gray-500 truncate">{sale.packageName}</p>
+                        </div>
+                        <span className="text-xs text-gray-500 shrink-0">{sale.date}</span>
                       </div>
                     ))}
                   {allSales.filter((s) => s.soldBy === dse.name).length > 5 && (
@@ -362,13 +366,13 @@ export default function SupervisorSalesPage() {
       </div>
 
       {/* ── Detailed Monthly View ── */}
-      <div className="rounded-3xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
+      <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm sm:rounded-3xl sm:p-6">
         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="text-lg font-semibold text-gray-900">Sales History</h2>
             <p className="text-sm text-gray-500">Review detailed sales records by month.</p>
           </div>
-          <div className="max-w-xs">
+          <div className="w-full sm:max-w-xs">
             <select
               value={selectedMonth}
               onChange={(e) => setSelectedMonth(e.target.value)}
@@ -383,7 +387,33 @@ export default function SupervisorSalesPage() {
           </div>
         </div>
 
-        <div className="overflow-hidden rounded-3xl border border-gray-200 shadow-sm">
+        {/* Mobile: card list */}
+        <div className="space-y-2 md:hidden">
+          {selectedMonthSales.length > 0 ? (
+            selectedMonthSales.map((sale) => (
+              <div key={String(sale._id)} className="rounded-xl border border-gray-200 bg-white p-3">
+                <div className="flex items-start justify-between">
+                  <div className="min-w-0 flex-1 mr-2">
+                    <p className="text-sm font-semibold text-gray-900 truncate">{sale.customer}</p>
+                    <p className="text-xs text-gray-500 mt-0.5">{sale.soldBy}</p>
+                    <p className="text-xs text-gray-500 mt-0.5 truncate">{sale.packageName}</p>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className="text-sm font-bold text-gray-900">K{COMMISSION_PER_SALE}</p>
+                    <p className="text-[10px] text-gray-500">{sale.date}</p>
+                  </div>
+                </div>
+              </div>
+            ))
+          ) : (
+            <p className="py-8 text-center text-sm text-gray-500">
+              No sales recorded for {monthLabel(selectedMonth)}.
+            </p>
+          )}
+        </div>
+
+        {/* Desktop: table */}
+        <div className="hidden overflow-hidden rounded-3xl border border-gray-200 shadow-sm md:block">
           <table className="min-w-full divide-y divide-gray-200 text-sm">
             <thead className="bg-gray-50">
               <tr>

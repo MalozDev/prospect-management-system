@@ -1,4 +1,4 @@
-const CACHE_NAME = "prospect-manager-v1";
+const CACHE_NAME = "prospects-v1";
 const STATIC_ASSETS = [
   "/",
   "/login",
@@ -78,7 +78,7 @@ self.addEventListener("push", (event) => {
 
   try {
     const data = event.data.json();
-    const title = data.title || "Prospect Manager";
+    const title = data.title || "Prospects";
     const options = {
       body: data.message || "You have a new notification.",
       icon: "/icons/icon-192.svg",
@@ -94,7 +94,7 @@ self.addEventListener("push", (event) => {
   } catch {
     // If parsing fails, show raw text
     event.waitUntil(
-      self.registration.showNotification("Prospect Manager", {
+      self.registration.showNotification("Prospects", {
         body: event.data.text(),
         icon: "/icons/icon-192.svg",
       })

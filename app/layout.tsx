@@ -3,12 +3,12 @@ import "./globals.css";
 import { PwaInstallPrompt } from "@/components/shared/PwaInstallPrompt";
 
 export const metadata: Metadata = {
-  title: "Prospect Manager",
-  description: "Airtel Zambia DSE Prospect Management System",
+  title: "Prospects",
+  description: "Sales Prospect Management System",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
-    title: "Prospect Manager",
+    title: "Prospects",
     statusBarStyle: "black-translucent",
   },
   icons: {
@@ -40,7 +40,7 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/icons/icon-512.svg" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <meta name="apple-mobile-web-app-title" content="ProspectMgr" />
+        <meta name="apple-mobile-web-app-title" content="Prospects" />
         <meta name="mobile-web-app-capable" content="yes" />
       </head>
       <body>
