@@ -4,11 +4,10 @@ import { useMemo, useState } from "react";
 import { ArrowDown, ArrowUp, BarChart3, TrendingUp } from "lucide-react";
 import { PageShell } from "@/components/shared/PageShell";
 import { StatCard } from "@/components/shared/StatCard";
+import { useTargets } from "@/lib/use-targets";
 import { useApiData } from "@/lib/use-api-data";
 import type { ISale } from "@/lib/models/Sale";
-
-const COMMISSION_PER_SALE = 200;
-const MONTHLY_TARGET = 25;
+import { COMMISSION_PER_SALE } from "@/lib/supervisor-utils";
 
 function monthLabel(monthKey: string) {
   const [year, month] = monthKey.split("-");
@@ -74,14 +73,16 @@ export default function SalesPage() {
       .map(([monthKey, count]) => ({ monthKey, count }));
   }, [sales]);
 
+  const targets = useTargets();
   const commissionThisMonth = monthSales.length * COMMISSION_PER_SALE;
-  const targetProgress = Math.min(100, Math.round((monthSales.length / MONTHLY_TARGET) * 100));
-  const currentAmount = Math.min(MONTHLY_TARGET, monthSales.length);
-  const currentProgress = Math.min(100, Math.round((currentAmount / MONTHLY_TARGET) * 100));
+  const targetProgress = Math.min(100, Math.round((monthSales.length / targets.monthly) * 100));
+  const currentAmount = Math.min(targets.monthly, monthSales.length);
+  const currentProgress = Math.min(100, Math.round((currentAmount / targets.monthly) * 100));
   const getRingColor = (amount: number) => {
-    if (amount >= 19) return "#16a34a";
-    if (amount >= 13) return "#fb923c";
-    if (amount >= 7) return "#facc15";
+    const t = targets.monthly;
+    if (amount >= t * 0.75) return "#16a34a";
+    if (amount >= t * 0.50) return "#fb923c";
+    if (amount >= t * 0.25) return "#facc15";
     return "#dc2626";
   };
   const ringStyle = {
@@ -94,7 +95,7 @@ export default function SalesPage() {
         <StatCard label="Today's Sales" value={String(todaySales.length)} hint="ODU sold today" />
         <StatCard label="Weekly Sales" value={String(weekSales.length)} hint="Past 7 days" />
         <StatCard label="Monthly Sales" value={String(monthSales.length)} hint="This month" />
-        <StatCard label="Target Progress" value={`${targetProgress}%`} hint={`${monthSales.length}/${MONTHLY_TARGET} sold`} />
+        <StatCard label="Target Progress" value={`${targetProgress}%`} hint={`${monthSales.length}/${targets.monthly} sold`} />
       </div>
 
       <div className="mt-4 rounded-3xl border border-gray-200 bg-white p-4 shadow-sm sm:mt-6 sm:p-6">
@@ -113,7 +114,7 @@ export default function SalesPage() {
               <div className="absolute inset-6 flex flex-col items-center justify-center rounded-full bg-white px-2 text-center sm:inset-8">
                 <p className="text-[8px] uppercase tracking-[0.2em] text-gray-500 sm:text-xs">Target</p>
                 <p className="mt-0.5 text-2xl font-semibold leading-none text-gray-900 sm:mt-1 sm:text-4xl">{monthSales.length}</p>
-                <p className="text-[11px] text-gray-500 sm:text-sm">of {MONTHLY_TARGET}</p>
+                <p className="text-[11px] text-gray-500 sm:text-sm">of {targets.monthly}</p>
                 <p className="mt-1 text-[11px] font-semibold text-[#E60012] sm:mt-2 sm:text-sm">{targetProgress}%</p>
               </div>
             </div>
@@ -129,10 +130,10 @@ export default function SalesPage() {
               <p className="text-sm font-semibold text-gray-700">Target levels</p>
               <div className="mt-3 space-y-2 sm:mt-4 sm:space-y-3">
                 {[
-                  { color: "bg-red-600", label: "Level 1", desc: "0–6 sales — red zone" },
-                  { color: "bg-yellow-400", label: "Level 2", desc: "7–12 sales — yellow zone" },
-                  { color: "bg-orange-500", label: "Level 3", desc: "13–18 sales — orange zone" },
-                  { color: "bg-emerald-600", label: "Level 4", desc: "19–25 sales — green zone" },
+                  { color: "bg-red-600", label: "Level 1", desc: `0–${Math.floor(targets.monthly * 0.25)} sales — red zone` },
+                  { color: "bg-yellow-400", label: "Level 2", desc: `${Math.ceil(targets.monthly * 0.25)}–${Math.floor(targets.monthly * 0.5)} sales — yellow zone` },
+                  { color: "bg-orange-500", label: "Level 3", desc: `${Math.ceil(targets.monthly * 0.5)}–${Math.floor(targets.monthly * 0.75)} sales — orange zone` },
+                  { color: "bg-emerald-600", label: "Level 4", desc: `${Math.ceil(targets.monthly * 0.75)}–${targets.monthly} sales — green zone` },
                 ].map((level) => (
                   <div key={level.label} className="flex items-center gap-3 rounded-2xl bg-white p-2.5 shadow-sm sm:p-3">
                     <span className={`inline-flex h-3 w-3 rounded-full ${level.color}`} />
@@ -149,7 +150,7 @@ export default function SalesPage() {
               <div className="mt-4 rounded-2xl bg-gray-100 p-4">
                 <p className="text-sm text-gray-500">Sales this month</p>
                 <p className="mt-2 text-3xl font-semibold text-gray-900">{monthSales.length}</p>
-                <p className="text-sm text-gray-500">Target is {MONTHLY_TARGET} sales</p>
+                <p className="text-sm text-gray-500">Target is {targets.monthly} sales</p>
               </div>
             </div>
           </div>

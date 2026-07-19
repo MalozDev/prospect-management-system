@@ -97,7 +97,7 @@ export async function GET(request: NextRequest) {
         await Notification.create({
           title: notif.title,
           message: notif.message,
-          time: "Just now",
+          time: new Date().toISOString(),
           unread: true,
           userId: notif.userId,
         });
@@ -157,7 +157,7 @@ export async function POST(request: NextRequest) {
       await Notification.create({
         title: "Follow-up Due Today",
         message: `Follow-up due today for ${followUp.customerName} (${followUp.phone})`,
-        time: "Just now",
+        time: new Date().toISOString(),
         unread: true,
         userId: user.userId,
       });

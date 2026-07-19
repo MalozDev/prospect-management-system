@@ -1,12 +1,14 @@
 "use client";
 
-import { CalendarDays, ChartNoAxesCombined, Sparkles, Users } from "lucide-react";
+import { CalendarDays, ChartNoAxesCombined, Sparkles, Users, Phone, StickyNote } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { StatusBadge } from "@/components/shared/StatusBadge";
+import { formatRelativeTime } from "@/lib/time-utils";
 interface ProspectPreview {
   _id?: unknown;
   id?: string;
+  title?: string;
   name: string;
   phone: string;
   location: string;
@@ -16,6 +18,7 @@ interface ProspectPreview {
   status: string;
   assignedDse: string;
   notes?: string;
+  lastContacted?: string;
 }
 import { getTodayIso, getWeekStartIso, getCurrentMonth } from "@/lib/supervisor-utils";
 
@@ -107,12 +110,22 @@ export function DseProspectPanel({ dseName, prospects, defaultExpanded = false }
             {visibleProspects.length > 0 ? (
               visibleProspects.map((prospect) => (
                 <div key={String(prospect._id ?? prospect.id ?? prospect.name)} className="rounded-2xl border border-gray-200 bg-gray-50 p-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold text-gray-900">{prospect.name}</p>
-                      <p className="mt-0.5 truncate text-xs text-gray-500">{prospect.phone}</p>
-                      <p className="mt-0.5 truncate text-xs text-gray-500">{prospect.location}</p>
-                    </div>
+                  <div className="flex items-start justify-between gap-2">                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-semibold text-gray-900">{prospect.name}</p>
+                        <p className="mt-0.5 truncate text-xs text-gray-500">
+                          <a href={`tel:${prospect.phone}`} className="text-[#E60012] hover:underline">{prospect.phone}</a>
+                        </p>
+                        <p className="mt-0.5 truncate text-xs text-gray-500">{prospect.location}</p>
+                        {prospect.status === "CONTACTED" && prospect.lastContacted && (
+                          <p className="mt-1 text-[10px] text-blue-600">📞 Contacted {formatRelativeTime(prospect.lastContacted)}</p>
+                        )}
+                        {prospect.notes?.trim() && (
+                          <p className="mt-1 flex items-start gap-1 rounded-lg bg-amber-50 p-1.5 text-[10px] text-amber-800">
+                            <StickyNote className="mt-0.5 h-3 w-3 shrink-0 text-amber-500" />
+                            <span>{prospect.notes}</span>
+                          </p>
+                        )}
+                      </div>
                     <StatusBadge status={prospect.status} className="shrink-0 px-2 py-0.5 text-[10px]" />
                   </div>
                 </div>

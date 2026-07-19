@@ -12,12 +12,12 @@ interface SalePreview {
   soldBy: string;
   date: string;
 }
+import { useTargets } from "@/lib/use-targets";
 import {
   COMMISSION_PER_SALE,
   getCurrentMonth,
   getTodayIso,
   getWeekStartIso,
-  MONTHLY_SALES_TARGET,
   targetZoneColor,
 } from "@/lib/supervisor-utils";
 
@@ -39,7 +39,8 @@ export function DseSalesPanel({ dseName, sales, defaultExpanded = false }: DseSa
   const weekSales = sales.filter((s) => s.date >= weekStart && s.date <= today);
   const monthSales = sales.filter((s) => s.date.slice(0, 7) === currentMonth);
   const commissionThisMonth = monthSales.length * COMMISSION_PER_SALE;
-  const targetProgress = Math.min(100, Math.round((monthSales.length / MONTHLY_SALES_TARGET) * 100));
+  const targets = useTargets();
+  const targetProgress = Math.min(100, Math.round((monthSales.length / targets.monthly) * 100));
   const ringStyle = {
     background: `conic-gradient(${targetZoneColor(targetProgress)} 0% ${targetProgress}%, #f3f4f6 ${targetProgress}% 100%)`,
   };
@@ -75,7 +76,7 @@ export function DseSalesPanel({ dseName, sales, defaultExpanded = false }: DseSa
             <StatCard
               label="Target Progress"
               value={`${targetProgress}%`}
-              hint={`${monthSales.length}/${MONTHLY_SALES_TARGET} sold`}
+              hint={`${monthSales.length}/${targets.monthly} sold`}
               className="p-3"
             />
           </div>
@@ -85,7 +86,7 @@ export function DseSalesPanel({ dseName, sales, defaultExpanded = false }: DseSa
               <div className="absolute inset-0 rounded-full" style={ringStyle} />
               <div className="absolute inset-3 flex flex-col items-center justify-center rounded-full bg-white text-center">
                 <p className="text-lg font-bold leading-none text-gray-900">{monthSales.length}</p>
-                <p className="text-[9px] text-gray-500">of {MONTHLY_SALES_TARGET}</p>
+                <p className="text-[9px] text-gray-500">of {targets.monthly}</p>
               </div>
             </div>
             <div>

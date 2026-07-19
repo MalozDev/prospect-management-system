@@ -55,11 +55,11 @@ export async function POST(request: NextRequest) {
     await connectToDatabase();
 
     const body = await request.json();
-    const { name, phone, location, address, expectedPurchaseDate, status, notes } = body;
+    const { title, name, phone, location, address, expectedPurchaseDate, status, notes } = body;
 
-    if (!name?.trim() || !phone?.trim() || !location?.trim() || !expectedPurchaseDate) {
+    if (!name?.trim() || !phone?.trim() || !location?.trim() || !address?.trim() || !expectedPurchaseDate) {
       return Response.json(
-        { error: "Name, phone, location, and expected purchase date are required." },
+        { error: "Name, phone, location, address, and follow-up date are required." },
         { status: 400 }
       );
     }
@@ -67,6 +67,7 @@ export async function POST(request: NextRequest) {
     const today = new Date().toISOString().slice(0, 10);
 
     const prospect = await Prospect.create({
+      title: title || "Mr",
       name: name.trim(),
       phone: phone.trim(),
       location: location.trim(),
@@ -82,7 +83,7 @@ export async function POST(request: NextRequest) {
     await Activity.create({
       title: "Prospect created",
       detail: `${prospect.name} added as a new prospect`,
-      time: "Just now",
+      time: new Date().toISOString(),
       type: "prospect",
       userId: user.userId,
     });
@@ -107,7 +108,7 @@ export async function POST(request: NextRequest) {
       await Notification.create({
         title: "Follow-up Due Today",
         message: `Follow-up due today for ${followUp.customerName} (${followUp.phone})`,
-        time: "Just now",
+        time: new Date().toISOString(),
         unread: true,
         userId: user.userId,
       });

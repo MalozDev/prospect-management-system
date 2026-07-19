@@ -17,6 +17,7 @@ import {
   ChevronUp,
   Sparkles,
   Activity,
+  StickyNote,
 } from "lucide-react";
 
 import { PageShell } from "@/components/shared/PageShell";
@@ -26,12 +27,9 @@ import { useApiData } from "@/lib/use-api-data";
 import type { IProspect } from "@/lib/models/Prospect";
 import type { ISale } from "@/lib/models/Sale";
 import type { IActivity } from "@/lib/models/Activity";
-import {
-  COMMISSION_PER_SALE,
-  DAILY_SALES_TARGET,
-  WEEKLY_SALES_TARGET,
-  MONTHLY_SALES_TARGET,
-} from "@/lib/supervisor-utils";
+import { COMMISSION_PER_SALE } from "@/lib/supervisor-utils";
+import { useTargets } from "@/lib/use-targets";
+import { formatRelativeTime } from "@/lib/time-utils";
 
 interface PageProps {
   params: Promise<{ id: string }> | { id: string };
@@ -53,6 +51,7 @@ function shortMonth(monthKey: string) {
 }
 
 export default function DseDetailPage({ params }: PageProps) {
+  const targets = useTargets();
   const [dseName, setDseName] = useState<string>("");
   const [expandedSection, setExpandedSection] = useState<string | null>(null);
   const [selectedHistoryMonth, setSelectedHistoryMonth] = useState<string>("");
@@ -125,9 +124,9 @@ export default function DseDetailPage({ params }: PageProps) {
     const monthProspects = dseProspects.filter((p) => p.createdAt.slice(0, 7) === currentMonth).length;
 
     // Target progress
-    const dailyProgress = Math.min(100, Math.round((todaySales / DAILY_SALES_TARGET) * 100));
-    const weeklyProgress = Math.min(100, Math.round((weekSales / WEEKLY_SALES_TARGET) * 100));
-    const monthlyProgress = Math.min(100, Math.round((monthSales / MONTHLY_SALES_TARGET) * 100));
+    const dailyProgress = Math.min(100, Math.round((todaySales / targets.daily) * 100));
+    const weeklyProgress = Math.min(100, Math.round((weekSales / targets.weekly) * 100));
+    const monthlyProgress = Math.min(100, Math.round((monthSales / targets.monthly) * 100));
 
     // Month-over-month change
     const monthChange = monthSales - prevMonthSales;
@@ -153,11 +152,11 @@ export default function DseDetailPage({ params }: PageProps) {
       monthlyProgress,
       monthChange,
       monthChangePercent,
-      dailyRemaining: Math.max(0, DAILY_SALES_TARGET - todaySales),
-      weeklyRemaining: Math.max(0, WEEKLY_SALES_TARGET - weekSales),
-      monthlyRemaining: Math.max(0, MONTHLY_SALES_TARGET - monthSales),
+      dailyRemaining: Math.max(0, targets.daily - todaySales),
+      weeklyRemaining: Math.max(0, targets.weekly - weekSales),
+      monthlyRemaining: Math.max(0, targets.monthly - monthSales),
     };
-  }, [dseProspects, dseSales, today, weekStart, currentMonth, previousMonth]);
+  }, [dseProspects, dseSales, today, weekStart, currentMonth, previousMonth, targets]);
 
   // ── Monthly Breakdown ──
   const monthlyStats = useMemo(() => {
@@ -326,7 +325,7 @@ export default function DseDetailPage({ params }: PageProps) {
           {/* Daily */}
           <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
             <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">Daily Target</p>
-            <p className="mt-2 text-2xl font-bold text-gray-900">{stats.todaySales} <span className="text-sm font-normal text-gray-500">/ {DAILY_SALES_TARGET}</span></p>
+            <p className="mt-2 text-2xl font-bold text-gray-900">{stats.todaySales} <span className="text-sm font-normal text-gray-500">/ {targets.daily}</span></p>
             <div className="mt-3 h-2 overflow-hidden rounded-full bg-gray-200">
               <div className="h-full rounded-full bg-[#E60012] transition-all" style={{ width: `${Math.min(100, stats.dailyProgress)}%` }} />
             </div>
@@ -338,7 +337,7 @@ export default function DseDetailPage({ params }: PageProps) {
           {/* Weekly */}
           <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
             <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">Weekly Target</p>
-            <p className="mt-2 text-2xl font-bold text-gray-900">{stats.weekSales} <span className="text-sm font-normal text-gray-500">/ {WEEKLY_SALES_TARGET}</span></p>
+            <p className="mt-2 text-2xl font-bold text-gray-900">{stats.weekSales} <span className="text-sm font-normal text-gray-500">/ {targets.weekly}</span></p>
             <div className="mt-3 h-2 overflow-hidden rounded-full bg-gray-200">
               <div className="h-full rounded-full bg-[#E60012] transition-all" style={{ width: `${Math.min(100, stats.weeklyProgress)}%` }} />
             </div>
@@ -350,7 +349,7 @@ export default function DseDetailPage({ params }: PageProps) {
           {/* Monthly */}
           <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
             <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">Monthly Target</p>
-            <p className="mt-2 text-2xl font-bold text-gray-900">{stats.monthSales} <span className="text-sm font-normal text-gray-500">/ {MONTHLY_SALES_TARGET}</span></p>
+            <p className="mt-2 text-2xl font-bold text-gray-900">{stats.monthSales} <span className="text-sm font-normal text-gray-500">/ {targets.monthly}</span></p>
             <div className="mt-3 h-2 overflow-hidden rounded-full bg-gray-200">
               <div className="h-full rounded-full bg-[#E60012] transition-all" style={{ width: `${Math.min(100, stats.monthlyProgress)}%` }} />
             </div>
@@ -500,14 +499,23 @@ export default function DseDetailPage({ params }: PageProps) {
                 activeProspects.map((prospect) => (
                   <div key={String(prospect._id)} className="rounded-2xl border border-gray-100 bg-gray-50/50 p-4 transition hover:border-gray-200">
                     <div className="flex items-start justify-between">
-                      <div>
+                      <div className="min-w-0 flex-1">
                         <h4 className="font-semibold text-gray-900">{prospect.name}</h4>
                         <p className="mt-0.5 text-xs text-gray-500">{prospect.location}</p>
+                        {prospect.status === "CONTACTED" && prospect.lastContacted && (
+                          <p className="mt-1 text-[10px] text-blue-600">📞 Contacted {formatRelativeTime(prospect.lastContacted)}</p>
+                        )}
+                        {prospect.notes?.trim() && (
+                          <p className="mt-1.5 flex items-start gap-1 rounded-lg bg-amber-50 p-1.5 text-[10px] text-amber-800">
+                            <StickyNote className="mt-0.5 h-3 w-3 shrink-0 text-amber-500" />
+                            <span>{prospect.notes}</span>
+                          </p>
+                        )}
                       </div>
                       <StatusBadge status={prospect.status} />
                     </div>
                     <div className="mt-3 flex flex-wrap items-center gap-4 text-xs text-gray-500">
-                      <span>📞 {prospect.phone}</span>
+                      <span>📞 <a href={`tel:${prospect.phone}`} className="text-[#E60012] hover:underline">{prospect.phone}</a></span>
                       <span className="flex items-center gap-1">
                         <Calendar className="h-3 w-3" /> {prospect.expectedPurchaseDate}
                       </span>

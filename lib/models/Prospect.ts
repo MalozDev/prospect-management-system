@@ -11,7 +11,10 @@ export type ProspectStatus =
   | "FOLLOW UP"
   | "VISIT SCHEDULED";
 
+import { PROSPECT_TITLES, type ProspectTitle } from "@/lib/prospect-titles";
+
 export interface IProspect extends Document {
+  title: ProspectTitle;
   name: string;
   phone: string;
   location: string;
@@ -21,10 +24,12 @@ export interface IProspect extends Document {
   status: ProspectStatus;
   assignedDse: string;
   notes: string;
+  lastContacted?: string;
 }
 
 const ProspectSchema = new Schema<IProspect>(
   {
+    title: { type: String, enum: PROSPECT_TITLES, default: "Mr", trim: true },
     name: { type: String, required: true, trim: true },
     phone: { type: String, required: true, trim: true },
     location: { type: String, required: true, trim: true },
@@ -39,6 +44,7 @@ const ProspectSchema = new Schema<IProspect>(
     },
     assignedDse: { type: String, required: true, trim: true },
     notes: { type: String, default: "" },
+    lastContacted: { type: String, default: "" },
   },
   { timestamps: true }
 );

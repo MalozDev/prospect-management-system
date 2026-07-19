@@ -2,6 +2,7 @@ import { ProspectCard } from "@/components/shared/ProspectCard";
 
 interface ProspectPreview {
   _id?: string;
+  title?: string;
   name: string;
   location: string;
   phone: string;

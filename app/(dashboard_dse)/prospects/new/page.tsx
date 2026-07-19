@@ -5,11 +5,13 @@ import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import { apiFetch } from "@/lib/api-client";
+import { PROSPECT_TITLES } from "@/lib/prospect-titles";
 
 export default function NewProspectPage() {
   const router = useRouter();
-  const [form, setForm] = useState({ name: "", phone: "", location: "", address: "", expectedPurchaseDate: "" });
+  const [form, setForm] = useState({ title: "Mr", name: "", phone: "", location: "", address: "", expectedPurchaseDate: "", notes: "" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -21,8 +23,8 @@ export default function NewProspectPage() {
     event.preventDefault();
     setError("");
 
-    if (!form.name.trim() || !form.phone.trim() || !form.location.trim() || !form.expectedPurchaseDate) {
-      setError("Please fill in all required fields.");
+    if (!form.name.trim() || !form.phone.trim() || !form.location.trim() || !form.address.trim() || !form.expectedPurchaseDate) {
+      setError("Please fill in all required fields (name, phone, location, address, and follow-up date).");
       return;
     }
 
@@ -54,24 +56,47 @@ export default function NewProspectPage() {
 
         <form onSubmit={handleSubmit} className="mt-6 space-y-4">
           <div>
-            <label className="mb-2 block text-sm font-semibold text-gray-700">Full Name</label>
-            <Input value={form.name} onChange={(event) => handleChange("name", event.target.value)} placeholder="Prospect full name" />
+            <label className="mb-2 block text-sm font-semibold text-gray-700">Title / Salutation</label>
+            <Select
+              value={form.title}
+              onChange={(event) => handleChange("title", event.target.value)}
+            >
+              {PROSPECT_TITLES.map((t) => (
+                <option key={t} value={t}>{t}</option>
+              ))}
+            </Select>
           </div>
           <div>
-            <label className="mb-2 block text-sm font-semibold text-gray-700">Phone Number</label>
-            <Input value={form.phone} onChange={(event) => handleChange("phone", event.target.value)} placeholder="+2609xxxxxxxx" />
+            <label className="mb-2 block text-sm font-semibold text-gray-700">Full Name <span className="text-red-500">*</span></label>
+            <Input value={form.name} onChange={(event) => handleChange("name", event.target.value)} placeholder="Prospect full name" required />
           </div>
           <div>
-            <label className="mb-2 block text-sm font-semibold text-gray-700">Location</label>
-            <Input value={form.location} onChange={(event) => handleChange("location", event.target.value)} placeholder="Field location" />
+            <label className="mb-2 block text-sm font-semibold text-gray-700">Phone Number <span className="text-red-500">*</span></label>
+            <Input value={form.phone} onChange={(event) => handleChange("phone", event.target.value)} placeholder="+2609xxxxxxxx" required />
           </div>
           <div>
-            <label className="mb-2 block text-sm font-semibold text-gray-700">Address</label>
-            <Input value={form.address} onChange={(event) => handleChange("address", event.target.value)} placeholder="Meeting address" />
+            <label className="mb-2 block text-sm font-semibold text-gray-700">Location <span className="text-red-500">*</span></label>
+            <Input value={form.location} onChange={(event) => handleChange("location", event.target.value)} placeholder="Field location" required />
           </div>
           <div>
-            <label className="mb-2 block text-sm font-semibold text-gray-700">Follow-up Date</label>
-            <Input value={form.expectedPurchaseDate} onChange={(event) => handleChange("expectedPurchaseDate", event.target.value)} type="date" />
+            <label className="mb-2 block text-sm font-semibold text-gray-700">Address <span className="text-red-500">*</span></label>
+            <Input value={form.address} onChange={(event) => handleChange("address", event.target.value)} placeholder="Meeting address" required />
+          </div>
+          <div>
+            <label className="mb-2 block text-sm font-semibold text-gray-700">Follow-up Date <span className="text-red-500">*</span></label>
+            <Input value={form.expectedPurchaseDate} onChange={(event) => handleChange("expectedPurchaseDate", event.target.value)} type="date" required />
+          </div>
+          <div>
+            <label className="mb-2 block text-sm font-semibold text-gray-700">
+              Notes <span className="font-normal text-gray-400">(optional)</span>
+            </label>
+            <textarea
+              value={form.notes}
+              onChange={(event) => handleChange("notes", event.target.value)}
+              placeholder="Any reminders, preferences, or special details..."
+              rows={3}
+              className="flex w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
+            />
           </div>
           <Button type="submit" className="w-full" disabled={loading}>
             {loading ? (

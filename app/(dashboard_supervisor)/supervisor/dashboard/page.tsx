@@ -10,6 +10,7 @@ import {
   ChevronDown,
   ChevronUp,
   ArrowUpRight,
+  StickyNote,
 } from "lucide-react";
 
 import { PageShell } from "@/components/shared/PageShell";
@@ -19,9 +20,12 @@ import { useApiData } from "@/lib/use-api-data";
 import type { IProspect } from "@/lib/models/Prospect";
 import type { ISale } from "@/lib/models/Sale";
 import type { IActivity } from "@/lib/models/Activity";
-import { COMMISSION_PER_SALE, DAILY_SALES_TARGET, WEEKLY_SALES_TARGET, MONTHLY_SALES_TARGET, TEAM_TARGET } from "@/lib/supervisor-utils";
+import { COMMISSION_PER_SALE } from "@/lib/supervisor-utils";
+import { useTargets } from "@/lib/use-targets";
+import { formatRelativeTime } from "@/lib/time-utils";
 
 export default function SupervisorDashboardPage() {
+  const targets = useTargets();
   const [expandedDse, setExpandedDse] = useState<string | null>(null);
 
   const { data: prospectsData } = useApiData<{ prospects: IProspect[] }>("/api/prospects", { prospects: [] });
@@ -41,7 +45,7 @@ export default function SupervisorDashboardPage() {
       .map((name) => {
         const dseProspects = prospectsData.prospects.filter((p) => p.assignedDse === name);
         const dseSales = salesData.sales.filter((s) => s.soldBy === name);
-        const todayProspects = dseProspects.filter((p) => p.createdAt === today).length;
+        const todayProspects = dseProspects.filter((p) => p.createdAt === today && p.status !== "SOLD" && p.status !== "LOST").length;
         const todaySalesCount = dseSales.filter((s) => s.date === today).length;
         const weekStart = new Date();
         weekStart.setDate(weekStart.getDate() - 6);
@@ -58,23 +62,23 @@ export default function SupervisorDashboardPage() {
           todaySales: todaySalesCount,
           weekSales,
           monthSales,
-          dailyRemaining: Math.max(0, DAILY_SALES_TARGET - todaySalesCount),
-          weeklyRemaining: Math.max(0, WEEKLY_SALES_TARGET - weekSales),
-          monthlyRemaining: Math.max(0, MONTHLY_SALES_TARGET - monthSales),
-          dailyProgress: Math.min(100, Math.round((todaySalesCount / DAILY_SALES_TARGET) * 100)),
-          weeklyProgress: Math.min(100, Math.round((weekSales / WEEKLY_SALES_TARGET) * 100)),
-          monthlyProgress: Math.min(100, Math.round((monthSales / MONTHLY_SALES_TARGET) * 100)),
+          dailyRemaining: Math.max(0, targets.daily - todaySalesCount),
+          weeklyRemaining: Math.max(0, targets.weekly - weekSales),
+          monthlyRemaining: Math.max(0, targets.monthly - monthSales),
+          dailyProgress: Math.min(100, Math.round((todaySalesCount / targets.daily) * 100)),
+          weeklyProgress: Math.min(100, Math.round((weekSales / targets.weekly) * 100)),
+          monthlyProgress: Math.min(100, Math.round((monthSales / targets.monthly) * 100)),
           revenue: dseSales.length * COMMISSION_PER_SALE,
         };
       })
       .sort((a, b) => b.monthSales - a.monthSales || b.todaySales - a.todaySales);
-  }, [prospectsData.prospects, salesData.sales, today]);
+  }, [prospectsData.prospects, salesData.sales, today, targets]);
 
   // Group today's prospects by DSE
   const todayByDse = useMemo(() => {
     const grouped: Record<string, IProspect[]> = {};
     prospectsData.prospects
-      .filter((p) => p.createdAt === today)
+      .filter((p) => p.createdAt === today && p.status !== "SOLD" && p.status !== "LOST")
       .forEach((prospect) => {
         if (!grouped[prospect.assignedDse]) {
           grouped[prospect.assignedDse] = [];
@@ -92,11 +96,11 @@ export default function SupervisorDashboardPage() {
     const totalRevenue = salesData.sales.length * COMMISSION_PER_SALE;
     const currentMonth = today.slice(0, 7);
     const teamMonthSales = salesData.sales.filter((s) => s.date.slice(0, 7) === currentMonth).length;
-    const teamTarget = TEAM_TARGET;
+    const teamTarget = targets.team;
     const teamProgress = teamTarget > 0 ? Math.min(100, Math.round((teamMonthSales / teamTarget) * 100)) : 0;
 
     return { totalDse, todayProspects, todaySales: todaySalesCount, totalRevenue, teamMonthSales, teamTarget, teamProgress };
-  }, [prospectsData.prospects, salesData.sales, today, dseStats.length]);
+  }, [prospectsData.prospects, salesData.sales, today, dseStats.length, targets]);
 
   const targetZoneColor = (progress: number) => {
     if (progress >= 75) return "#16a34a";
@@ -165,10 +169,21 @@ export default function SupervisorDashboardPage() {
                       {dseProspects.map((prospect) => (
                         <div key={String(prospect._id)} className="rounded-xl border border-gray-200 bg-white p-3">
                           <div className="flex items-start justify-between gap-2">
-                            <div className="min-w-0">
+                            <div className="min-w-0 flex-1">
                               <p className="truncate text-sm font-semibold text-gray-900">{prospect.name}</p>
-                              <p className="mt-0.5 truncate text-xs text-gray-500">{prospect.phone}</p>
+                              <p className="mt-0.5 truncate text-xs text-gray-500">
+                                <a href={`tel:${prospect.phone}`} className="text-[#E60012] hover:underline">{prospect.phone}</a>
+                              </p>
                               <p className="mt-0.5 truncate text-xs text-gray-500">{prospect.location}</p>
+                              {prospect.status === "CONTACTED" && prospect.lastContacted && (
+                                <p className="mt-1 text-[10px] text-blue-600">📞 Contacted {formatRelativeTime(prospect.lastContacted)}</p>
+                              )}
+                              {prospect.notes?.trim() && (
+                                <p className="mt-1.5 flex items-start gap-1 rounded-lg bg-amber-50 p-1.5 text-[10px] text-amber-800">
+                                  <StickyNote className="mt-0.5 h-3 w-3 shrink-0 text-amber-500" />
+                                  <span>{prospect.notes}</span>
+                                </p>
+                              )}
                             </div>
                             <StatusBadge status={prospect.status} className="shrink-0 px-2 py-0.5 text-[10px]" />
                           </div>
@@ -256,7 +271,7 @@ export default function SupervisorDashboardPage() {
       <div className="mt-4 rounded-3xl border border-gray-200 bg-white p-4 shadow-sm sm:mt-6 sm:p-5">
         <h3 className="mb-1 text-sm font-semibold text-gray-900 sm:text-base">Team Live Field Feed</h3>
         <p className="mb-4 text-xs text-gray-500">Prospect created &amp; follow-up activity only</p>
-        <ActivityTimeline activities={liveFeed} compact />
+        <ActivityTimeline activities={liveFeed} compact filterable />
       </div>
     </PageShell>
   );

@@ -1,20 +1,29 @@
 "use client";
 
 import Link from "next/link";
-import { BellRing, CalendarDays, PhoneCall, PlusCircle, Target, TrendingUp } from "lucide-react";
+import { BellRing, CalendarDays, PhoneCall, PlusCircle, Target, TrendingUp, StickyNote, Clock, CheckCircle2, Users, AlertCircle } from "lucide-react";
 import { useMemo } from "react";
+import { FaWhatsapp } from "react-icons/fa";
 
 import { PageShell } from "@/components/shared/PageShell";
+import { StatusBadge } from "@/components/shared/StatusBadge";
+import { ActivityTimeline } from "@/components/shared/ActivityTimeline";
 import { useApiData } from "@/lib/use-api-data";
-import { DAILY_SALES_TARGET, WEEKLY_SALES_TARGET, MONTHLY_SALES_TARGET } from "@/lib/supervisor-utils";
+import { useTargets } from "@/lib/use-targets";
+import { buildWhatsAppUrl, buildWhatsAppMessage } from "@/lib/whatsapp";
+import { getStoredProfile } from "@/utils/profile";
 import type { IProspect } from "@/lib/models/Prospect";
 import type { ISale } from "@/lib/models/Sale";
 import type { IFollowUp } from "@/lib/models/FollowUp";
+import type { IActivity } from "@/lib/models/Activity";
 
 export default function DashboardPage() {
+  const targets = useTargets();
   const { data: prospectsData } = useApiData<{ prospects: IProspect[] }>("/api/prospects", { prospects: [] });
   const { data: salesData } = useApiData<{ sales: ISale[] }>("/api/sales", { sales: [] });
   const { data: followUpsData } = useApiData<{ followUps: IFollowUp[] }>("/api/followups", { followUps: [] });
+  const { data: activitiesData } = useApiData<{ activities: IActivity[] }>("/api/activities?limit=10", { activities: [] });
+  const dseName = useMemo(() => getStoredProfile().name, []);
 
   const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
   const currentMonth = today.slice(0, 7);
@@ -24,14 +33,20 @@ export default function DashboardPage() {
     return ws.toISOString().slice(0, 10);
   }, []);
 
-  const todayProspects = useMemo(
-    () => prospectsData.prospects.filter((p) => p.expectedPurchaseDate === today).slice(0, 6),
+  // ── Today's stats ──
+  const prospectsCreatedToday = useMemo(
+    () => prospectsData.prospects.filter((p) => p.createdAt === today),
     [prospectsData.prospects, today]
   );
 
-  const todayFollowUps = useMemo(
-    () => followUpsData.followUps.filter((item) => item.status === "TODAY").length,
-    [followUpsData.followUps]
+  const prospectsDueToday = useMemo(
+    () => prospectsData.prospects.filter((p) => p.expectedPurchaseDate === today && p.status !== "SOLD" && p.status !== "LOST"),
+    [prospectsData.prospects, today]
+  );
+
+  const soldToday = useMemo(
+    () => salesData.sales.filter((s) => s.date === today).length,
+    [salesData.sales, today]
   );
 
   const overdueFollowUps = useMemo(
@@ -53,19 +68,19 @@ export default function DashboardPage() {
     [salesData.sales, currentMonth]
   );
 
-  const targetProgress = Math.min(100, Math.round((salesThisMonth / MONTHLY_SALES_TARGET) * 100));
+  const targetProgress = Math.min(100, Math.round((salesThisMonth / targets.monthly) * 100));
 
   // Dynamic insights based on actual performance
   const insight = useMemo(() => {
-    const dailyRemaining = Math.max(0, DAILY_SALES_TARGET - salesToday);
-    const weeklyRemaining = Math.max(0, WEEKLY_SALES_TARGET - salesThisWeek);
-    const monthlyRemaining = Math.max(0, MONTHLY_SALES_TARGET - salesThisMonth);
+    const dailyRemaining = Math.max(0, targets.daily - salesToday);
+    const weeklyRemaining = Math.max(0, targets.weekly - salesThisWeek);
+    const monthlyRemaining = Math.max(0, targets.monthly - salesThisMonth);
 
-    if (salesToday >= DAILY_SALES_TARGET) {
+    if (salesToday >= targets.daily) {
       return { text: `Daily target met! ${salesToday} sold today.`, color: "text-emerald-600" };
     }
     if (salesToday === 1) {
-      return { text: `1 sale today — ${dailyRemaining} more to hit daily target of ${DAILY_SALES_TARGET}.`, color: "text-amber-600" };
+      return { text: `1 sale today — ${dailyRemaining} more to hit daily target of ${targets.daily}.`, color: "text-amber-600" };
     }
     if (salesToday === 0 && salesThisWeek > 0) {
       return { text: `${salesThisWeek} sales this week — push for ${dailyRemaining > 0 ? `${dailyRemaining} more today` : "more"}.`, color: "text-gray-600" };
@@ -74,16 +89,16 @@ export default function DashboardPage() {
       return { text: "No sales yet this month — let's get started!", color: "text-gray-500" };
     }
     if (weeklyRemaining <= 3 && salesThisWeek > 0) {
-      return { text: `Only ${weeklyRemaining} away from weekly target of ${WEEKLY_SALES_TARGET}!`, color: "text-emerald-600" };
+      return { text: `Only ${weeklyRemaining} away from weekly target of ${targets.weekly}!`, color: "text-emerald-600" };
     }
     if (monthlyRemaining > 0) {
-      return { text: `${salesThisMonth} of ${MONTHLY_SALES_TARGET} this month — ${monthlyRemaining} remaining.`, color: "text-gray-600" };
+      return { text: `${salesThisMonth} of ${targets.monthly} this month — ${monthlyRemaining} remaining.`, color: "text-gray-600" };
     }
-    return { text: `${salesThisMonth} of ${MONTHLY_SALES_TARGET} this month. Keep going!`, color: "text-gray-600" };
-  }, [salesToday, salesThisWeek, salesThisMonth]);
+    return { text: `${salesThisMonth} of ${targets.monthly} this month. Keep going!`, color: "text-gray-600" };
+  }, [salesToday, salesThisWeek, salesThisMonth, targets]);
 
   const getRingColor = (amount: number) => {
-    const pct = MONTHLY_SALES_TARGET > 0 ? (amount / MONTHLY_SALES_TARGET) * 100 : 0;
+    const pct = targets.monthly > 0 ? (amount / targets.monthly) * 100 : 0;
     if (pct >= 75) return "#16a34a";
     if (pct >= 50) return "#fb923c";
     if (pct >= 25) return "#facc15";
@@ -110,9 +125,9 @@ export default function DashboardPage() {
               </div>
               <p className={`mt-1 text-xs font-medium ${insight.color}`}>{insight.text}</p>
               <div className="mt-2 flex flex-wrap gap-2">
-                <span className="rounded-full bg-white px-2 py-1 text-[11px] text-gray-600">Today: {salesToday}/{DAILY_SALES_TARGET}</span>
-                <span className="rounded-full bg-white px-2 py-1 text-[11px] text-gray-600">Week: {salesThisWeek}/{WEEKLY_SALES_TARGET}</span>
-                <span className="rounded-full bg-white px-2 py-1 text-[11px] text-gray-600">Month: {salesThisMonth}/{MONTHLY_SALES_TARGET}</span>
+                <span className="rounded-full bg-white px-2 py-1 text-[11px] text-gray-600">Today: {salesToday}/{targets.daily}</span>
+                <span className="rounded-full bg-white px-2 py-1 text-[11px] text-gray-600">Week: {salesThisWeek}/{targets.weekly}</span>
+                <span className="rounded-full bg-white px-2 py-1 text-[11px] text-gray-600">Month: {salesThisMonth}/{targets.monthly}</span>
               </div>
             </div>
           </div>
@@ -138,45 +153,144 @@ export default function DashboardPage() {
         </div>
       </section>
 
-      <section className="mt-4 rounded-3xl border border-gray-200 bg-white p-3 shadow-sm">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-sm font-semibold text-gray-900">Today&apos;s prospects</h2>
-            <p className="text-xs text-gray-500">Quick calls and visits.</p>
+      {/* ── Today's Summary Stats ── */}
+      <section className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <div className="rounded-2xl border border-gray-200 bg-white p-3 shadow-sm">
+          <div className="flex items-center gap-2 text-[#E60012]">
+            <Users className="h-4 w-4" />
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-500">Created</p>
           </div>
-          <Link href="/followups" className="text-sm font-medium text-[#E60012]">
-            View all
-          </Link>
+          <p className="mt-1 text-2xl font-semibold text-gray-900">{prospectsCreatedToday.length}</p>
+          <p className="mt-0.5 text-[10px] text-gray-500">today</p>
         </div>
+        <div className="rounded-2xl border border-gray-200 bg-white p-3 shadow-sm">
+          <div className="flex items-center gap-2 text-[#E60012]">
+            <Clock className="h-4 w-4" />
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-500">Due now</p>
+          </div>
+          <p className="mt-1 text-2xl font-semibold text-gray-900">{prospectsDueToday.length}</p>
+          <p className="mt-0.5 text-[10px] text-gray-500">active follow-ups</p>
+        </div>
+        <div className="rounded-2xl border border-gray-200 bg-white p-3 shadow-sm">
+          <div className="flex items-center gap-2 text-emerald-600">
+            <CheckCircle2 className="h-4 w-4" />
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-500">Sold</p>
+          </div>
+          <p className="mt-1 text-2xl font-semibold text-gray-900">{soldToday}</p>
+          <p className="mt-0.5 text-[10px] text-gray-500">today</p>
+        </div>
+        <div className="rounded-2xl border border-gray-200 bg-white p-3 shadow-sm">
+          <div className="flex items-center gap-2 text-amber-600">
+            <AlertCircle className="h-4 w-4" />
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-500">Overdue</p>
+          </div>
+          <p className="mt-1 text-2xl font-semibold text-gray-900">{overdueFollowUps}</p>
+          <p className="mt-0.5 text-[10px] text-gray-500">follow-ups</p>
+        </div>
+      </section>
 
-        <div className="mt-3 grid gap-2 sm:grid-cols-3">
-          {todayProspects.length > 0 ? (
-            todayProspects.map((prospect) => (
+      {/* ── Follow-ups Due Today ── */}
+      {prospectsDueToday.length > 0 && (
+        <section className="mt-4 rounded-3xl border border-gray-200 bg-white p-3 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-sm font-semibold text-gray-900">Follow-ups due today</h2>
+              <p className="text-xs text-gray-500">Contact these prospects now.</p>
+            </div>
+            <Link href="/followups" className="text-sm font-medium text-[#E60012]">
+              View all
+            </Link>
+          </div>
+
+          <div className="mt-3 grid gap-2 sm:grid-cols-3">
+            {prospectsDueToday.slice(0, 6).map((prospect) => (
               <Link href="/followups" key={String(prospect._id)} className="rounded-2xl border border-gray-200 bg-gray-50 p-3">
                 <p className="text-sm font-semibold text-gray-900">{prospect.name}</p>
                 <p className="mt-1 text-xs text-gray-500">{prospect.location}</p>
                 <p className="mt-2 flex items-center gap-1 text-xs text-[#E60012]">
                   <PhoneCall className="h-3.5 w-3.5" /> {prospect.phone}
                 </p>
+                {prospect.notes?.trim() && (
+                  <p className="mt-1.5 flex items-start gap-1 rounded-lg bg-amber-50 p-1.5 text-[10px] text-amber-800">
+                    <StickyNote className="mt-0.5 h-3 w-3 shrink-0 text-amber-500" />
+                    <span>{prospect.notes}</span>
+                  </p>
+                )}
+                <div className="mt-2 flex gap-1.5">
+                  <a
+                    href={`tel:${prospect.phone}`}
+                    className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-white px-2 py-1 text-[10px] font-medium text-[#E60012] transition hover:bg-red-50"
+                    aria-label={`Call ${prospect.name}`}
+                  >
+                    <PhoneCall className="h-3 w-3" /> Call
+                  </a>
+                  <a
+                    href={buildWhatsAppUrl(prospect.phone, buildWhatsAppMessage({ customerName: prospect.name, dseName, title: prospect.title, location: prospect.location, notes: prospect.notes }))}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-white px-2 py-1 text-[10px] font-medium text-green-600 transition hover:bg-green-50"
+                    aria-label={`WhatsApp ${prospect.name}`}
+                  >
+                    <FaWhatsapp className="h-3 w-3" /> WhatsApp
+                  </a>
+                </div>
               </Link>
-            ))
-          ) : (
-            <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50 p-3 text-sm text-gray-500 sm:col-span-3">
-              No prospects scheduled for today yet.
-            </div>
-          )}
-        </div>
-      </section>
+            ))}
+          </div>
+        </section>
+      )}
 
-      <section className="mt-4 grid gap-2 sm:grid-cols-2">
-        <div className="rounded-2xl border border-gray-200 bg-white p-3 shadow-sm">
-          <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Today follow-ups</p>
-          <p className="mt-2 text-2xl font-semibold text-gray-900">{todayFollowUps}</p>
+      {/* ── Today's Activity ── */}
+      <section className="mt-4 rounded-3xl border border-gray-200 bg-white p-3 shadow-sm">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-sm font-semibold text-gray-900">Today&apos;s activity</h2>
+            <p className="text-xs text-gray-500">Everything that happened today.</p>
+          </div>
         </div>
-        <div className="rounded-2xl border border-gray-200 bg-white p-3 shadow-sm">
-          <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Overdue</p>
-          <p className="mt-2 text-2xl font-semibold text-gray-900">{overdueFollowUps}</p>
-        </div>
+
+        {activitiesData.activities.length > 0 ? (
+          <ActivityTimeline activities={activitiesData.activities} filterable />
+        ) : prospectsCreatedToday.length > 0 ? (
+          <div className="mt-3 space-y-2">
+            {prospectsCreatedToday.map((prospect) => (
+              <div key={String(prospect._id)} className="flex items-center justify-between rounded-xl border border-gray-100 bg-gray-50 p-3">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-semibold text-gray-900">{prospect.name}</p>
+                    <StatusBadge status={prospect.status} />
+                  </div>
+                  <p className="mt-0.5 text-xs text-gray-500">
+                    {prospect.location} · Follow-up: {prospect.expectedPurchaseDate}
+                  </p>
+                  <p className="mt-0.5 text-[10px] text-gray-400">Added today</p>
+                </div>
+                <div className="flex shrink-0 gap-1.5 pl-2">
+                  <a
+                    href={`tel:${prospect.phone}`}
+                    className="rounded-full border border-gray-200 bg-white p-1.5 text-[#E60012] transition hover:bg-red-50"
+                    aria-label={`Call ${prospect.name}`}
+                  >
+                    <PhoneCall className="h-3.5 w-3.5" />
+                  </a>
+                  <a
+                    href={buildWhatsAppUrl(prospect.phone, buildWhatsAppMessage({ customerName: prospect.name, dseName, title: prospect.title, location: prospect.location, notes: prospect.notes }))}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="rounded-full border border-gray-200 bg-white p-1.5 text-green-600 transition hover:bg-green-50"
+                    aria-label={`WhatsApp ${prospect.name}`}
+                  >
+                    <FaWhatsapp className="h-3.5 w-3.5" />
+                  </a>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="mt-3 rounded-xl border border-dashed border-gray-200 bg-gray-50 p-4 text-center text-sm text-gray-500">
+            No activity today yet. Capture your first prospect!
+          </div>
+        )}
       </section>
     </PageShell>
   );

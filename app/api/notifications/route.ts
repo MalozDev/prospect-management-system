@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import { Notification } from "@/lib/models/Notification";
 import { getUserFromRequest, unauthorizedResponse } from "@/lib/auth";
+import { isValidDateStr } from "@/lib/time-utils";
 
 export async function GET(request: NextRequest) {
   const user = getUserFromRequest(request);
@@ -24,7 +25,17 @@ export async function GET(request: NextRequest) {
 
     const notifications = await Notification.find(filter).sort({ createdAt: -1 }).lean();
 
-    return Response.json({ notifications });
+    // Migrate old "Just now" entries — use createdAt as the real timestamp
+    const fixedNotifications = notifications.map((n) => ({
+      ...n,
+      time: isValidDateStr(n.time)
+        ? n.time
+        : n.createdAt instanceof Date
+          ? n.createdAt.toISOString()
+          : new Date().toISOString(),
+    }));
+
+    return Response.json({ notifications: fixedNotifications });
   } catch (error) {
     console.error("Get notifications error:", error);
     return Response.json({ error: "Internal server error." }, { status: 500 });
@@ -51,7 +62,7 @@ export async function POST(request: NextRequest) {
     const notification = await Notification.create({
       title: title.trim(),
       message: message.trim(),
-      time: "Just now",
+      time: new Date().toISOString(),
       unread: true,
       userId: targetUserId || user.userId,
     });

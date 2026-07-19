@@ -8,7 +8,6 @@ import { apiFetch } from "@/lib/api-client";
 import type { IFollowUp } from "@/lib/models/FollowUp";
 import {
   Phone,
-  MessageCircle,
   Eye,
   EyeOff,
   CheckCircle2,
@@ -20,7 +19,11 @@ import {
   ChevronRight,
   X,
   Loader2,
+  StickyNote,
 } from "lucide-react";
+import { FaWhatsapp } from "react-icons/fa";
+import { buildWhatsAppUrl, buildWhatsAppMessage } from "@/lib/whatsapp";
+import { getStoredProfile } from "@/utils/profile";
 
 // Feedback modal state
 type FeedbackAction = "sold" | "lost" | "schedule_visit" | "postpone" | null;
@@ -41,6 +44,12 @@ function formatDate(dateString: string) {
   const day = date.getDate();
   const ordinal = getOrdinal(day);
   return `${date.toLocaleString("en-US", { month: "long" })} ${day}${ordinal}, ${date.getFullYear()}`;
+}
+
+function formatDateForMessage(dateString: string) {
+  if (!dateString) return "";
+  const date = new Date(dateString);
+  return date.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
 }
 
 function formatDateShort(dateString: string) {
@@ -67,6 +76,8 @@ export default function FollowUpsPage() {
   const futureSectionRef = useRef<HTMLDivElement | null>(null);
 
   const { data, refetch } = useApiData<{ followUps: IFollowUp[] }>("/api/followups", { followUps: [] });
+  const profile = useMemo(() => getStoredProfile(), []);
+  const dseName = profile.name;
 
   const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
 
@@ -521,6 +532,12 @@ export default function FollowUpsPage() {
                   <p className="mt-1 text-sm text-gray-600">
                     Expected purchase: {formatDate(item.expectedPurchaseDate)}
                   </p>
+                  {item.notes?.trim() && (
+                    <p className="mt-1.5 flex items-start gap-1.5 rounded-xl bg-amber-50 p-2 text-xs text-amber-800">
+                      <StickyNote className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-500" />
+                      <span>{item.notes}</span>
+                    </p>
+                  )}
                   {item.lastContacted && (
                     <p className="mt-1 text-xs text-gray-400">Last contacted: {item.lastContacted}</p>
                   )}
@@ -537,14 +554,14 @@ export default function FollowUpsPage() {
                     <Phone className="h-4 w-4" />
                   </a>
                   <a
-                    href={`https://wa.me/${item.phone.replace(/\D/g, "")}`}
+                    href={buildWhatsAppUrl(item.phone, buildWhatsAppMessage({ customerName: item.customerName, dseName, date: formatDateForMessage(item.expectedPurchaseDate), notes: item.notes }))}
                     target="_blank"
                     rel="noreferrer"
                     className="rounded-full border border-gray-200 bg-white p-2.5 text-green-600 transition hover:bg-green-50 hover:border-green-200"
                     aria-label={`WhatsApp ${item.customerName}`}
                     title="WhatsApp"
                   >
-                    <MessageCircle className="h-4 w-4" />
+                    <FaWhatsapp className="h-4 w-4" />
                   </a>
 
                   {/* Mark Contacted button */}
@@ -630,6 +647,12 @@ export default function FollowUpsPage() {
                               <p className="mt-1 text-sm text-gray-600">
                                 Expected purchase: {formatDate(item.expectedPurchaseDate)}
                               </p>
+                              {item.notes?.trim() && (
+                                <p className="mt-1.5 flex items-start gap-1.5 rounded-xl bg-amber-50 p-2 text-xs text-amber-800">
+                                  <StickyNote className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-500" />
+                                  <span>{item.notes}</span>
+                                </p>
+                              )}
                             </div>
 
                             <div className="flex flex-wrap gap-2">
@@ -641,14 +664,14 @@ export default function FollowUpsPage() {
                                 <Phone className="h-4 w-4" />
                               </a>
                               <a
-                                href={`https://wa.me/${item.phone.replace(/\D/g, "")}`}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="rounded-full border border-gray-200 p-2 text-green-600 transition hover:bg-green-50"
-                                aria-label={`WhatsApp ${item.customerName}`}
-                              >
-                                <MessageCircle className="h-4 w-4" />
-                              </a>
+                              href={buildWhatsAppUrl(item.phone, buildWhatsAppMessage({ customerName: item.customerName, dseName, date: formatDateForMessage(item.expectedPurchaseDate), notes: item.notes }))}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="rounded-full border border-gray-200 p-2 text-green-600 transition hover:bg-green-50"
+                              aria-label={`WhatsApp ${item.customerName}`}
+                            >
+                              <FaWhatsapp className="h-4 w-4" />
+                            </a>
                             </div>
                           </div>
                         </div>

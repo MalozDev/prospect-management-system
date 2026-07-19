@@ -39,7 +39,7 @@ export async function PATCH(
     const { id } = await params;
     const body = await request.json();
 
-    const allowedFields = ["name", "phone", "location", "address", "expectedPurchaseDate", "status", "notes"];
+    const allowedFields = ["title", "name", "phone", "location", "address", "expectedPurchaseDate", "status", "notes"];
     const updates: Record<string, unknown> = {};
 
     for (const field of allowedFields) {
@@ -63,7 +63,7 @@ export async function PATCH(
       await Activity.create({
         title: `Status updated to ${updates.status}`,
         detail: `${prospect.name}: status changed to ${updates.status}`,
-        time: "Just now",
+        time: new Date().toISOString(),
         type: updates.status === "SOLD" ? "sale" : updates.status === "LOST" ? "lost" : "prospect",
         userId: user.userId,
       });

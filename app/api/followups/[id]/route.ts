@@ -39,11 +39,18 @@ export async function PATCH(
         return Response.json({ error: "Follow-up not found." }, { status: 404 });
       }
 
+      // Update linked prospect status to CONTACTED and store contacted timestamp
+      if (followUp.prospectId) {
+        await Prospect.findByIdAndUpdate(followUp.prospectId, {
+          $set: { status: "CONTACTED", lastContacted: new Date().toISOString() },
+        });
+      }
+
       // Log activity
       await Activity.create({
         title: "Follow up completed",
         detail: `Follow up completed for ${followUp.customerName}`,
-        time: "Just now",
+        time: new Date().toISOString(),
         type: "followup",
         userId: user.userId,
       });
@@ -83,7 +90,7 @@ export async function PATCH(
       await Activity.create({
         title: "Sale completed",
         detail: `ODU sale closed for ${followUp.customerName}`,
-        time: "Just now",
+        time: new Date().toISOString(),
         type: "sale",
         userId: user.userId,
       });
@@ -92,7 +99,7 @@ export async function PATCH(
       await Notification.create({
         title: "Sale Completed",
         message: `Sale completed for ${followUp.customerName}`,
-        time: "Just now",
+        time: new Date().toISOString(),
         unread: true,
         userId: user.userId,
       });
@@ -123,7 +130,7 @@ export async function PATCH(
       await Activity.create({
         title: "Prospect lost",
         detail: `${followUp.customerName} marked as lost`,
-        time: "Just now",
+        time: new Date().toISOString(),
         type: "lost",
         userId: user.userId,
       });
@@ -177,7 +184,7 @@ export async function PATCH(
       await Notification.create({
         title: "Visit Scheduled",
         message: `Visit scheduled for ${followUp.customerName} on ${visitDate || "soon"}`,
-        time: "Just now",
+        time: new Date().toISOString(),
         unread: true,
         userId: user.userId,
       });
@@ -186,7 +193,7 @@ export async function PATCH(
       await Activity.create({
         title: "Visit scheduled",
         detail: `Visit scheduled for ${followUp.customerName} on ${visitDate || "soon"}`,
-        time: "Just now",
+        time: new Date().toISOString(),
         type: "visit",
         userId: user.userId,
       });
@@ -238,7 +245,7 @@ export async function PATCH(
       await Activity.create({
         title: "Follow-up postponed",
         detail: `${followUp.customerName} postponed to ${newDate}`,
-        time: "Just now",
+        time: new Date().toISOString(),
         type: "followup",
         userId: user.userId,
       });

@@ -8,6 +8,7 @@ import { useApiData } from "@/lib/use-api-data";
 import { apiFetch } from "@/lib/api-client";
 import type { INotification } from "@/lib/models/Notification";
 import { CheckCheck, Trash2 } from "lucide-react";
+import { formatRelativeTime } from "@/lib/time-utils";
 
 export default function NotificationsPage() {
   const { data, refetch } = useApiData<{ notifications: INotification[] }>("/api/notifications", { notifications: [] });
@@ -96,7 +97,7 @@ export default function NotificationsPage() {
                       <h3 className="font-semibold text-gray-900">{item.title}</h3>
                       <p className="mt-0.5 text-sm text-gray-600">{item.message}</p>
                     </div>
-                    <span className="shrink-0 text-xs text-gray-400">{item.time}</span>
+                    <span className="shrink-0 text-xs text-gray-400">{formatRelativeTime(item.time)}</span>
                   </div>
                 </Link>
 

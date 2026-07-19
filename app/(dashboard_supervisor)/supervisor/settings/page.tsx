@@ -1,16 +1,38 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { PageShell } from "@/components/shared/PageShell";
 import { clearToken, apiFetch, getStoredApiUser } from "@/lib/api-client";
 import { DEFAULT_PROFILE, getStoredProfile, saveProfile, type ProfileInfo } from "@/utils/profile";
+import { AlertCircle } from "lucide-react";
+import { TARGET_KEYS } from "@/lib/target-keys";
 
 export default function SupervisorSettingsPage() {
   const router = useRouter();
   const [profile, setProfile] = useState<ProfileInfo>(DEFAULT_PROFILE);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+
+  // Target config
+  const [targets, setTargets] = useState<Record<string, string>>({
+    [TARGET_KEYS.DAILY]: "2",
+    [TARGET_KEYS.WEEKLY]: "12",
+    [TARGET_KEYS.MONTHLY]: "25",
+    [TARGET_KEYS.TEAM]: "400",
+  });
+  const [targetsSaving, setTargetsSaving] = useState(false);
+  const [targetsSaved, setTargetsSaved] = useState(false);
+  const [targetsError, setTargetsError] = useState("");
+
+  // Load targets on mount
+  useEffect(() => {
+    apiFetch<{ targets: Record<string, string> }>("/api/settings/targets")
+      .then((data) => {
+        if (data.targets) setTargets(data.targets);
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -49,6 +71,30 @@ export default function SupervisorSettingsPage() {
     window.dispatchEvent(new Event("profile-updated"));
     setTimeout(() => setSaved(false), 2000);
   }
+
+  const handleTargetChange = useCallback((key: string, value: string) => {
+    setTargets((current) => ({ ...current, [key]: value }));
+    setTargetsSaved(false);
+  }, []);
+
+  const handleSaveTargets = useCallback(async () => {
+    setTargetsSaving(true);
+    setTargetsError("");
+    try {
+      const data = await apiFetch<{ targets: Record<string, string> }>("/api/settings/targets", {
+        method: "POST",
+        body: JSON.stringify(targets),
+      });
+      if (data.targets) setTargets(data.targets);
+      setTargetsSaved(true);
+      setTargetsError("");
+      setTimeout(() => setTargetsSaved(false), 3000);
+    } catch {
+      setTargetsError("Failed to save targets. Please try again.");
+    } finally {
+      setTargetsSaving(false);
+    }
+  }, [targets]);
 
   function handleLogout() {
     clearToken();
@@ -106,6 +152,48 @@ export default function SupervisorSettingsPage() {
           >
             {saving ? "Saving..." : saved ? "Saved!" : "Save profile"}
           </button>
+        </div>
+
+        {/* ── Sales Targets ── */}
+        <div className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
+          <h3 className="font-semibold text-gray-900">Sales Targets</h3>
+          <p className="mt-1 text-sm text-gray-500">Set daily, weekly, and monthly ODU sales targets for your team.</p>
+
+          <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {[
+              { key: TARGET_KEYS.DAILY, label: "Daily Target" },
+              { key: TARGET_KEYS.WEEKLY, label: "Weekly Target" },
+              { key: TARGET_KEYS.MONTHLY, label: "Monthly Target" },
+              { key: TARGET_KEYS.TEAM, label: "Team Target" },
+            ].map(({ key, label }) => (
+              <label key={key} className="text-sm font-medium text-gray-700">
+                <span className="mb-1 block">{label}</span>
+                <input
+                  type="number"
+                  min="1"
+                  value={targets[key] || ""}
+                  onChange={(e) => handleTargetChange(key, e.target.value)}
+                  className="w-full rounded-2xl border border-gray-300 px-3 py-2 text-sm outline-none focus:border-[#E60012] focus:ring-2 focus:ring-[#E60012]/20"
+                />
+              </label>
+            ))}
+          </div>
+
+          <button
+            type="button"
+            onClick={handleSaveTargets}
+            disabled={targetsSaving}
+            className="mt-4 rounded-full bg-[#E60012] px-4 py-2 text-sm font-medium text-white transition hover:bg-red-700 disabled:opacity-50"
+          >
+            {targetsSaving ? "Saving..." : targetsSaved ? "Saved!" : "Save targets"}
+          </button>
+
+          {targetsError && (
+            <p className="mt-3 flex items-center gap-1.5 text-sm text-red-600">
+              <AlertCircle className="h-4 w-4" />
+              {targetsError}
+            </p>
+          )}
         </div>
 
         <div className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">

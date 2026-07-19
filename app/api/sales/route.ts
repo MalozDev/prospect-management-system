@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
     await Activity.create({
       title: "Sale completed",
       detail: `Sale logged for ${sale.customer}`,
-      time: "Just now",
+      time: new Date().toISOString(),
       type: "sale",
       userId: user.userId,
     });

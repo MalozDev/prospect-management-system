@@ -1,8 +1,4 @@
 export const COMMISSION_PER_SALE = 200;
-export const DAILY_SALES_TARGET = 2;
-export const WEEKLY_SALES_TARGET = 12;
-export const MONTHLY_SALES_TARGET = 25;
-export const TEAM_TARGET = 400;
 
 export function getTodayIso() {
   return new Date().toISOString().slice(0, 10);
