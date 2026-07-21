@@ -4,8 +4,8 @@ import { useEffect } from "react";
 
 /**
  * Ensures the service worker is registered on every page load.
- * This is critical for push notifications to work reliably,
- * especially after a fresh PWA launch or page refresh.
+ * Uses a timestamp query param to bust the browser cache,
+ * forcing the new SW to download on every deploy.
  */
 export function ServiceWorkerRegister() {
   useEffect(() => {
@@ -13,8 +13,16 @@ export function ServiceWorkerRegister() {
 
     let cancelled = false;
 
+    // Add a version query string so the browser always fetches
+    // the latest sw.js after a deploy (CACHE_NAME changed).
+    // Using a fixed version per deploy avoids re-installing on
+    // every page load (which Date.now() would cause).
+    // Bump this number on each deploy to force a SW update.
+    const SW_VERSION = "2";
+    const swUrl = `/sw.js?v=${SW_VERSION}`;
+
     navigator.serviceWorker
-      .register("/sw.js")
+      .register(swUrl)
       .then((registration) => {
         if (cancelled) return;
 

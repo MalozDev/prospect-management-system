@@ -21,8 +21,11 @@ export function PwaInstallPrompt() {
   // Register service worker on mount
   useEffect(() => {
     if ("serviceWorker" in navigator) {
+      // Cache-busting version forces browser to fetch latest sw.js
+      // Bump this number on each deploy to force a SW update.
+      const swUrl = `/sw.js?v=2`;
       navigator.serviceWorker
-        .register("/sw.js")
+        .register(swUrl)
         .then(() => {
           // Service worker registered
         })

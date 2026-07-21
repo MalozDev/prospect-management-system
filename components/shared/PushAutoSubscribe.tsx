@@ -40,13 +40,21 @@ export function PushAutoSubscribe() {
       return;
     }
 
-    // If permission was already granted, re-subscribe to ensure
-    // the server has a valid subscription for this device.
-    // If permission is "default", we don't ask — the PwaInstallPrompt
-    // handles that.
+    // ── Permission handling ──
     if (Notification.permission === "granted") {
+      // Already allowed — subscribe/refresh the subscription
       subscribeToPush().catch(() => {});
+    } else if (Notification.permission === "default") {
+      // Never asked before — request permission now
+      // This ensures the user gets asked even if the PwaInstallPrompt
+      // was dismissed on a previous session.
+      Notification.requestPermission().then((permission) => {
+        if (permission === "granted") {
+          subscribeToPush().catch(() => {});
+        }
+      }).catch(() => {});
     }
+    // If "denied", the user must enable in browser settings — we can't ask again
 
     // Clear the app badge when the user opens the app
     // This tells the OS that the user has seen their notifications

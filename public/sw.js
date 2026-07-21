@@ -1,9 +1,13 @@
-const CACHE_NAME = "prospects-v1";
+// 🔄 Increment this version whenever you deploy service worker changes.
+// The browser detects the change and activates the new SW immediately.
+// Using timestamp ensures every deploy gets a fresh cache.
+const CACHE_NAME = "prospects-" + new Date().toISOString().slice(0, 10);
+
 const STATIC_ASSETS = [
   "/",
   "/login",
   "/register",
-  "/manifest.json",
+  "/manifest.webmanifest",
   "/icons/icon-192.svg",
   "/icons/icon-512.svg",
 ];
