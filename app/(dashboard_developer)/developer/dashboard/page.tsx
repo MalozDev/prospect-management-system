@@ -18,11 +18,17 @@ import {
   ArrowUpRight,
   ArrowUp,
   ArrowDown,
+  X,
+  LogIn,
+  MapPin,
+  Phone,
+  Award,
 } from "lucide-react";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect, useCallback } from "react";
 
 import { useApiData } from "@/lib/use-api-data";
+import { getTodayLocal } from "@/lib/time-utils";
 import type { IUser } from "@/lib/models/User";
 import type { IProspect } from "@/lib/models/Prospect";
 import type { ISale } from "@/lib/models/Sale";
@@ -86,10 +92,26 @@ export default function DeveloperDashboardPage() {
   );
 
   const [expandedTeams, setExpandedTeams] = useState<Record<string, boolean>>({});
+  const [showActiveUsers, setShowActiveUsers] = useState(false);
 
   const toggleTeam = (name: string) => {
     setExpandedTeams((prev) => ({ ...prev, [name]: !prev[name] }));
   };
+
+  // Close modal on Escape key
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setShowActiveUsers(false);
+    };
+    if (showActiveUsers) {
+      document.addEventListener('keydown', handler);
+      document.body.style.overflow = 'hidden';
+    }
+    return () => {
+      document.removeEventListener('keydown', handler);
+      document.body.style.overflow = '';
+    };
+  }, [showActiveUsers]);
 
   const stats = useMemo(() => {
     const users = usersData.users;
@@ -97,12 +119,30 @@ export default function DeveloperDashboardPage() {
     const sales = salesData.sales;
     const followUps = followUpsData.followUps;
 
-    // Count active today from grouped data
-    let activeToday = 0;
+    // Collect all active DSEs from grouped data
+    const activeDses: { name: string; region: string; cugSuffix: string; lastLogin: string; supervisor: string; stats: DseStats }[] = [];
     for (const team of groupedData.teams) {
-      activeToday += team.stats.activeToday || 0;
+      for (const dse of team.dseMembers) {
+        if (dse.activeToday) {
+          activeDses.push({ ...dse, supervisor: team.supervisor.name });
+        }
+      }
     }
-    activeToday += groupedData.unassigned.stats.activeToday || 0;
+    for (const dse of groupedData.unassigned.dseMembers) {
+      if (dse.activeToday) {
+        activeDses.push({ ...dse, supervisor: "Unassigned" });
+      }
+    }
+
+    // Active supervisors from users data
+    const activeSupervisors = users.filter((u) => u.role === "SUPERVISOR" && u.lastLogin?.startsWith(today)).map((u) => ({
+      name: u.name,
+      region: u.region,
+      cugSuffix: u.cugSuffix,
+      lastLogin: u.lastLogin || "",
+    }));
+
+    let activeToday = activeDses.length + activeSupervisors.length;
 
     return {
       totalDse: users.filter((u) => u.role === "DSE").length,
@@ -117,6 +157,8 @@ export default function DeveloperDashboardPage() {
       totalFollowUps: followUps.length,
       openFollowUps: followUps.filter((f) => f.status === "TODAY" || f.status === "OVERDUE").length,
       activeToday,
+      activeDses,
+      activeSupervisors,
     };
   }, [usersData, prospectsData, salesData, followUpsData, groupedData, today, currentMonth]);
 
@@ -150,6 +192,7 @@ export default function DeveloperDashboardPage() {
       subtitle: `${stats.totalDse > 0 ? Math.round((stats.activeToday / stats.totalDse) * 100) : 0}% of DSEs active`,
       icon: Zap,
       gradient: "from-orange-600 to-pink-600",
+      onClick: stats.activeToday > 0 ? () => setShowActiveUsers(true) : undefined,
     },
   ];
 
@@ -193,7 +236,8 @@ export default function DeveloperDashboardPage() {
             {statCards.map((card) => (
               <div
                 key={card.title}
-                className="group relative overflow-hidden rounded-2xl border border-gray-700/50 bg-[#1a1a3e] p-5 transition hover:border-purple-500/30 hover:shadow-lg hover:shadow-purple-500/5"
+                onClick={card.onClick}
+                className={`group relative overflow-hidden rounded-2xl border border-gray-700/50 bg-[#1a1a3e] p-5 transition hover:border-purple-500/30 hover:shadow-lg hover:shadow-purple-500/5 ${card.onClick ? 'cursor-pointer' : ''}`}
               >
                 <div className={`absolute inset-0 bg-gradient-to-br ${card.gradient} opacity-[0.03]`} />
                 <div className="relative">
@@ -467,6 +511,162 @@ export default function DeveloperDashboardPage() {
           </div>
         )}
       </div>
+
+      {/* ── Active Users Modal ── */}
+      {showActiveUsers && (
+        <div className="fixed inset-0 z-[99999] flex items-start justify-center overflow-y-auto pt-4 pb-8 sm:pt-10">
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 bg-black/70 backdrop-blur-sm"
+            onClick={() => setShowActiveUsers(false)}
+          />
+
+          {/* Modal */}
+          <div className="relative z-10 w-[calc(100%-2rem)] max-w-2xl rounded-2xl border border-gray-700/50 bg-[#1a1a3e] shadow-2xl shadow-purple-500/10">
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-gray-700/50 px-5 py-4">
+              <div className="flex items-center gap-2">
+                <Zap className="h-5 w-5 text-orange-400" />
+                <h2 className="text-lg font-bold text-white">Active Today</h2>
+                <span className="rounded-full bg-orange-500/20 px-2.5 py-0.5 text-xs font-medium text-orange-300">
+                  {stats.activeToday} user{stats.activeToday !== 1 ? "s" : ""}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowActiveUsers(false)}
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-700/50 text-gray-400 transition hover:bg-gray-600 hover:text-white"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="max-h-[70vh] overflow-y-auto p-5 space-y-5">
+              {/* Active DSEs */}
+              {stats.activeDses.length > 0 && (
+                <section>
+                  <div className="mb-3 flex items-center gap-2">
+                    <Users className="h-4 w-4 text-purple-400" />
+                    <h3 className="text-sm font-semibold text-white">
+                      Direct Sales Executives
+                    </h3>
+                    <span className="ml-auto text-xs text-gray-500">{stats.activeDses.length} active</span>
+                  </div>
+                  <div className="space-y-2">
+                    {stats.activeDses.map((dse) => {
+                      const loginTime = dse.lastLogin ? new Date(dse.lastLogin).toLocaleTimeString("en-ZM", { hour: "2-digit", minute: "2-digit", hour12: true }) : "—";
+                      return (
+                        <Link
+                          key={dse.name}
+                          href={`/developer/dse/${encodeURIComponent(dse.name)}`}
+                          className="flex items-center gap-3 rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3 transition hover:bg-emerald-500/10"
+                        >
+                          {/* Avatar */}
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-500/20 text-sm font-bold text-emerald-400">
+                            {dse.name.charAt(0)}
+                          </div>
+
+                          {/* Info */}
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-medium text-white">{dse.name}</span>
+                              <span className="rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[9px] font-medium text-emerald-400">
+                                DSE
+                              </span>
+                            </div>
+                            <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[10px] text-gray-400">
+                              <span className="inline-flex items-center gap-1">
+                                <MapPin className="h-2.5 w-2.5" />{dse.region}
+                              </span>
+                              <span className="inline-flex items-center gap-1">
+                                <Phone className="h-2.5 w-2.5" />CUG: {dse.cugSuffix}
+                              </span>
+                              <span className="inline-flex items-center gap-1">
+                                <LogIn className="h-2.5 w-2.5" />{loginTime}
+                              </span>
+                              <span className="text-gray-500">· Sup: {dse.supervisor}</span>
+                            </div>
+                          </div>
+
+                          {/* Mini stats */}
+                          <div className="flex shrink-0 items-center gap-2.5 text-xs">
+                            <div className="text-center">
+                              <p className={`font-semibold ${dse.stats.prospectsToday > 0 ? "text-blue-400" : "text-gray-500"}`}>{dse.stats.prospectsToday}</p>
+                              <p className="text-[9px] text-gray-600">Prosp.</p>
+                            </div>
+                            <div className="text-center">
+                              <p className={`font-semibold ${dse.stats.salesToday > 0 ? "text-emerald-400" : "text-gray-500"}`}>{dse.stats.salesToday}</p>
+                              <p className="text-[9px] text-gray-600">Sold</p>
+                            </div>
+                            <ArrowUpRight className="h-3 w-3 text-gray-500" />
+                          </div>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                </section>
+              )}
+
+              {/* Active Supervisors */}
+              {stats.activeSupervisors && stats.activeSupervisors.length > 0 && (
+                <section>
+                  <div className="mb-3 flex items-center gap-2">
+                    <Shield className="h-4 w-4 text-blue-400" />
+                    <h3 className="text-sm font-semibold text-white">
+                      Supervisors
+                    </h3>
+                    <span className="ml-auto text-xs text-gray-500">{stats.activeSupervisors.length} active</span>
+                  </div>
+                  <div className="space-y-2">
+                    {stats.activeSupervisors.map((sup: { name: string; region: string; cugSuffix: string; lastLogin: string }) => {
+                      const loginTime = sup.lastLogin ? new Date(sup.lastLogin).toLocaleTimeString("en-ZM", { hour: "2-digit", minute: "2-digit", hour12: true }) : "—";
+                      return (
+                        <div
+                          key={sup.name}
+                          className="flex items-center gap-3 rounded-xl border border-blue-500/20 bg-blue-500/5 p-3"
+                        >
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-500/20 text-sm font-bold text-blue-400">
+                            {sup.name.charAt(0)}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-medium text-white">{sup.name}</span>
+                              <span className="rounded-full bg-blue-500/15 px-1.5 py-0.5 text-[9px] font-medium text-blue-400">
+                                Supervisor
+                              </span>
+                            </div>
+                            <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[10px] text-gray-400">
+                              <span className="inline-flex items-center gap-1">
+                                <MapPin className="h-2.5 w-2.5" />{sup.region}
+                              </span>
+                              <span className="inline-flex items-center gap-1">
+                                <Phone className="h-2.5 w-2.5" />CUG: {sup.cugSuffix}
+                              </span>
+                              <span className="inline-flex items-center gap-1">
+                                <LogIn className="h-2.5 w-2.5" />{loginTime}
+                              </span>
+                            </div>
+                          </div>
+                          <Award className="h-4 w-4 shrink-0 text-blue-400" />
+                        </div>
+                      );
+                    })}
+                  </div>
+                </section>
+              )}
+
+              {/* Empty state */}
+              {stats.activeDses.length === 0 && (!stats.activeSupervisors || stats.activeSupervisors.length === 0) && (
+                <div className="flex flex-col items-center justify-center py-10 text-center">
+                  <Zap className="h-12 w-12 text-gray-600" />
+                  <p className="mt-3 text-sm text-gray-400">No active users today yet.</p>
+                  <p className="text-xs text-gray-500">Activity data will appear once users log in.</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
