@@ -3,7 +3,7 @@ import { connectToDatabase } from "@/lib/mongodb";
 import { Activity } from "@/lib/models/Activity";
 import { User } from "@/lib/models/User";
 import { getUserFromRequest, unauthorizedResponse } from "@/lib/auth";
-import { isValidDateStr } from "@/lib/time-utils";
+import { isValidDateStr, getNowLocalISO } from "@/lib/time-utils";
 
 export async function GET(request: NextRequest) {
   const user = getUserFromRequest(request);
@@ -21,6 +21,11 @@ export async function GET(request: NextRequest) {
 
     if (type) {
       filter.type = type;
+    }
+
+    // DSE only sees their own activities
+    if (user.role === "DSE") {
+      filter.userId = user.userId;
     }
 
     // Supervisor only sees activities from DSEs on their team
@@ -45,7 +50,7 @@ export async function GET(request: NextRequest) {
         ? a.time
         : a.createdAt instanceof Date
           ? a.createdAt.toISOString()
-          : new Date().toISOString(),
+          : getNowLocalISO(),
     }));
 
     // Batch backfill dseName for old activities — single query for all missing names

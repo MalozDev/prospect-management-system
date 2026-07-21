@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { BellRing, CalendarDays, PhoneCall, PlusCircle, Target, TrendingUp, StickyNote, Clock, CheckCircle2, Users, AlertCircle } from "lucide-react";
-import { useMemo } from "react";
+import { BellRing, CalendarDays, PhoneCall, PlusCircle, Target, TrendingUp, StickyNote, Clock, CheckCircle2, Users, AlertCircle, ChevronDown, ChevronUp } from "lucide-react";
+import { useMemo, useState } from "react";
 import { FaWhatsapp } from "react-icons/fa";
 
 import { PageShell } from "@/components/shared/PageShell";
@@ -24,13 +24,26 @@ export default function DashboardPage() {
   const { data: followUpsData } = useApiData<{ followUps: IFollowUp[] }>("/api/followups", { followUps: [] });
   const { data: activitiesData } = useApiData<{ activities: IActivity[] }>("/api/activities?limit=10", { activities: [] });
   const dseName = useMemo(() => getStoredProfile().name, []);
+  const [showActivities, setShowActivities] = useState(false);
 
-  const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
+  const today = useMemo(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }, []);
+
+  // Filter activities to only today's
+  const todayActivities = useMemo(
+    () => activitiesData.activities.filter((a) => {
+      const activityDate = a.time?.slice(0, 10);
+      return activityDate === today;
+    }),
+    [activitiesData.activities, today]
+  );
   const currentMonth = today.slice(0, 7);
   const weekStart = useMemo(() => {
-    const ws = new Date();
-    ws.setDate(ws.getDate() - 6);
-    return ws.toISOString().slice(0, 10);
+    const d = new Date();
+    d.setDate(d.getDate() - 6);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   }, []);
 
   // ── Today's stats ──
@@ -69,6 +82,9 @@ export default function DashboardPage() {
   );
 
   const targetProgress = Math.min(100, Math.round((salesThisMonth / targets.monthly) * 100));
+  const prospectTargetProgress = targets.prospectDaily > 0
+    ? Math.min(100, Math.round((prospectsCreatedToday.length / targets.prospectDaily) * 100))
+    : 0;
 
   // Dynamic insights based on actual performance
   const insight = useMemo(() => {
@@ -125,7 +141,8 @@ export default function DashboardPage() {
               </div>
               <p className={`mt-1 text-xs font-medium ${insight.color}`}>{insight.text}</p>
               <div className="mt-2 flex flex-wrap gap-2">
-                <span className="rounded-full bg-white px-2 py-1 text-[11px] text-gray-600">Today: {salesToday}/{targets.daily}</span>
+                <span className="rounded-full bg-white px-2 py-1 text-[11px] text-gray-600">Prospects: {prospectsCreatedToday.length}/{targets.prospectDaily}</span>
+                <span className="rounded-full bg-white px-2 py-1 text-[11px] text-gray-600">Sales: {salesToday}/{targets.daily}</span>
                 <span className="rounded-full bg-white px-2 py-1 text-[11px] text-gray-600">Week: {salesThisWeek}/{targets.weekly}</span>
                 <span className="rounded-full bg-white px-2 py-1 text-[11px] text-gray-600">Month: {salesThisMonth}/{targets.monthly}</span>
               </div>
@@ -240,55 +257,75 @@ export default function DashboardPage() {
         </section>
       )}
 
-      {/* ── Today's Activity ── */}
-      <section className="mt-4 rounded-3xl border border-gray-200 bg-white p-3 shadow-sm">
-        <div className="flex items-center justify-between">
+      {/* ── Today's Activity (collapsible dropdown) ── */}
+      <section className="mt-4 rounded-3xl border border-gray-200 bg-white shadow-sm">
+        <button
+          type="button"
+          onClick={() => setShowActivities((v) => !v)}
+          className="flex w-full items-center justify-between p-3 text-left"
+        >
           <div>
             <h2 className="text-sm font-semibold text-gray-900">Today&apos;s activity</h2>
-            <p className="text-xs text-gray-500">Everything that happened today.</p>
+            <p className="text-xs text-gray-500">
+              {todayActivities.length} action{todayActivities.length !== 1 ? "s" : ""} today
+            </p>
           </div>
-        </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-medium text-[#E60012]">
+              {showActivities ? "Hide" : "View"}
+            </span>
+            {showActivities ? (
+              <ChevronUp className="h-4 w-4 text-gray-400" />
+            ) : (
+              <ChevronDown className="h-4 w-4 text-gray-400" />
+            )}
+          </div>
+        </button>
 
-        {activitiesData.activities.length > 0 ? (
-          <ActivityTimeline activities={activitiesData.activities} filterable />
-        ) : prospectsCreatedToday.length > 0 ? (
-          <div className="mt-3 space-y-2">
-            {prospectsCreatedToday.map((prospect) => (
-              <div key={String(prospect._id)} className="flex items-center justify-between rounded-xl border border-gray-100 bg-gray-50 p-3">
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <p className="text-sm font-semibold text-gray-900">{prospect.name}</p>
-                    <StatusBadge status={prospect.status} />
+        {showActivities && (
+          <div className="border-t border-gray-100 p-3">
+            {todayActivities.length > 0 ? (
+              <ActivityTimeline activities={todayActivities} filterable />
+            ) : prospectsCreatedToday.length > 0 ? (
+              <div className="space-y-2">
+                {prospectsCreatedToday.map((prospect) => (
+                  <div key={String(prospect._id)} className="flex items-center justify-between rounded-xl border border-gray-100 bg-gray-50 p-3">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-semibold text-gray-900">{prospect.name}</p>
+                        <StatusBadge status={prospect.status} />
+                      </div>
+                      <p className="mt-0.5 text-xs text-gray-500">
+                        {prospect.location} · Follow-up: {prospect.expectedPurchaseDate}
+                      </p>
+                      <p className="mt-0.5 text-[10px] text-gray-400">Added today</p>
+                    </div>
+                    <div className="flex shrink-0 gap-1.5 pl-2">
+                      <a
+                        href={`tel:${prospect.phone}`}
+                        className="rounded-full border border-gray-200 bg-white p-1.5 text-[#E60012] transition hover:bg-red-50"
+                        aria-label={`Call ${prospect.name}`}
+                      >
+                        <PhoneCall className="h-3.5 w-3.5" />
+                      </a>
+                      <a
+                        href={buildWhatsAppUrl(prospect.phone, buildWhatsAppMessage({ customerName: prospect.name, dseName, title: prospect.title, location: prospect.location, notes: prospect.notes }))}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="rounded-full border border-gray-200 bg-white p-1.5 text-green-600 transition hover:bg-green-50"
+                        aria-label={`WhatsApp ${prospect.name}`}
+                      >
+                        <FaWhatsapp className="h-3.5 w-3.5" />
+                      </a>
+                    </div>
                   </div>
-                  <p className="mt-0.5 text-xs text-gray-500">
-                    {prospect.location} · Follow-up: {prospect.expectedPurchaseDate}
-                  </p>
-                  <p className="mt-0.5 text-[10px] text-gray-400">Added today</p>
-                </div>
-                <div className="flex shrink-0 gap-1.5 pl-2">
-                  <a
-                    href={`tel:${prospect.phone}`}
-                    className="rounded-full border border-gray-200 bg-white p-1.5 text-[#E60012] transition hover:bg-red-50"
-                    aria-label={`Call ${prospect.name}`}
-                  >
-                    <PhoneCall className="h-3.5 w-3.5" />
-                  </a>
-                  <a
-                    href={buildWhatsAppUrl(prospect.phone, buildWhatsAppMessage({ customerName: prospect.name, dseName, title: prospect.title, location: prospect.location, notes: prospect.notes }))}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="rounded-full border border-gray-200 bg-white p-1.5 text-green-600 transition hover:bg-green-50"
-                    aria-label={`WhatsApp ${prospect.name}`}
-                  >
-                    <FaWhatsapp className="h-3.5 w-3.5" />
-                  </a>
-                </div>
+                ))}
               </div>
-            ))}
-          </div>
-        ) : (
-          <div className="mt-3 rounded-xl border border-dashed border-gray-200 bg-gray-50 p-4 text-center text-sm text-gray-500">
-            No activity today yet. Capture your first prospect!
+            ) : (
+              <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50 p-4 text-center text-sm text-gray-500">
+                No activity today yet. Capture your first prospect!
+              </div>
+            )}
           </div>
         )}
       </section>

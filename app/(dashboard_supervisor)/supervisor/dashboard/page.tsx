@@ -29,18 +29,21 @@ export default function SupervisorDashboardPage() {
   const targets = useTargets();
   const [expandedDse, setExpandedDse] = useState<string | null>(null);
 
-  const { data: dseUsersData } = useApiData<{ dseUsers: { name: string; cugSuffix: string; region: string; avatarUrl: string; avatarColor: string }[] }>("/api/supervisors/dse", { dseUsers: [] });
+  const { data: dseUsersData } = useApiData<{ dseUsers: { name: string; cugSuffix: string; region: string; avatarUrl: string }[] }>("/api/supervisors/dse", { dseUsers: [] });
   const { data: prospectsData } = useApiData<{ prospects: IProspect[] }>("/api/prospects", { prospects: [] });
   const { data: salesData } = useApiData<{ sales: ISale[] }>("/api/sales", { sales: [] });
   const { data: activitiesData } = useApiData<{ activities: IActivity[] }>("/api/activities?limit=8", { activities: [] });
 
-  const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
+  const today = useMemo(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }, []);
 
   // Build a lookup for DSE user info (avatar etc.)
   const dseInfoMap = useMemo(() => {
-    const map = new Map<string, { avatarUrl: string; avatarColor: string }>();
+    const map = new Map<string, { avatarUrl: string }>();
     for (const u of dseUsersData.dseUsers) {
-      map.set(u.name, { avatarUrl: u.avatarUrl, avatarColor: u.avatarColor });
+      map.set(u.name, { avatarUrl: u.avatarUrl });
     }
     return map;
   }, [dseUsersData.dseUsers]);
@@ -60,7 +63,7 @@ export default function SupervisorDashboardPage() {
         const todaySalesCount = dseSales.filter((s) => s.date === today).length;
         const weekStart = new Date();
         weekStart.setDate(weekStart.getDate() - 6);
-        const weekStartIso = weekStart.toISOString().slice(0, 10);
+        const weekStartIso = `${weekStart.getFullYear()}-${String(weekStart.getMonth() + 1).padStart(2, '0')}-${String(weekStart.getDate()).padStart(2, '0')}`;
         const weekSales = dseSales.filter((s) => s.date >= weekStartIso && s.date <= today).length;
         const currentMonth = today.slice(0, 7);
         const monthSales = dseSales.filter((s) => s.date.slice(0, 7) === currentMonth).length;
@@ -70,7 +73,7 @@ export default function SupervisorDashboardPage() {
         return {
           name,
           avatarUrl: info?.avatarUrl || "",
-          avatarColor: info?.avatarColor || "",
+  
           prospectsCount: dseProspects.length,
           salesCount: dseSales.length,
           todayProspects,
@@ -262,7 +265,7 @@ export default function SupervisorDashboardPage() {
                 {dseStats.map((dse) => (
                   <tr key={dse.name} className="hover:bg-gray-50">
                     <td className="px-3 py-3">
-                      <ProfileAvatar name={dse.name} avatarUrl={dse.avatarUrl} avatarColor={dse.avatarColor} size="sm" />
+                      <ProfileAvatar name={dse.name} avatarUrl={dse.avatarUrl} size="sm" />
                     </td>
                     <td className="px-3 py-3 font-semibold text-gray-900">{dse.name}</td>
                     <td className="px-3 py-3 text-center text-gray-600">
@@ -331,12 +334,12 @@ function TargetBarInline({ current, remaining, progress }: { current: number; re
   );
 }
 
-function DsePerformanceCard({ dse }: { dse: { name: string; prospectsCount: number; salesCount: number; todayProspects: number; todaySales: number; weekSales: number; monthSales: number; dailyRemaining: number; weeklyRemaining: number; monthlyRemaining: number; dailyProgress: number; weeklyProgress: number; monthlyProgress: number; revenue: number; avatarUrl?: string; avatarColor?: string } }) {
+function DsePerformanceCard({ dse }: { dse: { name: string; prospectsCount: number; salesCount: number; todayProspects: number; todaySales: number; weekSales: number; monthSales: number; dailyRemaining: number; weeklyRemaining: number; monthlyRemaining: number; dailyProgress: number; weeklyProgress: number; monthlyProgress: number; revenue: number; avatarUrl?: string } }) {
   return (
     <div className="rounded-2xl border border-gray-200 bg-gray-50 p-3">
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-2">
-          <ProfileAvatar name={dse.name} avatarUrl={dse.avatarUrl} avatarColor={dse.avatarColor} size="sm" />
+          <ProfileAvatar name={dse.name} avatarUrl={dse.avatarUrl} size="sm" />
           <div>
             <p className="font-semibold text-gray-900">{dse.name}</p>
             <p className="text-xs text-gray-500">{dse.prospectsCount} prospects · {dse.salesCount} ODU sales</p>

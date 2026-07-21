@@ -6,6 +6,41 @@ export function isValidDateStr(str: string): boolean {
 }
 
 /**
+ * Return today's date as YYYY-MM-DD in the LOCAL timezone.
+ * Use everywhere instead of `new Date().toISOString().slice(0, 10)`
+ * which gives UTC date and breaks in timezones with positive UTC offset.
+ */
+export function getTodayLocal(): string {
+  const d = new Date();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+/**
+ * Return a full ISO-8601 timestamp representing the LOCAL date/time.
+ * Use instead of `new Date().toISOString()` which gives UTC.
+ */
+export function getNowLocalISO(): string {
+  const d = new Date();
+  // Shift by the timezone offset so toISOString() reflects local time
+  return new Date(d.getTime() - d.getTimezoneOffset() * 60_000).toISOString();
+}
+
+/**
+ * Return the date 6 days ago as YYYY-MM-DD in LOCAL timezone.
+ */
+export function getWeekStartLocal(): string {
+  const d = new Date();
+  d.setDate(d.getDate() - 6);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+/**
  * Convert an ISO timestamp or date string into a human-readable relative time.
  *
  * Examples: "Just now", "2 min ago", "1 hour ago", "Yesterday", "3 days ago"

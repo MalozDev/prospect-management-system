@@ -35,7 +35,10 @@ const ProspectSchema = new Schema<IProspect>(
     location: { type: String, required: true, trim: true },
     address: { type: String, required: true, trim: true },
     expectedPurchaseDate: { type: String, required: true },
-    createdAt: { type: String, required: true, default: () => new Date().toISOString().slice(0, 10) },
+    createdAt: { type: String, required: true, default: () => {
+      const d = new Date();
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    } },
     status: {
       type: String,
       required: true,

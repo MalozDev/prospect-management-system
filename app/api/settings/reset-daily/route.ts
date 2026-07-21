@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import { FollowUp } from "@/lib/models/FollowUp";
 import { getUserFromRequest, unauthorizedResponse } from "@/lib/auth";
+import { getTodayLocal } from "@/lib/time-utils";
 
 export async function POST(_request: NextRequest) {
   const user = getUserFromRequest(_request);
@@ -12,7 +13,7 @@ export async function POST(_request: NextRequest) {
   try {
     await connectToDatabase();
 
-    const today = new Date().toISOString().slice(0, 10);
+    const today = getTodayLocal();
 
     // Move all UPCOMING follow-ups that are due today to TODAY
     const activatedToday = await FollowUp.updateMany(

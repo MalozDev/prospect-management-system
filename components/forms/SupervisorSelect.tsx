@@ -15,12 +15,14 @@ interface Props {
   label?: string;
   value?: string;
   onChange?: (value: string) => void;
+  showNotOnBoard?: boolean;
 }
 
 export default function SupervisorSelect({
   label = "Supervisor",
   value,
   onChange,
+  showNotOnBoard = true,
 }: Props) {
   const [supervisors, setSupervisors] = useState<Supervisor[]>([]);
   const [loading, setLoading] = useState(true);
@@ -57,11 +59,21 @@ export default function SupervisorSelect({
         <option value="">
           {loading ? "Loading supervisors..." : "Select a supervisor"}
         </option>
+        {showNotOnBoard && supervisors.length > 0 && (
+          <option value="UNASSIGNED">
+            Supervisor not on board yet
+          </option>
+        )}
         {supervisors.map((sup) => (
           <option key={sup._id} value={sup.name}>
             {sup.name} {sup.region ? `(${sup.region})` : ""}
           </option>
         ))}
+        {supervisors.length === 0 && !loading && (
+          <option value="UNASSIGNED">
+            No supervisors yet — choose to wait
+          </option>
+        )}
       </Select>
 
       {error && (

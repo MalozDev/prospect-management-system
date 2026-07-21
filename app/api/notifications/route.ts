@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import { Notification } from "@/lib/models/Notification";
 import { getUserFromRequest, unauthorizedResponse } from "@/lib/auth";
-import { isValidDateStr } from "@/lib/time-utils";
+import { isValidDateStr, getNowLocalISO } from "@/lib/time-utils";
 
 export async function GET(request: NextRequest) {
   const user = getUserFromRequest(request);
@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
         ? n.time
         : n.createdAt instanceof Date
           ? n.createdAt.toISOString()
-          : new Date().toISOString(),
+          : getNowLocalISO(),
     }));
 
     return Response.json({ notifications: fixedNotifications });
@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
     const notification = await Notification.create({
       title: title.trim(),
       message: message.trim(),
-      time: new Date().toISOString(),
+      time: getNowLocalISO(),
       unread: true,
       userId: targetUserId || user.userId,
     });

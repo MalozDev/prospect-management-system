@@ -29,7 +29,6 @@ interface DseUser {
   region: string;
   supervisor: string;
   avatarUrl: string;
-  avatarColor: string;
 }
 
 export default function SupervisorDsePage() {
@@ -39,12 +38,15 @@ export default function SupervisorDsePage() {
   const { data: prospectsData } = useApiData<{ prospects: IProspect[] }>("/api/prospects", { prospects: [] });
   const { data: salesData } = useApiData<{ sales: ISale[] }>("/api/sales", { sales: [] });
 
-  const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
+  const today = useMemo(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }, []);
   const currentMonth = today.slice(0, 7);
   const weekStart = useMemo(() => {
     const ws = new Date();
     ws.setDate(ws.getDate() - 6);
-    return ws.toISOString().slice(0, 10);
+    return `${ws.getFullYear()}-${String(ws.getMonth() + 1).padStart(2, '0')}-${String(ws.getDate()).padStart(2, '0')}`;
   }, []);
 
   // Compute stats for each DSE
@@ -136,7 +138,6 @@ export default function SupervisorDsePage() {
                 <ProfileAvatar
                   name={dse.name}
                   avatarUrl={dse.avatarUrl}
-                  avatarColor={dse.avatarColor}
                   size="lg"
                   showName
                   namePosition="below"

@@ -9,8 +9,10 @@ import Logo from "@/components/layout/Logo";
 
 import CugInput from "@/components/forms/CugInput";
 import PasswordInput from "@/components/forms/PasswordInput";
-import { loginApi, setToken, setStoredApiUser, apiFetch } from "@/lib/api-client";
+import SupervisorSelect from "@/components/forms/SupervisorSelect";
+import { loginApi, setToken, setStoredApiUser, apiFetch, getStoredApiUser } from "@/lib/api-client";
 import { saveProfile } from "@/utils/profile";
+import { subscribeToPush } from "@/lib/push-subscribe";
 
 type Status = "idle" | "loading" | "success" | "error";
 
@@ -26,6 +28,13 @@ export default function LoginPage() {
   const [forgotMessage, setForgotMessage] = useState("");
   const [loadingForgot, setLoadingForgot] = useState(false);
 
+  // Supervisor selection prompt
+  const [showSupervisorPrompt, setShowSupervisorPrompt] = useState(false);
+  const [selectedSupervisor, setSelectedSupervisor] = useState("");
+  const [savingSupervisor, setSavingSupervisor] = useState(false);
+  const [supervisorPromptError, setSupervisorPromptError] = useState("");
+  const [redirectAfterPrompt, setRedirectAfterPrompt] = useState("");
+
   // Auto-reset error state after 2 seconds
   useEffect(() => {
     if (status === "error") {
@@ -40,7 +49,10 @@ export default function LoginPage() {
   // Close modal on Escape key
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setShowForgotModal(false);
+      if (e.key === "Escape") {
+        setShowForgotModal(false);
+        setShowSupervisorPrompt(false);
+      }
     };
     document.addEventListener("keydown", handleEsc);
     return () => document.removeEventListener("keydown", handleEsc);
@@ -68,6 +80,57 @@ export default function LoginPage() {
     } finally {
       setLoadingForgot(false);
       setShowForgotModal(true);
+    }
+  };
+
+  const handleSaveSupervisor = async () => {
+    if (!selectedSupervisor) {
+      setSupervisorPromptError("Please select a supervisor or choose 'Not on board'.");
+      return;
+    }
+    setSavingSupervisor(true);
+    setSupervisorPromptError("");
+    try {
+      // Build update payload
+      const payload: Record<string, unknown> = { supervisor: selectedSupervisor };
+
+      // If choosing "Not on board" (value is "UNASSIGNED" from the dropdown),
+      // store the current supervisor count so we can detect new supervisors
+      // on the next login. Map UNASSIGNED → NOT_ON_BOARD in the backend.
+      if (selectedSupervisor === "UNASSIGNED") {
+        payload.supervisor = "NOT_ON_BOARD";
+        try {
+          const supRes = await fetch("/api/supervisors");
+          const supData = await supRes.json();
+          payload.supervisorCheckedAt = supData.supervisors?.length || 0;
+        } catch {
+          payload.supervisorCheckedAt = 0;
+        }
+      }
+
+      // Update supervisor assignment
+      await apiFetch("/api/users/me", {
+        method: "PATCH",
+        body: JSON.stringify(payload),
+      });
+
+      // Update stored user info
+      const apiUser = getStoredApiUser();
+      if (apiUser) {
+        setStoredApiUser({ ...apiUser, supervisor: selectedSupervisor });
+      }
+
+      setShowSupervisorPrompt(false);
+      // Navigate to the intended destination
+      if (redirectAfterPrompt) {
+        router.push(redirectAfterPrompt);
+      } else {
+        router.push("/dashboard");
+      }
+    } catch (err) {
+      setSupervisorPromptError(err instanceof Error ? err.message : "Failed to save supervisor.");
+    } finally {
+      setSavingSupervisor(false);
     }
   };
 
@@ -103,19 +166,39 @@ export default function LoginPage() {
         phone: `097898${data.user.cugSuffix}`,
         region: data.user.region,
         cug: `097898${data.user.cugSuffix}`,
-        avatarUrl: "",
+        avatarUrl: data.user.avatarUrl || "",
       });
       window.dispatchEvent(new Event("profile-updated"));
 
-      // Show success state before redirect
+      // Auto-subscribe to push notifications (non-blocking)
+      subscribeToPush().catch(() => {});
+
+      // Check if DSE needs to select a supervisor
+      // The API returns needsSupervisor = true when:
+      // - DSE has no supervisor (first time)
+      // - DSE chose "NOT_ON_BOARD" before but new supervisors have appeared
+      const needsSupervisor = data.user.role === "DSE" && (data as any).needsSupervisor === true;
+
+      // Determine redirect destination
+      let destination = "";
+      if (data.user.role === "SUPERADMIN") {
+        destination = "/developer/dashboard";
+      } else if (data.user.role === "SUPERVISOR") {
+        destination = "/supervisor/dashboard";
+      } else {
+        destination = "/dashboard";
+      }
+
+      // Show success state before redirect or prompt
       setStatus("success");
       setTimeout(() => {
-        if (data.user.role === "SUPERADMIN") {
-          router.push("/developer/dashboard");
-        } else if (data.user.role === "SUPERVISOR") {
-          router.push("/supervisor/dashboard");
+        if (needsSupervisor) {
+          // Show supervisor selection prompt instead of redirecting
+          setRedirectAfterPrompt(destination);
+          setSelectedSupervisor(data.user.supervisor || "");
+          setShowSupervisorPrompt(true);
         } else {
-          router.push("/dashboard");
+          router.push(destination);
         }
       }, 1500);
     } catch (err) {
@@ -250,6 +333,71 @@ export default function LoginPage() {
               className="mt-4 h-11 w-full rounded-xl bg-gray-100 text-sm font-medium text-gray-700 hover:bg-gray-200 transition-colors"
             >
               Got it
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Supervisor Selection Prompt */}
+      {showSupervisorPrompt && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          {/* Overlay */}
+          <div
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+            onClick={() => {}}
+          />
+
+          {/* Modal */}
+          <div role="dialog" aria-modal="true" aria-label="Select supervisor" className="relative w-full max-w-md animate-scale-in rounded-3xl bg-white p-6 shadow-2xl">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-50">
+                <svg className="h-5 w-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900">Select Your Supervisor</h2>
+                <p className="text-sm text-gray-500">Choose your supervisor to get started.</p>
+              </div>
+            </div>
+
+            <div className="mb-4">
+              <SupervisorSelect
+                value={selectedSupervisor}
+                onChange={(value) => {
+                  setSelectedSupervisor(value);
+                  setSupervisorPromptError("");
+                }}
+              />
+            </div>
+
+            {supervisorPromptError && (
+              <p className="mb-3 text-sm text-red-600">{supervisorPromptError}</p>
+            )}
+
+            <div className="mt-1 flex items-center justify-between rounded-2xl bg-amber-50 border border-amber-200 p-3 text-xs text-amber-800">
+              <svg className="h-4 w-4 shrink-0 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <p>
+                If your supervisor hasn&apos;t registered yet, choose &quot;Supervisor not on board yet&quot;. You can always update this later.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleSaveSupervisor}
+              disabled={savingSupervisor}
+              className="mt-4 h-12 w-full rounded-xl bg-blue-600 text-sm font-medium text-white transition hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            >
+              {savingSupervisor ? (
+                <>
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  Saving...
+                </>
+              ) : (
+                "Continue to Dashboard"
+              )}
             </button>
           </div>
         </div>

@@ -17,7 +17,15 @@ export default function ProfilePage() {
     let active = true;
     setTimeout(() => {
       if (active) {
-        setProfile(getStoredProfile());
+        const stored = getStoredProfile();
+        // If stored profile doesn't have avatar, try API user as fallback
+        if (!stored.avatarUrl?.startsWith("data:")) {
+          const apiUser = getStoredApiUser();
+          if (apiUser?.avatarUrl?.startsWith("data:")) {
+            stored.avatarUrl = apiUser.avatarUrl;
+          }
+        }
+        setProfile(stored);
       }
     }, 0);
     return () => {
@@ -58,8 +66,7 @@ export default function ProfilePage() {
         <div className="flex items-center gap-4">
           <ProfileAvatar
             name={profile.name}
-            avatarUrl={profile.avatarUrl?.startsWith("#") ? "" : profile.avatarUrl}
-            avatarColor={profile.avatarUrl?.startsWith("#") ? profile.avatarUrl : ""}
+            avatarUrl={profile.avatarUrl?.startsWith("data:") ? profile.avatarUrl : ""}
             size="xl"
           />
           <div>

@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import { FollowUp } from "@/lib/models/FollowUp";
+import { getTodayLocal, getNowLocalISO } from "@/lib/time-utils";
 import { Prospect } from "@/lib/models/Prospect";
 import { Sale } from "@/lib/models/Sale";
 import { Activity } from "@/lib/models/Activity";
@@ -19,7 +20,7 @@ export async function PATCH(
     const { id } = await params;
     const body = await request.json();
 
-    const today = new Date().toISOString().slice(0, 10);
+    const today = getTodayLocal();
 
     // === MARK AS CONTACTED ===
     if (body.action === "contacted") {
@@ -42,7 +43,7 @@ export async function PATCH(
       // Update linked prospect status to CONTACTED and store contacted timestamp
       if (followUp.prospectId) {
         await Prospect.findByIdAndUpdate(followUp.prospectId, {
-          $set: { status: "CONTACTED", lastContacted: new Date().toISOString() },
+          $set: { status: "CONTACTED", lastContacted: getNowLocalISO() },
         });
       }
 
@@ -50,7 +51,7 @@ export async function PATCH(
       await Activity.create({
         title: "Follow up completed",
         detail: `Follow up completed for ${followUp.customerName}`,
-        time: new Date().toISOString(),
+        time: getNowLocalISO(),
         type: "followup",
         userId: user.userId,
         dseName: user.name,
@@ -63,7 +64,7 @@ export async function PATCH(
     if (body.action === "sold") {
       const followUp = await FollowUp.findByIdAndUpdate(
         id,
-        { $set: { outcome: "SOLD" } },
+        { $set: { outcome: "SOLD", status: "COMPLETED", lastContacted: today } },
         { new: true }
       ).lean();
 
@@ -91,7 +92,7 @@ export async function PATCH(
       await Activity.create({
         title: "Sale completed",
         detail: `ODU sale closed for ${followUp.customerName}`,
-        time: new Date().toISOString(),
+        time: getNowLocalISO(),
         type: "sale",
         userId: user.userId,
         dseName: user.name,
@@ -101,7 +102,7 @@ export async function PATCH(
       await Notification.create({
         title: "Sale Completed",
         message: `Sale completed for ${followUp.customerName}`,
-        time: new Date().toISOString(),
+        time: getNowLocalISO(),
         unread: true,
         userId: user.userId,
       });
@@ -113,7 +114,7 @@ export async function PATCH(
     if (body.action === "lost") {
       const followUp = await FollowUp.findByIdAndUpdate(
         id,
-        { $set: { outcome: "LOST" } },
+        { $set: { outcome: "LOST", status: "COMPLETED", lastContacted: today } },
         { new: true }
       ).lean();
 
@@ -132,7 +133,7 @@ export async function PATCH(
       await Activity.create({
         title: "Prospect lost",
         detail: `${followUp.customerName} marked as lost`,
-        time: new Date().toISOString(),
+        time: getNowLocalISO(),
         type: "lost",
         userId: user.userId,
         dseName: user.name,
@@ -150,6 +151,8 @@ export async function PATCH(
         {
           $set: {
             outcome: "VISIT_SCHEDULED",
+            status: "COMPLETED",
+            lastContacted: today,
             visitDate,
           },
         },
@@ -187,7 +190,7 @@ export async function PATCH(
       await Notification.create({
         title: "Visit Scheduled",
         message: `Visit scheduled for ${followUp.customerName} on ${visitDate || "soon"}`,
-        time: new Date().toISOString(),
+        time: getNowLocalISO(),
         unread: true,
         userId: user.userId,
       });
@@ -196,7 +199,7 @@ export async function PATCH(
       await Activity.create({
         title: "Visit scheduled",
         detail: `Visit scheduled for ${followUp.customerName} on ${visitDate || "soon"}`,
-        time: new Date().toISOString(),
+        time: getNowLocalISO(),
         type: "visit",
         userId: user.userId,
         dseName: user.name,
@@ -214,6 +217,8 @@ export async function PATCH(
         {
           $set: {
             outcome: "POSTPONED",
+            status: "COMPLETED",
+            lastContacted: today,
           },
         },
         { new: true }
@@ -249,7 +254,7 @@ export async function PATCH(
       await Activity.create({
         title: "Follow-up postponed",
         detail: `${followUp.customerName} postponed to ${newDate}`,
-        time: new Date().toISOString(),
+        time: getNowLocalISO(),
         type: "followup",
         userId: user.userId,
         dseName: user.name,

@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { registerApi, setToken, setStoredApiUser } from "@/lib/api-client";
 import { saveProfile } from "@/utils/profile";
+import { subscribeToPush } from "@/lib/push-subscribe";
 
 type Status = "idle" | "loading" | "success" | "error";
 
@@ -61,11 +62,7 @@ export default function RegisterPage() {
       setStatus("error");
       return;
     }
-    if (role === "DSE" && !supervisor) {
-      setError("Please select your supervisor.");
-      setStatus("error");
-      return;
-    }
+
     if (password.length < 6) {
       setError("Password must be at least 6 characters long.");
       setStatus("error");
@@ -100,9 +97,12 @@ export default function RegisterPage() {
         phone: `097898${data.user.cugSuffix}`,
         region: data.user.region,
         cug: `097898${data.user.cugSuffix}`,
-        avatarUrl: "",
+        avatarUrl: data.user.avatarUrl || "",
       });
       window.dispatchEvent(new Event("profile-updated"));
+
+      // Auto-subscribe to push notifications (non-blocking)
+      subscribeToPush().catch(() => {});
 
       // Show success state before redirect
       setStatus("success");

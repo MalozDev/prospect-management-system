@@ -20,10 +20,14 @@ import {
   X,
   Loader2,
   StickyNote,
+  AlertCircle,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import { FaWhatsapp } from "react-icons/fa";
 import { buildWhatsAppUrl, buildWhatsAppMessage } from "@/lib/whatsapp";
 import { getStoredProfile } from "@/utils/profile";
+import { OutcomeToast, type OutcomeType } from "@/components/shared/OutcomeToast";
 
 // Feedback modal state
 type FeedbackAction = "sold" | "lost" | "schedule_visit" | "postpone" | null;
@@ -59,7 +63,9 @@ function formatDateShort(dateString: string) {
 }
 
 function isToday(dateStr: string) {
-  return dateStr === new Date().toISOString().slice(0, 10);
+  const d = new Date();
+  const todayLocal = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  return dateStr === todayLocal;
 }
 
 export default function FollowUpsPage() {
@@ -73,13 +79,24 @@ export default function FollowUpsPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [showFeedback, setShowFeedback] = useState(true);
+  const [feedbackCollapsed, setFeedbackCollapsed] = useState(false);
+  const [pendingContactId, setPendingContactId] = useState<string | null>(null);
+  const [contactError, setContactError] = useState("");
+  const [outcomeToast, setOutcomeToast] = useState<{
+    type: OutcomeType;
+    customerName: string;
+    detail?: string;
+  } | null>(null);
   const futureSectionRef = useRef<HTMLDivElement | null>(null);
 
   const { data, refetch } = useApiData<{ followUps: IFollowUp[] }>("/api/followups", { followUps: [] });
   const profile = useMemo(() => getStoredProfile(), []);
   const dseName = profile.name;
 
-  const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
+  const today = useMemo(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }, []);
 
   // Categorize follow-ups
   const todayItems = useMemo(
@@ -127,13 +144,13 @@ export default function FollowUpsPage() {
     [futureGroups]
   );
 
-  // Check for pending review items on load
+  // Check for pending review items on load (only if no explicit contact is pending)
   useEffect(() => {
-    if (pendingReviewItems.length > 0 && showFeedback) {
+    if (pendingReviewItems.length > 0 && showFeedback && !pendingContactId) {
       // Auto-show feedback for first pending review item
       setFeedbackItem(pendingReviewItems[0]);
     }
-  }, [pendingReviewItems, showFeedback]);
+  }, [pendingReviewItems, showFeedback, pendingContactId]);
 
   useEffect(() => {
     if (showFuture && futureSectionRef.current) {
@@ -141,21 +158,25 @@ export default function FollowUpsPage() {
     }
   }, [showFuture]);
 
-  const handleContacted = useCallback(async (id: string) => {
-    setActionLoading(id);
-    setError("");
-    try {
-      await apiFetch(`/api/followups/${id}`, {
-        method: "PATCH",
-        body: JSON.stringify({ action: "contacted" }),
-      });
-      refetch();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to mark as contacted.");
-    } finally {
-      setActionLoading(null);
+  const handleContacted = useCallback(async (id: string, item: IFollowUp) => {
+    // If there's already a pending contact, refuse until feedback is given
+    if (pendingContactId && pendingContactId !== id) {
+      setContactError("Please provide feedback for the current prospect first.");
+      setTimeout(() => setContactError(""), 4000);
+      return;
     }
-  }, [refetch]);
+
+    // If we already have feedback showing for this item, just reopen it
+    if (pendingContactId === id && feedbackItem) {
+      return;
+    }
+
+    setContactError("");
+    setPendingContactId(id);
+    setFeedbackItem(item);
+    setShowFeedback(true);
+    setFeedbackCollapsed(false);
+  }, [pendingContactId, feedbackItem]);
 
   const handleFeedbackSubmit = useCallback(async () => {
     if (!feedbackItem) return;
@@ -200,10 +221,27 @@ export default function FollowUpsPage() {
           });
           break;
       }
+      // Show outcome popup
+      if (feedbackAction && feedbackItem) {
+        let detail = "";
+        if (feedbackAction === "schedule_visit" && visitDate) {
+          detail = formatDate(visitDate);
+        } else if (feedbackAction === "postpone" && postponeDate) {
+          detail = formatDate(postponeDate);
+        }
+        setOutcomeToast({
+          type: feedbackAction,
+          customerName: feedbackItem.customerName,
+          detail,
+        });
+      }
+
       setFeedbackItem(null);
       setFeedbackAction(null);
+      setPendingContactId(null);
       setVisitDate("");
       setPostponeDate("");
+      setContactError("");
       refetch();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to submit feedback.");
@@ -219,6 +257,18 @@ export default function FollowUpsPage() {
     setPostponeDate("");
     setError("");
     setShowFeedback(false);
+    // Don't clear pendingContactId — user must provide feedback before contacting another
+  }, []);
+
+  const cancelPendingContact = useCallback(() => {
+    setPendingContactId(null);
+    setFeedbackItem(null);
+    setFeedbackAction(null);
+    setVisitDate("");
+    setPostponeDate("");
+    setError("");
+    setShowFeedback(false);
+    setContactError("");
   }, []);
 
   const getId = (item: IFollowUp) => String(item._id);
@@ -237,6 +287,22 @@ export default function FollowUpsPage() {
           {error}
         </div>
       )}
+      {contactError && (
+        <div className="mb-4 rounded-xl bg-amber-50 p-3 text-sm text-amber-700 border border-amber-200 flex items-center gap-2">
+          <AlertCircle className="h-4 w-4 shrink-0" />
+          <span>{contactError}</span>
+        </div>
+      )}
+
+      {/* Outcome Toast Popup */}
+      {outcomeToast && (
+        <OutcomeToast
+          type={outcomeToast.type}
+          customerName={outcomeToast.customerName}
+          detail={outcomeToast.detail}
+          onDismiss={() => setOutcomeToast(null)}
+        />
+      )}
 
       {/* Feedback Modal */}
       {feedbackItem && feedbackAction === null && (
@@ -253,13 +319,23 @@ export default function FollowUpsPage() {
                 </p>
               </div>
             </div>
-            <button
-              type="button"
-              onClick={dismissFeedback}
-              className="rounded-full p-1 text-gray-400 hover:text-gray-600"
-            >
-              <X className="h-5 w-5" />
-            </button>
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={cancelPendingContact}
+                className="rounded-full px-3 py-1 text-xs font-medium text-gray-500 hover:text-gray-700 hover:bg-amber-100 transition"
+                title="Cancel contact attempt"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={dismissFeedback}
+                className="rounded-full p-1 text-gray-400 hover:text-gray-600"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
           </div>
 
           <div className="mt-4 flex flex-wrap gap-2">
@@ -463,27 +539,55 @@ export default function FollowUpsPage() {
       </div>
 
       <div className="grid gap-4">
-        {/* Pending Review Items */}
+        {/* Pending Review Items — collapsible with Done button */}
         {pendingReviewItems.length > 0 && !showFeedback && (
           <div className="rounded-3xl border border-amber-200 bg-amber-50/50 p-4 shadow-sm">
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="h-4 w-4 text-amber-600" />
-              <p className="text-sm font-semibold text-gray-900">
-                {pendingReviewItems.length} follow-up{pendingReviewItems.length !== 1 ? "s" : ""} need your feedback
-              </p>
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4 text-amber-600" />
+                <p className="text-sm font-semibold text-gray-900">
+                  {feedbackCollapsed ? (
+                    <>{pendingReviewItems.length} follow-up{pendingReviewItems.length !== 1 ? "s" : ""} need feedback</>
+                  ) : (
+                    <>{pendingReviewItems.length} follow-up{pendingReviewItems.length !== 1 ? "s" : ""} need your feedback</>
+                  )}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setFeedbackCollapsed((v) => !v)}
+                className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition ${
+                  feedbackCollapsed
+                    ? "border border-amber-300 bg-white text-amber-700 hover:bg-amber-50"
+                    : "bg-amber-200 text-amber-800 hover:bg-amber-300"
+                }`}
+              >
+                {feedbackCollapsed ? (
+                  <><ChevronDown className="h-3.5 w-3.5" /> View</>
+                ) : (
+                  <><CheckCircle2 className="h-3.5 w-3.5" /> Done</>
+                )}
+              </button>
             </div>
-            <div className="mt-3 flex flex-wrap gap-2">
-              {pendingReviewItems.slice(0, 3).map((item) => (
-                <button
-                  key={String(item._id)}
-                  type="button"
-                  onClick={() => { setFeedbackItem(item); setShowFeedback(true); }}
-                  className="rounded-xl border border-amber-200 bg-white px-3 py-2 text-sm text-gray-700 transition hover:border-amber-300"
-                >
-                  {item.customerName} <ChevronRight className="ml-1 inline h-3 w-3" />
-                </button>
-              ))}
-            </div>
+            {!feedbackCollapsed && (
+              <div className="mt-3 flex flex-wrap gap-2">
+                {pendingReviewItems.slice(0, 5).map((item) => (
+                  <button
+                    key={String(item._id)}
+                    type="button"
+                    onClick={() => { setFeedbackItem(item); setShowFeedback(true); }}
+                    className="rounded-xl border border-amber-200 bg-white px-3 py-2 text-sm text-gray-700 transition hover:border-amber-300 hover:shadow-sm"
+                  >
+                    {item.customerName} <ChevronRight className="ml-1 inline h-3 w-3" />
+                  </button>
+                ))}
+                {pendingReviewItems.length > 5 && (
+                  <p className="flex items-center text-xs text-gray-500 px-2">
+                    +{pendingReviewItems.length - 5} more
+                  </p>
+                )}
+              </div>
+            )}
           </div>
         )}
 
@@ -565,19 +669,34 @@ export default function FollowUpsPage() {
                   </a>
 
                   {/* Mark Contacted button */}
-                  <button
-                    type="button"
-                    onClick={() => handleContacted(String(item._id))}
-                    disabled={actionLoading === String(item._id)}
-                    className="inline-flex items-center gap-1.5 rounded-full bg-[#E60012] px-3 py-2 text-sm font-medium text-white transition hover:bg-red-700 disabled:opacity-50"
-                  >
-                    {actionLoading === String(item._id) ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
+                  {pendingContactId === String(item._id) ? (
+                    <button
+                      type="button"
+                      onClick={() => handleContacted(String(item._id), item)}
+                      className="inline-flex items-center gap-1.5 rounded-full bg-amber-500 px-3 py-2 text-sm font-medium text-white transition hover:bg-amber-600"
+                    >
                       <CheckCircle2 className="h-4 w-4" />
-                    )}
-                    {item.category === "VISIT" ? "Visited" : "Contacted"}
-                  </button>
+                      Give Feedback
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => handleContacted(String(item._id), item)}
+                      disabled={actionLoading === String(item._id) || (!!pendingContactId && pendingContactId !== String(item._id))}
+                      className={`inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-sm font-medium text-white transition disabled:opacity-50 ${
+                        pendingContactId
+                          ? "bg-gray-400 cursor-not-allowed"
+                          : "bg-[#E60012] hover:bg-red-700"
+                      }`}
+                    >
+                      {actionLoading === String(item._id) ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <CheckCircle2 className="h-4 w-4" />
+                      )}
+                      {item.category === "VISIT" ? "Visited" : "Contacted"}
+                    </button>
+                  )}
                 </div>
               </div>
             </div>

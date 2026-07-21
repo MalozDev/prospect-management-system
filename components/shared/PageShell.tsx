@@ -16,7 +16,7 @@ export function PageShell({ title, description, children }: PageShellProps) {
       <div className="mx-auto flex max-w-7xl">
         <Sidebar />
         <main className="flex-1 pb-24 md:pb-8">
-          <div className="border-b border-gray-200 bg-white/80 px-4 py-4 backdrop-blur sm:px-6">
+          <div className="relative z-10 border-b border-gray-200 bg-white/80 px-4 py-4 backdrop-blur sm:px-6">
             <div className="flex items-center justify-between">
               <div>
                 <h1 className="text-xl font-semibold text-gray-900">{title}</h1>

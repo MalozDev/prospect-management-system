@@ -4,6 +4,7 @@ export const TARGET_KEYS = {
   WEEKLY: "weekly_sales_target",
   MONTHLY: "monthly_sales_target",
   TEAM: "team_target",
+  PROSPECT_DAILY: "daily_prospect_target",
 } as const;
 
 export type TargetKey = (typeof TARGET_KEYS)[keyof typeof TARGET_KEYS];
@@ -14,6 +15,7 @@ export const DEFAULT_TARGET_VALUES: Record<TargetKey, string> = {
   [TARGET_KEYS.WEEKLY]: "12",
   [TARGET_KEYS.MONTHLY]: "25",
   [TARGET_KEYS.TEAM]: "400",
+  [TARGET_KEYS.PROSPECT_DAILY]: "5",
 } as const;
 
 /** Parse stored target strings into numbers (falls back to defaults). */

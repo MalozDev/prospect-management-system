@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import { FollowUp } from "@/lib/models/FollowUp";
+import { getTodayLocal } from "@/lib/time-utils";
 import { Notification } from "@/lib/models/Notification";
 import { User } from "@/lib/models/User";
 import { getUserFromRequest, unauthorizedResponse } from "@/lib/auth";
@@ -55,7 +56,7 @@ export async function GET(request: NextRequest) {
     let query = FollowUp.find(filter).sort({ expectedPurchaseDate: 1 });
     if (limit > 0) query = query.limit(limit);
     const followUps = await query.lean();
-    const today = new Date().toISOString().slice(0, 10);
+    const today = getTodayLocal();
 
     // Auto-update statuses based on dates, and create notifications for due items
     // Batch all updates into a single bulkWrite operation
@@ -63,6 +64,24 @@ export async function GET(request: NextRequest) {
     const notificationsToCreate: { title: string; message: string; userId: string }[] = [];
 
     for (const fu of followUps) {
+      // Reset PENDING_REVIEW items from previous days back to TODAY
+      // so the DSE must re-contact them on the new day
+      const isOldPending =
+        fu.outcome === "PENDING_REVIEW" &&
+        fu.expectedPurchaseDate < today;
+
+      if (isOldPending) {
+        bulkOps.push({
+          updateOne: {
+            filter: { _id: fu._id },
+            update: { $set: { status: "TODAY", outcome: "" } },
+          },
+        });
+        (fu as Record<string, unknown>).status = "TODAY";
+        (fu as Record<string, unknown>).outcome = "";
+        continue;
+      }
+
       const dueNow = fu.status === "UPCOMING" && fu.expectedPurchaseDate === today;
       const overdue = fu.status === "UPCOMING" && fu.expectedPurchaseDate < today;
 
@@ -127,7 +146,7 @@ export async function GET(request: NextRequest) {
         .map((n) => ({
           title: n.title,
           message: n.message,
-          time: new Date().toISOString(),
+          time: getTodayLocal(),
           unread: true,
           userId: n.userId,
         }));
@@ -171,7 +190,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const today = new Date().toISOString().slice(0, 10);
+    const today = getTodayLocal();
     const computedStatus = expectedPurchaseDate === today ? "TODAY" : expectedPurchaseDate < today ? "OVERDUE" : "UPCOMING";
 
     const followUp = await FollowUp.create({
@@ -192,7 +211,7 @@ export async function POST(request: NextRequest) {
       await Notification.create({
         title: "Follow-up Due Today",
         message: `Follow-up due today for ${followUp.customerName} (${followUp.phone})`,
-        time: new Date().toISOString(),
+        time: getTodayLocal(),
         unread: true,
         userId: user.userId,
       });

@@ -7,6 +7,7 @@ export interface Targets {
   weekly: number;
   monthly: number;
   team: number;
+  prospectDaily: number;
 }
 
 const FALLBACK: Targets = {
@@ -14,6 +15,7 @@ const FALLBACK: Targets = {
   weekly: Number(DEFAULT_TARGET_VALUES[TARGET_KEYS.WEEKLY as TargetKey]),
   monthly: Number(DEFAULT_TARGET_VALUES[TARGET_KEYS.MONTHLY as TargetKey]),
   team: Number(DEFAULT_TARGET_VALUES[TARGET_KEYS.TEAM as TargetKey]),
+  prospectDaily: Number(DEFAULT_TARGET_VALUES[TARGET_KEYS.PROSPECT_DAILY as TargetKey]),
 };
 
 /**
@@ -34,6 +36,7 @@ export function useTargets(): Targets {
           weekly: safeParse(data.targets[TARGET_KEYS.WEEKLY], FALLBACK.weekly),
           monthly: safeParse(data.targets[TARGET_KEYS.MONTHLY], FALLBACK.monthly),
           team: safeParse(data.targets[TARGET_KEYS.TEAM], FALLBACK.team),
+          prospectDaily: safeParse(data.targets[TARGET_KEYS.PROSPECT_DAILY], FALLBACK.prospectDaily),
         });
       })
       .catch(() => {

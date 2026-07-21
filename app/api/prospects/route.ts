@@ -1,11 +1,13 @@
 import { NextRequest } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import { Prospect } from "@/lib/models/Prospect";
+import { getTodayLocal, getNowLocalISO } from "@/lib/time-utils";
 import { FollowUp } from "@/lib/models/FollowUp";
 import { Notification } from "@/lib/models/Notification";
 import { Activity } from "@/lib/models/Activity";
 import { User } from "@/lib/models/User";
 import { getUserFromRequest, unauthorizedResponse } from "@/lib/auth";
+import { getSupervisorUserId, sendNotification } from "@/lib/send-notification";
 
 export async function GET(request: NextRequest) {
   const user = getUserFromRequest(request);
@@ -83,7 +85,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const today = new Date().toISOString().slice(0, 10);
+    const today = getTodayLocal();
 
     const prospect = await Prospect.create({
       title: title || "Mr",
@@ -102,7 +104,7 @@ export async function POST(request: NextRequest) {
     await Activity.create({
       title: "Prospect created",
       detail: `${prospect.name} added as a new prospect`,
-      time: new Date().toISOString(),
+      time: getNowLocalISO(),
       type: "prospect",
       userId: user.userId,
       dseName: user.name,
@@ -128,10 +130,24 @@ export async function POST(request: NextRequest) {
       await Notification.create({
         title: "Follow-up Due Today",
         message: `Follow-up due today for ${followUp.customerName} (${followUp.phone})`,
-        time: new Date().toISOString(),
+        time: getNowLocalISO(),
         unread: true,
         userId: user.userId,
       });
+    }
+
+    // ── Notify the DSE's supervisor about the new prospect ──
+    if (user.role === "DSE") {
+      const supervisorUserId = await getSupervisorUserId(user.name);
+      if (supervisorUserId) {
+        sendNotification({
+          title: "New prospect captured",
+          message: `${user.name} captured a new prospect: ${prospect.name} from ${prospect.location}`,
+          userId: supervisorUserId,
+          url: "/supervisor/prospects",
+          tag: "prospect",
+        }).catch(() => {});
+      }
     }
 
     return Response.json({ prospect, followUp }, { status: 201 });

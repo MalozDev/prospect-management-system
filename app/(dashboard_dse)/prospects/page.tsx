@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { CalendarDays, ChartNoAxesCombined, Users, Sparkles, Phone, StickyNote } from "lucide-react";
+import { CalendarDays, ChartNoAxesCombined, Users, Sparkles, Phone, StickyNote, ChevronDown, ChevronUp, Activity } from "lucide-react";
 import { useMemo, useState } from "react";
 import { FaWhatsapp } from "react-icons/fa";
 
@@ -19,9 +19,22 @@ export default function ProspectsPage() {
   const { data } = useApiData<{ prospects: IProspect[] }>("/api/prospects", { prospects: [] });
   const { data: activitiesData } = useApiData<{ activities: IActivity[] }>("/api/activities?limit=10", { activities: [] });
   const [showList, setShowList] = useState(false);
+  const [showActivityFeed, setShowActivityFeed] = useState(false);
   const dseName = useMemo(() => getStoredProfile().name, []);
 
-  const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
+  const today = useMemo(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }, []);
+
+  // Filter activities to only today's
+  const todayActivities = useMemo(
+    () => activitiesData.activities.filter((a) => {
+      const activityDate = a.time?.slice(0, 10);
+      return activityDate === today;
+    }),
+    [activitiesData.activities, today]
+  );
   const currentMonth = today.slice(0, 7);
   const weekStart = useMemo(() => {
     const ws = new Date();
@@ -118,81 +131,123 @@ export default function ProspectsPage() {
         </div>
       </div>
 
-      {/* ── Today's Activity ── */}
-      <div className="rounded-3xl border border-gray-200 bg-white p-4 shadow-sm">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="text-sm font-semibold text-gray-900">Today&apos;s activity</p>
-            <p className="text-xs text-gray-500">All prospects captured today with their current status.</p>
+      {/* ── Prospects overview section ── */}
+      <div className="rounded-3xl border border-gray-200 bg-white shadow-sm">
+        {/* Prospects header */}
+        <div className="p-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm font-semibold text-gray-900">Today&apos;s prospects</p>
+              <p className="text-xs text-gray-500">Prospects captured today with their current status.</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowList((value) => !value)}
+              className="rounded-full border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition hover:border-[#E60012] hover:text-[#E60012]"
+            >
+              {showList ? "Hide all" : "View all prospects"}
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={() => setShowList((value) => !value)}
-            className="rounded-full border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition hover:border-[#E60012] hover:text-[#E60012]"
-          >
-            {showList ? "Hide all" : "View all"}
-          </button>
+
+          {/* Prospect cards */}
+          {todaysAllProspects.length > 0 ? (
+            <div className="mt-4 grid gap-3 md:grid-cols-3">
+              {todaysAllProspects.map((prospect) => (
+                <div key={String(prospect._id)} className="rounded-2xl border border-gray-200 bg-gray-50 p-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-semibold text-gray-900">{prospect.name}</p>
+                      <p className="mt-0.5 text-xs text-gray-500">{prospect.location}</p>
+                      <p className="mt-0.5 text-xs text-gray-500">{prospect.phone}</p>
+                      <p className="mt-0.5 text-[10px] text-gray-400">Added today</p>
+                    </div>
+                    <StatusBadge status={prospect.status} className="shrink-0" />
+                  </div>
+                  {prospect.notes?.trim() && (
+                    <p className="mt-1.5 flex items-start gap-1 rounded-lg bg-amber-50 p-1.5 text-[10px] text-amber-800">
+                      <StickyNote className="mt-0.5 h-3 w-3 shrink-0 text-amber-500" />
+                      <span>{prospect.notes}</span>
+                    </p>
+                  )}
+                  <div className="mt-2 flex gap-1.5">
+                    <a
+                      href={`tel:${prospect.phone}`}
+                      className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-white px-2 py-1 text-[10px] font-medium text-[#E60012] transition hover:bg-red-50"
+                      aria-label={`Call ${prospect.name}`}
+                    >
+                      <Phone className="h-3 w-3" /> Call
+                    </a>
+                    <a
+                      href={buildWhatsAppUrl(prospect.phone, buildWhatsAppMessage({ customerName: prospect.name, dseName, title: prospect.title, location: prospect.location, notes: prospect.notes }))}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-white px-2 py-1 text-[10px] font-medium text-green-600 transition hover:bg-green-50"
+                      aria-label={`WhatsApp ${prospect.name}`}
+                    >
+                      <FaWhatsapp className="h-3 w-3" /> WhatsApp
+                    </a>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="mt-4 rounded-xl border border-dashed border-gray-200 bg-gray-50 p-6 text-center">
+              <Activity className="mx-auto h-6 w-6 text-gray-300" />
+              <p className="mt-2 text-sm text-gray-500">No prospects captured today yet.</p>
+            </div>
+          )}
+
+          {showList && (
+            <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {prospects.map((prospect) => (
+                <ProspectCard key={String(prospect._id)} prospect={prospect} />
+              ))}
+            </div>
+          )}
         </div>
 
-        {/* Activity feed with timestamps */}
-        {activitiesData.activities.length > 0 && (
-          <div className="mb-4">
-            <ActivityTimeline activities={activitiesData.activities} filterable />
-          </div>
-        )}
-
-        {/* Prospect cards */}
-        {todaysAllProspects.length > 0 ? (
-          <div className="grid gap-3 md:grid-cols-3">
-            {todaysAllProspects.map((prospect) => (
-              <div key={String(prospect._id)} className="rounded-2xl border border-gray-200 bg-gray-50 p-3">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold text-gray-900">{prospect.name}</p>
-                    <p className="mt-0.5 text-xs text-gray-500">{prospect.location}</p>
-                    <p className="mt-0.5 text-xs text-gray-500">{prospect.phone}</p>
-                    <p className="mt-0.5 text-[10px] text-gray-400">Added today</p>
-                  </div>
-                  <StatusBadge status={prospect.status} className="shrink-0" />
-                </div>
-                {prospect.notes?.trim() && (
-                  <p className="mt-1.5 flex items-start gap-1 rounded-lg bg-amber-50 p-1.5 text-[10px] text-amber-800">
-                    <StickyNote className="mt-0.5 h-3 w-3 shrink-0 text-amber-500" />
-                    <span>{prospect.notes}</span>
-                  </p>
-                )}
-                <div className="mt-2 flex gap-1.5">
-                  <a
-                    href={`tel:${prospect.phone}`}
-                    className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-white px-2 py-1 text-[10px] font-medium text-[#E60012] transition hover:bg-red-50"
-                    aria-label={`Call ${prospect.name}`}
-                  >
-                    <Phone className="h-3 w-3" /> Call
-                  </a>
-                  <a
-                    href={buildWhatsAppUrl(prospect.phone, buildWhatsAppMessage({ customerName: prospect.name, dseName, title: prospect.title, location: prospect.location, notes: prospect.notes }))}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-white px-2 py-1 text-[10px] font-medium text-green-600 transition hover:bg-green-50"
-                    aria-label={`WhatsApp ${prospect.name}`}
-                  >
-                    <FaWhatsapp className="h-3 w-3" /> WhatsApp
-                  </a>
-                </div>
+        {/* Activity feed — collapsed by default, view on demand */}
+        <div className="border-t border-gray-100">
+          <button
+            type="button"
+            onClick={() => setShowActivityFeed((v) => !v)}
+            className="flex w-full items-center justify-between p-4 text-left transition hover:bg-gray-50"
+          >
+            <div className="flex items-center gap-2">
+              <Activity className="h-4 w-4 text-gray-400" />
+              <div>
+                <p className="text-sm font-semibold text-gray-900">Activity feed</p>
+                <p className="text-xs text-gray-500">
+                  {todayActivities.length} action{todayActivities.length !== 1 ? "s" : ""} today
+                </p>
               </div>
-            ))}
-          </div>
-        ) : activitiesData.activities.length === 0 ? (
-          <p className="text-sm text-gray-500">No activity today yet.</p>
-        ) : null}
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-medium text-[#E60012]">
+                {showActivityFeed ? "Hide" : "View"}
+              </span>
+              {showActivityFeed ? (
+                <ChevronUp className="h-4 w-4 text-gray-400" />
+              ) : (
+                <ChevronDown className="h-4 w-4 text-gray-400" />
+              )}
+            </div>
+          </button>
 
-        {showList && (
-          <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {prospects.map((prospect) => (
-              <ProspectCard key={String(prospect._id)} prospect={prospect} />
-            ))}
-          </div>
-        )}
+          {showActivityFeed && (
+            <div className="border-t border-gray-100 px-4 pb-4">
+              {todayActivities.length > 0 ? (
+                <div className="mt-3">
+                  <ActivityTimeline activities={todayActivities} filterable />
+                </div>
+              ) : (
+                <div className="mt-3 rounded-xl border border-dashed border-gray-200 bg-gray-50 p-6 text-center text-sm text-gray-500">
+                  No activity today yet.
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
     </PageShell>
   );

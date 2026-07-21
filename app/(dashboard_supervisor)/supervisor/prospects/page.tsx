@@ -29,7 +29,10 @@ export default function SupervisorProspectsPage() {
   const [selectedDse, setSelectedDse] = useState("ALL");
   const [statusFilter, setStatusFilter] = useState<ProspectStatusFilter>("ALL");
 
-  const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
+  const today = useMemo(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }, []);
 
   const prospects = data.prospects;
 

@@ -12,6 +12,8 @@ export interface IUser extends Document {
   supervisor: string;
   avatarUrl: string;
   avatarColor: string;
+  lastLogin: string;
+  supervisorCheckedAt: number;
   createdAt: Date;
   updatedAt: Date;
   comparePassword(candidatePassword: string): Promise<boolean>;
@@ -27,6 +29,8 @@ const UserSchema = new Schema<IUser>(
     supervisor: { type: String, default: "" },
     avatarUrl: { type: String, default: "" },
     avatarColor: { type: String, default: "" },
+    lastLogin: { type: String, default: "" },
+    supervisorCheckedAt: { type: Number, default: 0 },
   },
   { timestamps: true }
 );

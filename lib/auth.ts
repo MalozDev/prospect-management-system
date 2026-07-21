@@ -13,11 +13,24 @@ export interface JwtPayload {
 }
 
 export function signToken(payload: JwtPayload): string {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: "7d" });
+  return jwt.sign(payload, JWT_SECRET, { expiresIn: "365d" });
 }
 
 export function verifyToken(token: string): JwtPayload {
   return jwt.verify(token, JWT_SECRET) as JwtPayload;
+}
+
+/**
+ * Decode a JWT without checking expiry.
+ * Used by the refresh endpoint so it can issue a new token
+ * even when the current one has already expired.
+ */
+export function decodeTokenIgnoreExpiry(token: string): JwtPayload | null {
+  try {
+    return jwt.verify(token, JWT_SECRET, { ignoreExpiration: true }) as JwtPayload;
+  } catch {
+    return null;
+  }
 }
 
 export function getTokenFromRequest(request: NextRequest): string | null {

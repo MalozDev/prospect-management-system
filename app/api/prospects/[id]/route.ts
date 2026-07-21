@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import { Prospect } from "@/lib/models/Prospect";
 import { Activity } from "@/lib/models/Activity";
+import { getNowLocalISO } from "@/lib/time-utils";
 import { getUserFromRequest, unauthorizedResponse } from "@/lib/auth";
 
 export async function GET(
@@ -63,7 +64,7 @@ export async function PATCH(
       await Activity.create({
         title: `Status updated to ${updates.status}`,
         detail: `${prospect.name}: status changed to ${updates.status}`,
-        time: new Date().toISOString(),
+        time: getNowLocalISO(),
         type: updates.status === "SOLD" ? "sale" : updates.status === "LOST" ? "lost" : "prospect",
         userId: user.userId,
         dseName: user.name,

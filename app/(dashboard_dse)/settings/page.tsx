@@ -3,14 +3,17 @@
 import { useEffect, useRef, useState } from "react";
 
 import { PageShell } from "@/components/shared/PageShell";
-import { ProfileAvatar, AVATAR_COLOR_PALETTE, hexToTailwindBg } from "@/components/shared/ProfileAvatar";
-import { apiFetch, getStoredApiUser } from "@/lib/api-client";
+import { ProfileAvatar } from "@/components/shared/ProfileAvatar";
+import { apiFetch, getStoredApiUser, setStoredApiUser } from "@/lib/api-client";
 import { DEFAULT_PROFILE, getStoredProfile, saveProfile, type ProfileInfo } from "@/utils/profile";
+import { resizeImage } from "@/lib/resize-image";
 
 export default function SettingsPage() {
   const [profile, setProfile] = useState<ProfileInfo>(DEFAULT_PROFILE);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [saveError, setSaveError] = useState("");
+  const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -30,28 +33,28 @@ export default function SettingsPage() {
     setSaved(false);
   }
 
-  function handleColorSelect(color: string) {
-    setProfile((current) => ({ ...current, avatarUrl: color }));
-    setSaved(false);
-  }
-
-  function handlePhotoUpload(event: React.ChangeEvent<HTMLInputElement>) {
+  async function handlePhotoUpload(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    // Validate file size (max 2MB)
-    if (file.size > 2 * 1024 * 1024) {
-      alert("Image must be smaller than 2MB.");
+    // Validate file size (max 5MB raw file)
+    if (file.size > 5 * 1024 * 1024) {
+      alert("Image must be smaller than 5MB.");
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const dataUrl = e.target?.result as string;
-      setProfile((current) => ({ ...current, avatarUrl: dataUrl }));
+    setUploading(true);
+    setSaveError("");
+    try {
+      // Resize to max 300px with JPEG compression -> ~50-80KB Data URL
+      const resizedDataUrl = await resizeImage(file, 300, 0.7);
+      setProfile((current) => ({ ...current, avatarUrl: resizedDataUrl }));
       setSaved(false);
-    };
-    reader.readAsDataURL(file);
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : "Failed to process image.");
+    } finally {
+      setUploading(false);
+    }
   }
 
   function clearAvatar() {
@@ -59,37 +62,56 @@ export default function SettingsPage() {
     setSaved(false);
   }
 
-  // Detect if avatarUrl is a hex color or a data URL
-  const hasPhoto = profile.avatarUrl && !profile.avatarUrl.startsWith("#");
-  const selectedColor = profile.avatarUrl?.startsWith("#") ? profile.avatarUrl : "";
+  // Check if profile has an uploaded photo (data URL)
+  const hasPhoto = profile.avatarUrl?.startsWith("data:");
+
+  // Load avatar from backend on mount if local storage doesn't have one
+  useEffect(() => {
+    async function loadAvatarFromBackend() {
+      const stored = getStoredProfile();
+      if (stored.avatarUrl?.startsWith("data:")) return; // Already have a photo locally
+      const apiUser = getStoredApiUser();
+      if (apiUser?.avatarUrl?.startsWith("data:")) {
+        setProfile((current) => ({ ...current, avatarUrl: apiUser.avatarUrl! }));
+      }
+    }
+    loadAvatarFromBackend();
+  }, []);
 
   async function handleSave() {
     setSaving(true);
+    setSaveError("");
+
+    // Always save to localStorage first
     saveProfile(profile);
+    window.dispatchEvent(new Event("profile-updated"));
+
     // Sync with backend
     const apiUser = getStoredApiUser();
     if (apiUser) {
       try {
         const body: Record<string, string> = { name: profile.name, region: profile.region };
         if (profile.avatarUrl) {
-          if (profile.avatarUrl.startsWith("#")) {
-            body.avatarColor = profile.avatarUrl;
-          } else {
-            body.avatarUrl = profile.avatarUrl;
-          }
+          body.avatarUrl = profile.avatarUrl;
         }
-        await apiFetch("/api/users/me", {
+        const result = await apiFetch<{ user: { avatarUrl?: string } }>("/api/users/me", {
           method: "PATCH",
           body: JSON.stringify(body),
         });
-      } catch {
-        // Local save is enough if server is unreachable
+
+        // Update the stored API user with the returned avatar URL
+        if (result?.user) {
+          setStoredApiUser({ ...apiUser, ...result.user });
+        }
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : "Could not sync with server.";
+        setSaveError(`Profile saved locally. ${msg}`);
       }
     }
+
     setSaving(false);
     setSaved(true);
-    window.dispatchEvent(new Event("profile-updated"));
-    setTimeout(() => setSaved(false), 2000);
+    setTimeout(() => setSaved(false), 3000);
   }
 
   return (
@@ -98,49 +120,32 @@ export default function SettingsPage() {
         {/* Avatar Section */}
         <div className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
           <h3 className="font-semibold text-gray-900">Profile Picture</h3>
-          <p className="mt-1 text-sm text-gray-500">Choose a color avatar or upload a photo.</p>
+          <p className="mt-1 text-sm text-gray-500">Upload a photo to personalise your profile.</p>
 
           <div className="mt-4 flex flex-col items-center gap-4">
             <ProfileAvatar
               name={profile.name}
               avatarUrl={hasPhoto ? profile.avatarUrl : ""}
-              avatarColor={selectedColor}
               size="xl"
             />
-
-            {/* Color palette */}
-            <div>
-              <p className="mb-2 text-center text-xs font-medium text-gray-500">Pick a color</p>
-              <div className="flex flex-wrap items-center justify-center gap-2">
-                {AVATAR_COLOR_PALETTE.map((color) => (
-                  <button
-                    key={color}
-                    type="button"
-                    onClick={() => handleColorSelect(color)}
-                    className={`h-8 w-8 rounded-full transition hover:scale-110 focus:outline-none focus:ring-2 focus:ring-offset-2 ${
-                      selectedColor === color ? "ring-2 ring-gray-400 ring-offset-2 scale-110" : ""
-                    }`}
-                    style={{ backgroundColor: color }}
-                    title={color}
-                  />
-                ))}
-              </div>
-            </div>
 
             {/* Upload & clear buttons */}
             <div className="flex items-center gap-3">
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="rounded-full border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
+                className="inline-flex items-center gap-2 rounded-full bg-[#E60012] px-5 py-2.5 text-sm font-medium text-white transition hover:bg-red-700 shadow-sm"
               >
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
                 {hasPhoto ? "Change photo" : "Upload photo"}
               </button>
-              {profile.avatarUrl && (
+              {hasPhoto && (
                 <button
                   type="button"
                   onClick={clearAvatar}
-                  className="rounded-full border border-red-200 px-4 py-2 text-sm font-medium text-red-600 transition hover:bg-red-50"
+                  className="rounded-full border border-red-200 px-4 py-2.5 text-sm font-medium text-red-600 transition hover:bg-red-50"
                 >
                   Remove
                 </button>
@@ -153,7 +158,25 @@ export default function SettingsPage() {
               className="hidden"
               onChange={handlePhotoUpload}
             />
-            <p className="text-[10px] text-gray-400">Max 2MB · JPEG, PNG, or GIF</p>
+            <p className="text-[10px] text-gray-400">Max 5MB · will be resized to 300px</p>
+
+            {uploading && (
+              <div className="flex items-center gap-2 text-xs text-blue-600">
+                <span className="h-3 w-3 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
+                Processing image...
+              </div>
+            )}
+
+            {!hasPhoto && (
+              <div className="rounded-2xl bg-gray-50 border border-dashed border-gray-200 p-4 text-center">
+                <div className="flex items-center justify-center gap-2 text-xs text-gray-500">
+                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <p>Your photo will appear on your profile and across the app once uploaded.</p>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -199,11 +222,19 @@ export default function SettingsPage() {
           <button
             type="button"
             onClick={handleSave}
-            disabled={saving}
+            disabled={saving || uploading}
             className="mt-4 rounded-full bg-[#E60012] px-4 py-2 text-sm font-medium text-white transition hover:bg-red-700 disabled:opacity-50"
           >
             {saving ? "Saving..." : saved ? "Saved!" : "Save profile"}
           </button>
+          {saveError && (
+            <p className="mt-3 flex items-center gap-1.5 text-sm text-amber-600">
+              <svg className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4.5c-.77-.833-2.694-.833-3.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z" />
+              </svg>
+              {saveError}
+            </p>
+          )}
         </div>
 
         <div className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">

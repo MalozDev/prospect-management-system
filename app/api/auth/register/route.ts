@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import { User } from "@/lib/models/User";
 import { signToken } from "@/lib/auth";
+import { getSupervisorUserId, sendNotification } from "@/lib/send-notification";
 
 export async function POST(request: NextRequest) {
   try {
@@ -32,6 +33,11 @@ export async function POST(request: NextRequest) {
       return Response.json({ error: "This CUG suffix is already registered." }, { status: 409 });
     }
 
+    // Count current supervisors for DSEs without a supervisor
+    const supervisorCount = role === "DSE" && !supervisor?.trim()
+      ? await User.countDocuments({ role: "SUPERVISOR" })
+      : 0;
+
     const user = await User.create({
       name: name.trim(),
       cugSuffix: cugSuffix.trim(),
@@ -39,7 +45,22 @@ export async function POST(request: NextRequest) {
       role,
       region: region || "Lusaka",
       supervisor: supervisor || "",
+      supervisorCheckedAt: supervisorCount,
     });
+
+    // ── Notify supervisor when a new DSE joins their team ──
+    if (role === "DSE" && supervisor?.trim()) {
+      const supervisorUserId = await getSupervisorUserId(name.trim());
+      if (supervisorUserId) {
+        sendNotification({
+          title: "New DSE on your team",
+          message: `${name.trim()} has joined your team as a Direct Sales Executive.`,
+          userId: supervisorUserId,
+          url: "/supervisor/dse",
+          tag: "team-join",
+        }).catch(() => {});
+      }
+    }
 
     const token = signToken({
       userId: user._id.toString(),

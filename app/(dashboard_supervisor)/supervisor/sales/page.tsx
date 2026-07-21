@@ -38,7 +38,10 @@ export default function SupervisorSalesPage() {
   const { data } = useApiData<{ sales: ISale[] }>("/api/sales", { sales: [] });
   const allSales = data.sales;
 
-  const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
+  const today = useMemo(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }, []);
   const currentMonth = today.slice(0, 7);
 
   // ── Derived data ────────────────────────────────────────────

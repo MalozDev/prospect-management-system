@@ -1,9 +1,11 @@
 import { NextRequest } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import { Sale } from "@/lib/models/Sale";
+import { getTodayLocal, getNowLocalISO } from "@/lib/time-utils";
 import { Activity } from "@/lib/models/Activity";
 import { User } from "@/lib/models/User";
 import { getUserFromRequest, unauthorizedResponse } from "@/lib/auth";
+import { getSupervisorUserId, sendNotification } from "@/lib/send-notification";
 
 export async function GET(request: NextRequest) {
   const user = getUserFromRequest(request);
@@ -76,7 +78,7 @@ export async function POST(request: NextRequest) {
       return Response.json({ error: "Customer name is required." }, { status: 400 });
     }
 
-    const today = new Date().toISOString().slice(0, 10);
+    const today = getTodayLocal();
 
     const sale = await Sale.create({
       customer: customer.trim(),
@@ -90,11 +92,25 @@ export async function POST(request: NextRequest) {
     await Activity.create({
       title: "Sale completed",
       detail: `Sale logged for ${sale.customer}`,
-      time: new Date().toISOString(),
+      time: getNowLocalISO(),
       type: "sale",
       userId: user.userId,
       dseName: user.name,
     });
+
+    // ── Notify the DSE's supervisor about the sale ──
+    if (user.role === "DSE") {
+      const supervisorUserId = await getSupervisorUserId(user.name);
+      if (supervisorUserId) {
+        sendNotification({
+          title: "Sale closed",
+          message: `${user.name} closed a sale with ${sale.customer} (${sale.packageName} — K${sale.amount})`,
+          userId: supervisorUserId,
+          url: "/supervisor/sales",
+          tag: "sale",
+        }).catch(() => {});
+      }
+    }
 
     return Response.json({ sale }, { status: 201 });
   } catch (error) {

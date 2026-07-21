@@ -14,7 +14,10 @@ const SaleSchema = new Schema<ISale>(
     packageName: { type: String, required: true, default: "ODU" },
     amount: { type: Number, required: true, default: 200 },
     soldBy: { type: String, required: true, trim: true },
-    date: { type: String, required: true, default: () => new Date().toISOString().slice(0, 10) },
+    date: { type: String, required: true, default: () => {
+      const d = new Date();
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    } },
   },
   { timestamps: true }
 );

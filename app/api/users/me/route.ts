@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import { User } from "@/lib/models/User";
 import { getUserFromRequest, unauthorizedResponse } from "@/lib/auth";
+import { sendNotification } from "@/lib/send-notification";
 
 export async function GET(request: NextRequest) {
   const user = getUserFromRequest(request);
@@ -42,7 +43,7 @@ export async function PATCH(request: NextRequest) {
     await connectToDatabase();
 
     const body = await request.json();
-    const allowedFields = ["name", "region", "avatarUrl", "avatarColor"];
+    const allowedFields = ["name", "region", "avatarUrl", "avatarColor", "supervisor", "supervisorCheckedAt"];
     const updates: Record<string, unknown> = {};
 
     for (const field of allowedFields) {
@@ -59,6 +60,28 @@ export async function PATCH(request: NextRequest) {
 
     if (!dbUser) {
       return Response.json({ error: "User not found." }, { status: 404 });
+    }
+
+    // ── Notify supervisor when a DSE assigns them ──
+    if (body.supervisor && typeof body.supervisor === "string") {
+      const newSup = body.supervisor.trim();
+      const isRealSupervisor = newSup && newSup !== "UNASSIGNED" && newSup !== "NOT_ON_BOARD";
+      if (isRealSupervisor) {
+        // Find the supervisor by name
+        const supervisorUser = await User.findOne({
+          name: newSup,
+          role: "SUPERVISOR",
+        }).lean();
+        if (supervisorUser) {
+          sendNotification({
+            title: "New DSE on your team",
+            message: `${user.name} has joined your team as a Direct Sales Executive.`,
+            userId: String(supervisorUser._id),
+            url: "/supervisor/dse",
+            tag: "team-join",
+          }).catch(() => {});
+        }
+      }
     }
 
     return Response.json({

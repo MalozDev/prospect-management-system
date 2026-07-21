@@ -25,7 +25,10 @@ function shortMonth(monthKey: string) {
 }
 
 export default function SalesPage() {
-  const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
+  const today = useMemo(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }, []);
   const currentMonth = today.slice(0, 7);
   const previousMonth = useMemo(() => {
     const [y, m] = currentMonth.split("-").map(Number);
@@ -35,7 +38,7 @@ export default function SalesPage() {
   const weekStart = useMemo(() => {
     const ws = new Date();
     ws.setDate(ws.getDate() - 6);
-    return ws.toISOString().slice(0, 10);
+    return `${ws.getFullYear()}-${String(ws.getMonth() + 1).padStart(2, '0')}-${String(ws.getDate()).padStart(2, '0')}`;
   }, []);
 
   const { data } = useApiData<{ sales: ISale[] }>("/api/sales", { sales: [] });

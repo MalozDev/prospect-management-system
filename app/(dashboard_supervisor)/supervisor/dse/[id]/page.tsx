@@ -67,7 +67,10 @@ export default function DseDetailPage({ params }: PageProps) {
     });
   }, [params]);
 
-  const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
+  const today = useMemo(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }, []);
   const currentMonth = today.slice(0, 7);
 
   const previousMonth = useMemo(() => {
@@ -79,10 +82,10 @@ export default function DseDetailPage({ params }: PageProps) {
   const weekStart = useMemo(() => {
     const ws = new Date();
     ws.setDate(ws.getDate() - 6);
-    return ws.toISOString().slice(0, 10);
+    return `${ws.getFullYear()}-${String(ws.getMonth() + 1).padStart(2, '0')}-${String(ws.getDate()).padStart(2, '0')}`;
   }, []);
 
-  const { data: dseUsersData } = useApiData<{ dseUsers: Array<{ name: string; cugSuffix: string; region: string; avatarUrl: string; avatarColor: string }> }>(
+  const { data: dseUsersData } = useApiData<{ dseUsers: Array<{ name: string; cugSuffix: string; region: string; avatarUrl: string }> }>(
     "/api/supervisors/dse",
     { dseUsers: [] }
   );
@@ -304,8 +307,7 @@ export default function DseDetailPage({ params }: PageProps) {
         <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start">
           <ProfileAvatar
             name={dseName}
-            avatarUrl={dseUserInfo?.avatarUrl?.startsWith("#") ? "" : dseUserInfo?.avatarUrl}
-            avatarColor={dseUserInfo?.avatarUrl?.startsWith("#") ? dseUserInfo?.avatarUrl : dseUserInfo?.avatarColor}
+            avatarUrl={dseUserInfo?.avatarUrl?.startsWith("data:") ? dseUserInfo?.avatarUrl : ""}
             size="xl"
           />
           <div className="text-center sm:text-left">
