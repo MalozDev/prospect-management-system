@@ -17,10 +17,15 @@ export default function NotificationsPage() {
   const notifications = data.notifications;
   const unreadCount = notifications.filter((n) => n.unread).length;
 
+  const triggerRefresh = () => {
+    window.dispatchEvent(new Event("notification-refresh"));
+  };
+
   const handleMarkRead = async (id: string) => {
     try {
       await apiFetch(`/api/notifications/${id}`, { method: "PATCH" });
       refetch();
+      triggerRefresh();
     } catch {
       // Silently fail
     }
@@ -31,6 +36,7 @@ export default function NotificationsPage() {
     try {
       await apiFetch(`/api/notifications/${id}`, { method: "DELETE" });
       refetch();
+      triggerRefresh();
     } catch {
       // Silently fail
     } finally {
@@ -52,6 +58,7 @@ export default function NotificationsPage() {
       }
     }
     refetch();
+    triggerRefresh();
   };
 
   return (

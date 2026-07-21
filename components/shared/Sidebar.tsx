@@ -7,6 +7,7 @@ import { usePathname } from "next/navigation";
 
 import { UserDropdown } from "@/components/shared/UserDropdown";
 import { getStoredProfile, type ProfileInfo, DEFAULT_PROFILE } from "@/utils/profile";
+import { useUnreadCount } from "@/lib/use-unread-count";
 
 const dseItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -28,6 +29,7 @@ const supervisorItems = [
 export function Sidebar() {
   const pathname = usePathname();
   const [profile, setProfile] = useState<ProfileInfo>(DEFAULT_PROFILE);
+  const unreadCount = useUnreadCount();
 
   useEffect(() => {
     let active = true;
@@ -84,7 +86,15 @@ export function Sidebar() {
                   : "text-gray-600 hover:bg-[#fff8f8] hover:text-[#E60012]"
               }`}
             >
-              <Icon className={`h-4 w-4 ${isActive ? "text-[#E60012]" : ""}`} />
+              <div className="relative">
+                <Icon className={`h-4 w-4 ${isActive ? "text-[#E60012]" : ""}`} />
+                {/* Notification badge on the Bell icon */}
+                {label === "Notifications" && unreadCount > 0 && (
+                  <span className="absolute -right-2 -top-2 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-[#E60012] px-1 text-[8px] font-bold leading-none text-white ring-2 ring-white">
+                    {unreadCount > 99 ? "99+" : unreadCount}
+                  </span>
+                )}
+              </div>
               <span>{label}</span>
               {isActive && (
                 <span className="ml-auto h-2 w-2 rounded-full bg-[#E60012]" />

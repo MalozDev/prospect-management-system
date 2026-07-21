@@ -3,6 +3,7 @@
 import { BottomNavigation } from "@/components/shared/BottomNavigation";
 import { Sidebar } from "@/components/shared/Sidebar";
 import { UserDropdown } from "@/components/shared/UserDropdown";
+import { NotificationBadge } from "@/components/shared/NotificationBadge";
 
 interface PageShellProps {
   title: string;
@@ -22,7 +23,10 @@ export function PageShell({ title, description, children }: PageShellProps) {
                 <h1 className="text-xl font-semibold text-gray-900">{title}</h1>
                 {description ? <p className="mt-1 text-sm text-gray-500">{description}</p> : null}
               </div>
-              <UserDropdown />
+              <div className="flex items-center gap-2">
+                <NotificationBadge />
+                <UserDropdown />
+              </div>
             </div>
           </div>
           <div className="p-4 sm:p-6">{children}</div>
