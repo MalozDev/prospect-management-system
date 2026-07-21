@@ -4,17 +4,23 @@ import Link from "next/link";
 import { Bell } from "lucide-react";
 import { useUnreadCount } from "@/lib/use-unread-count";
 
+interface NotificationBadgeProps {
+  /** Where the bell icon links to. Defaults to "/notifications" (DSE). 
+   *  Superadmins should pass "/developer/notifications". */
+  href?: string;
+}
+
 /**
  * Bell icon with a live unread notification count badge.
- * Polls every 30 seconds. Visible on all pages via the PageShell header.
- * Clicking opens the notifications page.
+ * Polls the count every 15 seconds. 
+ * Place in page headers so it's always visible.
  */
-export function NotificationBadge() {
+export function NotificationBadge({ href = "/notifications" }: NotificationBadgeProps) {
   const unreadCount = useUnreadCount();
 
   return (
     <Link
-      href="/notifications"
+      href={href}
       className="relative flex h-10 w-10 items-center justify-center rounded-full text-gray-500 transition hover:bg-gray-100 hover:text-[#E60012]"
       aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ""}`}
     >

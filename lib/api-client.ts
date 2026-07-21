@@ -33,6 +33,7 @@ export function clearToken(): void {
   localStorage.removeItem(API_TOKEN_KEY);
   localStorage.removeItem(API_USER_KEY);
   localStorage.removeItem("crm-profile");
+  localStorage.removeItem("crm-unread-count");
   // Clear all API caches on logout
   clearAllCaches();
 }

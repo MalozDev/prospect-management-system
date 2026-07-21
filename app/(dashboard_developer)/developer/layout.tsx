@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 
 import { clearToken, getStoredApiUser } from "@/lib/api-client";
+import { NotificationBadge } from "@/components/shared/NotificationBadge";
 
 const navItems = [
   { href: "/developer/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -129,14 +130,17 @@ export default function DeveloperLayout({
                 <Shield className="h-5 w-5 text-purple-400" />
                 <h1 className="text-lg font-semibold text-white">Developer Console</h1>
               </div>
-              <button
-                type="button"
-                onClick={handleLogout}
-                className="flex items-center gap-2 rounded-xl border border-gray-700 bg-[#252550] px-4 py-2 text-sm text-red-400 transition hover:bg-[#2f2f60] md:hidden"
-              >
-                <LogOut className="h-4 w-4" />
-                Logout
-              </button>
+              <div className="flex items-center gap-2">
+                <NotificationBadge href="/developer/notifications" />
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className="flex items-center gap-2 rounded-xl border border-gray-700 bg-[#252550] px-4 py-2 text-sm text-red-400 transition hover:bg-[#2f2f60] md:hidden"
+                >
+                  <LogOut className="h-4 w-4" />
+                  Logout
+                </button>
+              </div>
             </div>
           </div>
           <div className="p-4 sm:p-6">{children}</div>

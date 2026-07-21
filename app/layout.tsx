@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { PwaInstallPrompt } from "@/components/shared/PwaInstallPrompt";
 import { ServiceWorkerRegister } from "@/components/shared/ServiceWorkerRegister";
+import { PushAutoSubscribe } from "@/components/shared/PushAutoSubscribe";
 
 export const metadata: Metadata = {
   title: "Prospects",
@@ -48,6 +49,7 @@ export default function RootLayout({
         {children}
         <PwaInstallPrompt />
         <ServiceWorkerRegister />
+        <PushAutoSubscribe />
       </body>
     </html>
   );

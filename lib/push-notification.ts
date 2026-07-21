@@ -1,6 +1,7 @@
 import webpush from "web-push";
 import { connectToDatabase } from "./mongodb";
 import { PushSubscription } from "./models/PushSubscription";
+import { Notification } from "./models/Notification";
 import { Setting } from "./models/Setting";
 
 const VAPID_PUBLIC_KEY_SETTING = "vapid_public_key";
@@ -88,6 +89,12 @@ export async function sendPushToUser(
 
     if (subscriptions.length === 0) return { success: 0, failed: 0 };
 
+    // Get current unread count for the app badge
+    const unreadCount = await Notification.countDocuments({
+      userId,
+      unread: true,
+    });
+
     let success = 0;
     let failed = 0;
 
@@ -96,6 +103,7 @@ export async function sendPushToUser(
       message: payload.message,
       url: payload.url || "/",
       tag: payload.tag || "default",
+      unreadCount, // ← Used by the service worker to set the home screen badge
     });
 
     for (const sub of subscriptions) {

@@ -3,6 +3,7 @@ import { Notification } from "./models/Notification";
 import { User } from "./models/User";
 import { sendPushToUser } from "./push-notification";
 import { getNowLocalISO } from "./time-utils";
+import { emitSseEvent } from "./notification-events";
 
 interface NotificationPayload {
   title: string;
@@ -21,13 +22,30 @@ export async function sendNotification(payload: NotificationPayload) {
     await connectToDatabase();
 
     // Create in-app notification
-    await Notification.create({
+    const notification = await Notification.create({
       title: payload.title,
       message: payload.message,
       time: getNowLocalISO(),
       unread: true,
       userId: payload.userId,
     });
+
+    // Emit SSE event for real-time badge update (non-blocking)
+    // Count unread notifications for the user to include in the event
+    Notification.countDocuments({
+      userId: payload.userId,
+      unread: true,
+    }).then((count) => {
+      emitSseEvent(payload.userId, "notification", {
+        unreadCount: count,
+        notification: {
+          id: String(notification._id),
+          title: payload.title,
+          message: payload.message,
+          url: payload.url,
+        },
+      });
+    }).catch(() => {});
 
     // Send browser push (non-blocking)
     sendPushToUser(payload.userId, {

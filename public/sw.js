@@ -90,7 +90,23 @@ self.addEventListener("push", (event) => {
       },
     };
 
-    event.waitUntil(self.registration.showNotification(title, options));
+    event.waitUntil(
+      (async () => {
+        // Show the notification
+        await self.registration.showNotification(title, options);
+
+        // Set app badge on the home screen icon (Android Chrome)
+        // Uses the Badge API via ServiceWorkerRegistration —
+        // supported on Chrome/Edge/Opera on Android
+        if (typeof data.unreadCount === "number" && self.registration.setAppBadge) {
+          try {
+            await self.registration.setAppBadge(data.unreadCount);
+          } catch {
+            // Badge API not supported — silently fail
+          }
+        }
+      })()
+    );
   } catch {
     // If parsing fails, show raw text
     event.waitUntil(
@@ -99,6 +115,15 @@ self.addEventListener("push", (event) => {
         icon: "/icons/icon-192.svg",
       })
     );
+  }
+});
+
+// Listen for messages from the app to clear the badge
+self.addEventListener("message", (event) => {
+  if (event.data && event.data.type === "CLEAR_BADGE") {
+    if (self.registration.clearAppBadge) {
+      self.registration.clearAppBadge().catch(() => {});
+    }
   }
 });
 
