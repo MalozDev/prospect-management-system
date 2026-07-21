@@ -15,7 +15,11 @@ import {
   Clock,
   Zap,
   BarChart3,
+  ArrowUpRight,
+  ArrowUp,
+  ArrowDown,
 } from "lucide-react";
+import Link from "next/link";
 import { useMemo, useState } from "react";
 
 import { useApiData } from "@/lib/use-api-data";
@@ -474,7 +478,10 @@ function DseRow({ dse, teamColor }: { dse: DseMember; teamColor: "purple" | "amb
     : { bg: "bg-amber-500/20", text: "text-amber-300", border: "border-amber-500/10" };
 
   return (
-    <div className={`flex items-center gap-2 rounded-lg bg-[#1a1a3e] px-3 py-2 ${dse.activeToday ? "border-l-2 border-emerald-500" : ""}`}>
+    <Link
+      href={`/developer/dse/${encodeURIComponent(dse.name)}`}
+      className={`flex items-center gap-2 rounded-lg bg-[#1a1a3e] px-3 py-2 transition hover:bg-[#252550] ${dse.activeToday ? "border-l-2 border-emerald-500" : ""}`}
+    >
       {/* Avatar */}
       <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${colorClasses.bg} text-xs font-bold ${colorClasses.text}`}>
         {dse.name.charAt(0)}
@@ -506,6 +513,9 @@ function DseRow({ dse, teamColor }: { dse: DseMember; teamColor: "purple" | "amb
           <p className="text-[9px] text-gray-600">Month</p>
         </div>
       </div>
-    </div>
+
+      {/* Arrow */}
+      <ArrowUpRight className="h-3.5 w-3.5 shrink-0 text-gray-500" />
+    </Link>
   );
 }
