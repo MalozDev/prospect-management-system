@@ -1,6 +1,5 @@
 // 🔄 Increment this version whenever you deploy service worker changes.
 // The browser detects the change and activates the new SW immediately.
-// Using timestamp ensures every deploy gets a fresh cache.
 const CACHE_NAME = "prospects-" + new Date().toISOString().slice(0, 10);
 
 const STATIC_ASSETS = [
@@ -12,7 +11,7 @@ const STATIC_ASSETS = [
   "/icons/icon-512.svg",
 ];
 
-// Install event - cache static assets
+// ── Install event ──
 self.addEventListener("install", (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
@@ -22,7 +21,7 @@ self.addEventListener("install", (event) => {
   self.skipWaiting();
 });
 
-// Activate event - clean old caches
+// ── Activate event — clean old caches ──
 self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches.keys().then((keys) => {
@@ -36,33 +35,23 @@ self.addEventListener("activate", (event) => {
   self.clients.claim();
 });
 
-// Fetch event - network first, fallback to cache
+// ── Fetch event — network first, fallback to cache ──
 self.addEventListener("fetch", (event) => {
-  // Only handle GET requests
   if (event.request.method !== "GET") return;
+  if (event.request.url.includes("/api/")) return;
 
-  // For API requests - network only (no cache)
-  if (event.request.url.includes("/api/")) {
-    return;
-  }
-
-  // For navigation requests - serve index.html from cache if offline
   if (event.request.mode === "navigate") {
     event.respondWith(
-      fetch(event.request).catch(() => {
-        return caches.match("/");
-      })
+      fetch(event.request).catch(() => caches.match("/"))
     );
     return;
   }
 
-  // For static assets - cache first, then network
   event.respondWith(
     caches.match(event.request).then((cached) => {
       return (
         cached ||
         fetch(event.request).then((response) => {
-          // Cache successful responses
           if (response.ok && response.type === "basic") {
             const clone = response.clone();
             caches.open(CACHE_NAME).then((cache) => {
@@ -76,21 +65,31 @@ self.addEventListener("fetch", (event) => {
   );
 });
 
-// Push notification event
+// ── Push notification event ──
 self.addEventListener("push", (event) => {
   if (!event.data) return;
 
   try {
     const data = event.data.json();
     const title = data.title || "Prospects";
+
+    // Build notification options with maximum compatibility
     const options = {
       body: data.message || "You have a new notification.",
       icon: "/icons/icon-192.svg",
       badge: "/icons/icon-192.svg",
-      vibrate: [200, 100, 200],
+      // Strong vibration pattern for mobile: vibrate-pause-vibrate-pause-vibrate
+      vibrate: [300, 100, 200, 100, 300],
       tag: data.tag || "default",
+      // Keep the notification visible until the user interacts with it
+      requireInteraction: true,
+      // Explicitly allow sound (not silent)
+      silent: false,
+      // Renotify so repeated notifications with the same tag still alert
+      renotify: true,
       data: {
         url: data.url || "/",
+        timestamp: Date.now(),
       },
     };
 
@@ -99,43 +98,81 @@ self.addEventListener("push", (event) => {
         // Show the notification
         await self.registration.showNotification(title, options);
 
-        // Set app badge on the home screen icon (Android Chrome)
-        // Uses the Badge API via ServiceWorkerRegistration —
-        // supported on Chrome/Edge/Opera on Android
-        if (typeof data.unreadCount === "number" && self.registration.setAppBadge) {
+        // Update app badge on the home screen icon (Android Chrome)
+        // Uses the Badge API via ServiceWorkerRegistration
+        if (typeof data.unreadCount === "number") {
           try {
-            await self.registration.setAppBadge(data.unreadCount);
+            if (data.unreadCount > 0) {
+              await self.registration.setAppBadge(data.unreadCount);
+            } else {
+              await self.registration.clearAppBadge();
+            }
           } catch {
             // Badge API not supported — silently fail
           }
         }
       })()
     );
-  } catch {
-    // If parsing fails, show raw text
+  } catch (e) {
+    // If JSON parsing fails, show raw text notification
+    console.error("SW push parse error:", e);
     event.waitUntil(
       self.registration.showNotification("Prospects", {
         body: event.data.text(),
         icon: "/icons/icon-192.svg",
+        badge: "/icons/icon-192.svg",
+        vibrate: [200, 100, 200],
+        requireInteraction: true,
+        silent: false,
       })
     );
   }
 });
 
-// Listen for messages from the app to clear the badge
+// ── Message listener — receives commands from the app ──
 self.addEventListener("message", (event) => {
-  if (event.data && event.data.type === "CLEAR_BADGE") {
-    if (self.registration.clearAppBadge) {
-      self.registration.clearAppBadge().catch(() => {});
-    }
+  if (!event.data || !event.data.type) return;
+
+  switch (event.data.type) {
+    case "CLEAR_BADGE":
+      // Clear the app badge when user opens the app
+      if (self.registration.clearAppBadge) {
+        self.registration.clearAppBadge().catch(() => {});
+      }
+      break;
+
+    case "SET_BADGE":
+      // Update the app badge with a specific unread count
+      if (typeof event.data.count === "number" && self.registration.setAppBadge) {
+        try {
+          if (event.data.count > 0) {
+            self.registration.setAppBadge(event.data.count);
+          } else {
+            self.registration.clearAppBadge();
+          }
+        } catch {
+          // Badge API not supported
+        }
+      }
+      break;
   }
 });
 
-// Notification click event - open the app and navigate
+// ── Notification click event ──
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
 
   const urlToOpen = event.notification.data?.url || "/";
+
+  // Clear the badge when user clicks a notification
+  if (self.registration.clearAppBadge) {
+    self.registration.clearAppBadge().catch(() => {});
+  }
+
+  // Ensure urlToOpen is an absolute URL (required by openWindow on some browsers)
+  const absoluteUrl = urlToOpen.startsWith("/")
+    ? self.location.origin + urlToOpen
+    : urlToOpen;
 
   event.waitUntil(
     clients
@@ -149,14 +186,14 @@ self.addEventListener("notificationclick", (event) => {
           if (client.url.includes(self.location.origin) && "focus" in client) {
             client.focus();
             if ("navigate" in client) {
-              client.navigate(urlToOpen);
+              client.navigate(absoluteUrl);
             }
             return;
           }
         }
         // Otherwise open new window
         if (clients.openWindow) {
-          return clients.openWindow(urlToOpen);
+          return clients.openWindow(absoluteUrl);
         }
       })
   );

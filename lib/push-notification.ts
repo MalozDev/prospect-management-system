@@ -17,11 +17,20 @@ export async function getVapidKeys(): Promise<{
   publicKey: string;
   privateKey: string;
 }> {
-  // First check env vars (production override)
-  if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
+  // First check env vars (production override).
+  // Both must be set, or neither — having only one is a misconfiguration.
+  const hasPub = !!process.env.VAPID_PUBLIC_KEY;
+  const hasPriv = !!process.env.VAPID_PRIVATE_KEY;
+
+  if (hasPub || hasPriv) {
+    if (!hasPub || !hasPriv) {
+      throw new Error(
+        "Both VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY must be set in .env, or neither."
+      );
+    }
     return {
-      publicKey: process.env.VAPID_PUBLIC_KEY,
-      privateKey: process.env.VAPID_PRIVATE_KEY,
+      publicKey: process.env.VAPID_PUBLIC_KEY!,
+      privateKey: process.env.VAPID_PRIVATE_KEY!,
     };
   }
 
@@ -39,6 +48,7 @@ export async function getVapidKeys(): Promise<{
   }
 
   // Generate new keys and store in DB
+  console.log("🔑 No existing VAPID keys found — generating new ones...");
   const vapidKeys = webpush.generateVAPIDKeys();
 
   await Setting.findOneAndUpdate(
@@ -52,7 +62,7 @@ export async function getVapidKeys(): Promise<{
     { upsert: true }
   );
 
-  console.log("🔑 Generated new VAPID keys and stored in database.");
+  console.log("✅ Generated new VAPID keys and stored in database.");
   console.log(`   Public key: ${vapidKeys.publicKey}`);
   console.log("   Add this to your .env as VAPID_PUBLIC_KEY for production.");
 
@@ -106,6 +116,8 @@ export async function sendPushToUser(
       unreadCount, // ← Used by the service worker to set the home screen badge
     });
 
+    console.log(`📬 Sending push to user ${userId}: ${subscriptions.length} subscription(s), ${unreadCount} unread`);
+
     for (const sub of subscriptions) {
       try {
         await webpush.sendNotification(
@@ -123,14 +135,18 @@ export async function sendPushToUser(
         // Check if subscription is expired/invalid - remove it
         if (err && typeof err === "object" && "statusCode" in err) {
           const statusCode = (err as { statusCode: number }).statusCode;
+          console.warn(`⚠️  Push send failed (${statusCode}) — removing subscription:`, sub.endpoint.slice(0, 50) + "...");
           if (statusCode === 410 || statusCode === 404) {
             await PushSubscription.findByIdAndDelete(sub._id);
           }
+        } else {
+          console.error("❌ Push send error (non-status):", err);
         }
         failed++;
       }
     }
 
+    console.log(`📬 Push result for user ${userId}: ${success} sent, ${failed} failed`);
     return { success, failed };
   } catch (error) {
     console.error("Send push error:", error);

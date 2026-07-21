@@ -4,8 +4,9 @@ import { useEffect } from "react";
 
 /**
  * Ensures the service worker is registered on every page load.
- * Uses a timestamp query param to bust the browser cache,
- * forcing the new SW to download on every deploy.
+ * First unregisters any existing service worker to clean up stale
+ * registrations (which can cause "Unknown" script errors), then
+ * registers the fresh one.
  */
 export function ServiceWorkerRegister() {
   useEffect(() => {
@@ -18,12 +19,36 @@ export function ServiceWorkerRegister() {
     // Using a fixed version per deploy avoids re-installing on
     // every page load (which Date.now() would cause).
     // Bump this number on each deploy to force a SW update.
-    const SW_VERSION = "2";
+    const SW_VERSION = "3";
     const swUrl = `/sw.js?v=${SW_VERSION}`;
 
-    navigator.serviceWorker
-      .register(swUrl)
-      .then((registration) => {
+    async function setupServiceWorker() {
+      if (cancelled) return;
+
+      try {
+        // First, get all existing registrations for this origin
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        if (cancelled) return;
+
+        // Unregister any stale registrations that don't match our SW URL.
+        // This cleans up corrupted or extension-injected SWs while
+        // leaving a healthy existing registration intact.
+        let hasValidRegistration = false;
+        for (const reg of registrations) {
+          const scriptUrl = reg.active?.scriptURL || reg.installing?.scriptURL || "";
+          if (scriptUrl.includes("/sw.js")) {
+            hasValidRegistration = true;
+          } else {
+            await reg.unregister();
+          }
+        }
+
+        // If a valid registration already exists, skip re-registering
+        if (hasValidRegistration) return;
+        if (cancelled) return;
+
+        // Now register the fresh one
+        const registration = await navigator.serviceWorker.register(swUrl);
         if (cancelled) return;
 
         // Listen for updates — catch errors from update() separately
@@ -37,10 +62,12 @@ export function ServiceWorkerRegister() {
             });
           }
         });
-      })
-      .catch(() => {
-        // SW registration failed silently — not critical
-      });
+      } catch {
+        // SW setup failed silently — not critical
+      }
+    }
+
+    setupServiceWorker();
 
     return () => {
       cancelled = true;

@@ -40,19 +40,45 @@ export function PushAutoSubscribe() {
       return;
     }
 
+    // ── Secure context check ──
+    // Push notifications require either HTTPS or localhost.
+    // If testing on a phone via http://192.168.x.x, push will NOT work.
+    const isSecureContext =
+      window.location.protocol === "https:" ||
+      window.location.hostname === "localhost" ||
+      window.location.hostname === "127.0.0.1";
+
+    if (!isSecureContext) {
+      console.warn(
+        "📵 Push notifications require HTTPS or localhost. " +
+        "Testing via HTTP (e.g. http://192.168.x.x) will NOT trigger push notifications on your phone.\n" +
+        "  → Run: ngrok http 3000  (get ngrok at https://ngrok.com)\n" +
+        "  → Then open the HTTPS ngrok URL on your phone to test push notifications."
+      );
+      // Attempt anyway in case the browser supports it
+    }
+
     // ── Permission handling ──
     if (Notification.permission === "granted") {
       // Already allowed — subscribe/refresh the subscription
-      subscribeToPush().catch(() => {});
+      subscribeToPush().catch((err) => {
+        console.warn("📵 Push subscription/renewal failed:", err);
+      });
     } else if (Notification.permission === "default") {
       // Never asked before — request permission now
       // This ensures the user gets asked even if the PwaInstallPrompt
       // was dismissed on a previous session.
       Notification.requestPermission().then((permission) => {
         if (permission === "granted") {
-          subscribeToPush().catch(() => {});
+          subscribeToPush().catch((err) => {
+            console.warn("📵 Push subscription after permission grant failed:", err);
+          });
+        } else if (permission === "denied") {
+          console.warn("📵 Notification permission denied. Enable it in your browser settings.");
         }
-      }).catch(() => {});
+      }).catch((err) => {
+        console.warn("📵 Notification permission request failed:", err);
+      });
     }
     // If "denied", the user must enable in browser settings — we can't ask again
 

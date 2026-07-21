@@ -32,7 +32,20 @@ function setCachedCount(count: number): void {
 }
 
 /**
- * Hook that maintains the live unread notification count.
+ * Post the current unread count to the service worker so it can update
+ * the home-screen app badge (the little number on the app icon).
+ */
+function postBadgeToSw(count: number): void {
+  if (typeof navigator === "undefined" || !navigator.serviceWorker?.controller) return;
+  navigator.serviceWorker.controller.postMessage({
+    type: "SET_BADGE",
+    count,
+  });
+}
+
+/**
+ * Hook that maintains the live unread notification count
+ * AND keeps the PWA home-screen app badge in sync.
  *
  * Strategy (3 layers for maximum responsiveness):
  * 1. **localStorage cache** — instant display on page load (no network wait)
@@ -44,6 +57,11 @@ export function useUnreadCount(): number {
   const [count, setCount] = useState(getCachedCount);
   const sseRef = useRef<EventSource | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Sync the PWA home-screen app badge whenever count changes
+  useEffect(() => {
+    postBadgeToSw(count);
+  }, [count]);
 
   useEffect(() => {
     const token = getToken();
