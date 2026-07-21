@@ -10,7 +10,7 @@ import Logo from "@/components/layout/Logo";
 import CugInput from "@/components/forms/CugInput";
 import PasswordInput from "@/components/forms/PasswordInput";
 import SupervisorSelect from "@/components/forms/SupervisorSelect";
-import { loginApi, setToken, setStoredApiUser, apiFetch, getStoredApiUser } from "@/lib/api-client";
+import { loginApi, setToken, setStoredApiUser, apiFetch, getStoredApiUser, getToken } from "@/lib/api-client";
 import { saveProfile } from "@/utils/profile";
 import { subscribeToPush } from "@/lib/push-subscribe";
 
@@ -18,10 +18,13 @@ type Status = "idle" | "loading" | "success" | "error";
 
 export default function LoginPage() {
   const router = useRouter();
+
+  // ── All useState hooks MUST be before any early return ──
   const [cug, setCug] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [status, setStatus] = useState<Status>("idle");
+  const [checkingSession, setCheckingSession] = useState(true);
 
   // Forgot password modal
   const [showForgotModal, setShowForgotModal] = useState(false);
@@ -34,6 +37,26 @@ export default function LoginPage() {
   const [savingSupervisor, setSavingSupervisor] = useState(false);
   const [supervisorPromptError, setSupervisorPromptError] = useState("");
   const [redirectAfterPrompt, setRedirectAfterPrompt] = useState("");
+
+  // ── All useEffect hooks MUST be before any early return ──
+
+  // Auto-redirect if already logged in
+  useEffect(() => {
+    const token = getToken();
+    if (!token) {
+      setCheckingSession(false);
+      return;
+    }
+
+    const apiUser = getStoredApiUser();
+    if (apiUser?.role === "SUPERADMIN") {
+      router.replace("/developer/dashboard");
+    } else if (apiUser?.role === "SUPERVISOR") {
+      router.replace("/supervisor/dashboard");
+    } else {
+      router.replace("/dashboard");
+    }
+  }, [router]);
 
   // Auto-reset error state after 2 seconds
   useEffect(() => {
@@ -58,6 +81,7 @@ export default function LoginPage() {
     return () => document.removeEventListener("keydown", handleEsc);
   }, []);
 
+  // ── All useCallback hooks ──
   const handleCugChange = useCallback((value: string) => {
     setCug(value);
     setStatus("idle");
@@ -70,6 +94,7 @@ export default function LoginPage() {
     setError("");
   }, []);
 
+  // ── Handler functions ──
   const handleForgotPassword = async () => {
     setLoadingForgot(true);
     try {
@@ -206,6 +231,15 @@ export default function LoginPage() {
       setStatus("error");
     }
   };
+
+  // Show nothing while checking session — EARLY RETURN (only JSX, no hooks below)
+  if (checkingSession) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-[#f8f8f8]">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-gray-200 border-t-[#E60012]" />
+      </div>
+    );
+  }
 
   return (
     <>

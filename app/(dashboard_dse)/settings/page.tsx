@@ -237,10 +237,7 @@ export default function SettingsPage() {
           )}
         </div>
 
-        <div className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
-          <h3 className="font-semibold text-gray-900">Theme</h3>
-          <p className="mt-1 text-sm text-gray-500">Light theme is currently enabled.</p>
-        </div>
+
         <div className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
           <h3 className="font-semibold text-gray-900">Notifications</h3>
           <p className="mt-1 text-sm text-gray-500">Enabled for follow-ups, visits, and sales updates.</p>

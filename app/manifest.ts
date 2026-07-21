@@ -5,7 +5,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: "Prospects",
     short_name: "Prospects",
     description: "Sales Prospect Management System",
-    start_url: "/login",
+    start_url: "/",
     display: "standalone",
     display_override: ["window-controls-overlay", "standalone"],
     background_color: "#ffffff",

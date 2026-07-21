@@ -57,3 +57,45 @@ export async function getSupervisorUserId(dseName: string): Promise<string | nul
     return null;
   }
 }
+
+/**
+ * Get the MongoDB _id of all superadmin users.
+ * Used to notify superadmins about system-wide events.
+ */
+export async function getAllSuperadminUserIds(): Promise<string[]> {
+  try {
+    await connectToDatabase();
+    const superadmins = await User.find({ role: "SUPERADMIN" }).select("_id").lean();
+    return superadmins.map((u) => String(u._id));
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Send a notification to all superadmin users.
+ * Fire-and-forget — never throws.
+ */
+export async function notifyAllSuperadmins(payload: {
+  title: string;
+  message: string;
+  url?: string;
+  tag?: string;
+}) {
+  try {
+    const superadminIds = await getAllSuperadminUserIds();
+    if (superadminIds.length === 0) return;
+
+    for (const userId of superadminIds) {
+      sendNotification({
+        title: payload.title,
+        message: payload.message,
+        userId,
+        url: payload.url || "/developer/dashboard",
+        tag: payload.tag || "system",
+      }).catch(() => {});
+    }
+  } catch {
+    // Silent fail
+  }
+}

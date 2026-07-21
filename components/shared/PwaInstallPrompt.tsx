@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { X, Download, Bell, CheckCircle2 } from "lucide-react";
+import { getToken } from "@/lib/api-client";
 
 // BeforeInstallPromptEvent - Chrome-specific but widely supported
 interface BeforeInstallPromptEvent extends Event {
@@ -107,11 +108,20 @@ export function PwaInstallPrompt() {
         applicationServerKey: keyData.publicKey,
       });
 
+      // Build auth headers with Bearer token (required by /api/push/subscribe)
+      const token = getToken();
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+
       // Send subscription to server
       const subJson = subscription.toJSON();
       await fetch("/api/push/subscribe", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({
           endpoint: subJson.endpoint,
           keys: subJson.keys,

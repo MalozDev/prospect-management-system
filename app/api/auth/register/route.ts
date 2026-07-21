@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import { User } from "@/lib/models/User";
 import { signToken } from "@/lib/auth";
-import { getSupervisorUserId, sendNotification } from "@/lib/send-notification";
+import { getSupervisorUserId, sendNotification, notifyAllSuperadmins } from "@/lib/send-notification";
 
 export async function POST(request: NextRequest) {
   try {
@@ -61,6 +61,36 @@ export async function POST(request: NextRequest) {
         }).catch(() => {});
       }
     }
+
+    // ── If a SUPERVISOR just registered, notify all DSEs who chose "NOT_ON_BOARD" ──
+    // so they can select their new supervisor during their active session.
+    if (role === "SUPERVISOR") {
+      // Find DSEs who chose "not on board" and have an active session (logged in recently)
+      const waitingDses = await User.find({
+        role: "DSE",
+        supervisor: "NOT_ON_BOARD",
+      }).select("_id name").lean();
+
+      if (waitingDses.length > 0) {
+        for (const dse of waitingDses) {
+          sendNotification({
+            title: "Supervisor available!",
+            message: `${name.trim()} has registered as a Supervisor. You can now select your supervisor in Settings.`,
+            userId: String(dse._id),
+            url: "/dashboard",
+            tag: "supervisor-available",
+          }).catch(() => {});
+        }
+      }
+    }
+
+    // ── Notify all superadmins about the new registration ──
+    notifyAllSuperadmins({
+      title: `New ${role === "DSE" ? "DSE" : "Supervisor"} registered`,
+      message: `${name.trim()} registered as a ${role === "DSE" ? "Direct Sales Executive" : "Supervisor"} (CUG: ${cugSuffix}).`,
+      url: role === "DSE" ? "/developer/dse" : "/developer/users",
+      tag: "user-registration",
+    }).catch(() => {});
 
     const token = signToken({
       userId: user._id.toString(),

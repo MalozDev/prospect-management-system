@@ -5,7 +5,7 @@ import { getTodayLocal, getNowLocalISO } from "@/lib/time-utils";
 import { Activity } from "@/lib/models/Activity";
 import { User } from "@/lib/models/User";
 import { getUserFromRequest, unauthorizedResponse } from "@/lib/auth";
-import { getSupervisorUserId, sendNotification } from "@/lib/send-notification";
+import { getSupervisorUserId, sendNotification, notifyAllSuperadmins } from "@/lib/send-notification";
 
 export async function GET(request: NextRequest) {
   const user = getUserFromRequest(request);
@@ -111,6 +111,14 @@ export async function POST(request: NextRequest) {
         }).catch(() => {});
       }
     }
+
+    // ── Notify all superadmins about the sale ──
+    notifyAllSuperadmins({
+      title: "Sale closed",
+      message: `${user.name} closed a sale with ${sale.customer} (${sale.packageName} — K${sale.amount})`,
+      url: "/developer/dashboard",
+      tag: "sale",
+    }).catch(() => {});
 
     return Response.json({ sale }, { status: 201 });
   } catch (error) {

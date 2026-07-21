@@ -1,11 +1,12 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { PwaInstallPrompt } from "@/components/shared/PwaInstallPrompt";
+import { ServiceWorkerRegister } from "@/components/shared/ServiceWorkerRegister";
 
 export const metadata: Metadata = {
   title: "Prospects",
   description: "Sales Prospect Management System",
-  manifest: "/manifest.json",
+  manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
     title: "Prospects",
@@ -46,6 +47,7 @@ export default function RootLayout({
       <body>
         {children}
         <PwaInstallPrompt />
+        <ServiceWorkerRegister />
       </body>
     </html>
   );

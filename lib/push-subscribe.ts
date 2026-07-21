@@ -1,3 +1,20 @@
+import { getToken } from "./api-client";
+
+/**
+ * Build the auth headers needed for push subscription API calls.
+ * The /api/push/subscribe endpoint requires a valid Bearer token.
+ */
+function getAuthHeaders(): Record<string, string> {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+  const token = getToken();
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+  return headers;
+}
+
 /**
  * Auto-subscribe the browser to push notifications.
  * Call this after login/register. Non-blocking — never throws.
@@ -39,7 +56,7 @@ export async function subscribeToPush(): Promise<void> {
       const subJson = existingSub.toJSON();
       await fetch("/api/push/subscribe", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: getAuthHeaders(),
         body: JSON.stringify({
           endpoint: subJson.endpoint,
           keys: subJson.keys,
@@ -59,7 +76,7 @@ export async function subscribeToPush(): Promise<void> {
     const subJson = subscription.toJSON();
     await fetch("/api/push/subscribe", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: getAuthHeaders(),
       body: JSON.stringify({
         endpoint: subJson.endpoint,
         keys: subJson.keys,

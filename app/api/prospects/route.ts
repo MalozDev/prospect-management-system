@@ -7,7 +7,7 @@ import { Notification } from "@/lib/models/Notification";
 import { Activity } from "@/lib/models/Activity";
 import { User } from "@/lib/models/User";
 import { getUserFromRequest, unauthorizedResponse } from "@/lib/auth";
-import { getSupervisorUserId, sendNotification } from "@/lib/send-notification";
+import { getSupervisorUserId, sendNotification, notifyAllSuperadmins } from "@/lib/send-notification";
 
 export async function GET(request: NextRequest) {
   const user = getUserFromRequest(request);
@@ -149,6 +149,14 @@ export async function POST(request: NextRequest) {
         }).catch(() => {});
       }
     }
+
+    // ── Notify all superadmins about the new prospect ──
+    notifyAllSuperadmins({
+      title: "New prospect captured",
+      message: `${user.name} captured a new prospect: ${prospect.name} from ${prospect.location}`,
+      url: "/developer/dashboard",
+      tag: "prospect",
+    }).catch(() => {});
 
     return Response.json({ prospect, followUp }, { status: 201 });
   } catch (error) {
