@@ -7,6 +7,8 @@ import { Sale } from "@/lib/models/Sale";
 import { Activity } from "@/lib/models/Activity";
 import { Notification } from "@/lib/models/Notification";
 import { getUserFromRequest, unauthorizedResponse } from "@/lib/auth";
+import { getSupervisorUserId, sendNotification, notifyAllSuperadmins } from "@/lib/send-notification";
+import { defer } from "@/lib/defer";
 
 export async function PATCH(
   request: NextRequest,
@@ -26,38 +28,34 @@ export async function PATCH(
     if (body.action === "contacted") {
       const followUp = await FollowUp.findByIdAndUpdate(
         id,
-        {
-          $set: {
-            status: "COMPLETED",
-            outcome: "PENDING_REVIEW",
-            lastContacted: today,
-          },
-        },
+        { $set: { status: "COMPLETED", outcome: "PENDING_REVIEW", lastContacted: today } },
         { new: true }
       ).lean();
 
-      if (!followUp) {
-        return Response.json({ error: "Follow-up not found." }, { status: 404 });
-      }
+      if (!followUp) return Response.json({ error: "Follow-up not found." }, { status: 404 });
 
-      // Update linked prospect status to CONTACTED and store contacted timestamp
+      // ═══ SYNC: update prospect status (data consistency) ═══
       if (followUp.prospectId) {
         await Prospect.findByIdAndUpdate(followUp.prospectId, {
           $set: { status: "CONTACTED", lastContacted: getNowLocalISO() },
         });
       }
 
-      // Log activity
-      await Activity.create({
-        title: "Follow up completed",
-        detail: `Follow up completed for ${followUp.customerName}`,
-        time: getNowLocalISO(),
-        type: "followup",
-        userId: user.userId,
-        dseName: user.name,
-      });
+      const response = Response.json({ followUp });
 
-      return Response.json({ followUp });
+      // ═══ DEFERRED: activity log only ═══
+      defer(async () => {
+        await Activity.create({
+          title: "Follow up completed",
+          detail: `Follow up completed for ${followUp.customerName}`,
+          time: getNowLocalISO(),
+          type: "followup",
+          userId: user.userId,
+          dseName: user.name,
+        });
+      }, request.signal);
+
+      return response;
     }
 
     // === SOLD ===
@@ -68,11 +66,9 @@ export async function PATCH(
         { new: true }
       ).lean();
 
-      if (!followUp) {
-        return Response.json({ error: "Follow-up not found." }, { status: 404 });
-      }
+      if (!followUp) return Response.json({ error: "Follow-up not found." }, { status: 404 });
 
-      // Create sale record
+      // ═══ SYNC: create sale + update prospect (data consistency) ═══
       const sale = await Sale.create({
         customer: followUp.customerName,
         packageName: body.packageName || "ODU",
@@ -81,33 +77,54 @@ export async function PATCH(
         date: today,
       });
 
-      // Update linked prospect if exists
       if (followUp.prospectId) {
-        await Prospect.findByIdAndUpdate(followUp.prospectId, {
-          $set: { status: "SOLD" },
-        });
+        await Prospect.findByIdAndUpdate(followUp.prospectId, { $set: { status: "SOLD" } });
       }
 
-      // Log activity
-      await Activity.create({
-        title: "Sale completed",
-        detail: `ODU sale closed for ${followUp.customerName}`,
-        time: getNowLocalISO(),
-        type: "sale",
-        userId: user.userId,
-        dseName: user.name,
-      });
+      // ═══ RESPOND IMMEDIATELY ═══
+      const response = Response.json({ followUp, sale });
 
-      // Create notification
-      await Notification.create({
-        title: "Sale Completed",
-        message: `Sale completed for ${followUp.customerName}`,
-        time: getNowLocalISO(),
-        unread: true,
-        userId: user.userId,
-      });
+      // ═══ DEFERRED: activity + notification + supervisor/admin alerts ═══
+      defer(async () => {
+        await Activity.create({
+          title: "Sale completed",
+          detail: `ODU sale closed for ${followUp.customerName}`,
+          time: getNowLocalISO(),
+          type: "sale",
+          userId: user.userId,
+          dseName: user.name,
+        });
 
-      return Response.json({ followUp, sale });
+        await Notification.create({
+          title: "Sale Completed",
+          message: `Sale completed for ${followUp.customerName}`,
+          time: getNowLocalISO(),
+          unread: true,
+          userId: user.userId,
+        });
+
+        if (user.role === "DSE") {
+          const supervisorUserId = await getSupervisorUserId(user.name);
+          if (supervisorUserId) {
+            await sendNotification({
+              title: "Sale closed",
+              message: `${user.name} closed a sale with ${sale.customer} (${sale.packageName} — K${sale.amount})`,
+              userId: supervisorUserId,
+              url: "/supervisor/sales",
+              tag: "sale",
+            });
+          }
+        }
+
+        await notifyAllSuperadmins({
+          title: "Sale closed",
+          message: `${user.name} closed a sale with ${sale.customer} (${sale.packageName} — K${sale.amount})`,
+          url: "/developer/dashboard",
+          tag: "sale",
+        });
+      }, request.signal);
+
+      return response;
     }
 
     // === LOST ===
@@ -118,28 +135,28 @@ export async function PATCH(
         { new: true }
       ).lean();
 
-      if (!followUp) {
-        return Response.json({ error: "Follow-up not found." }, { status: 404 });
-      }
+      if (!followUp) return Response.json({ error: "Follow-up not found." }, { status: 404 });
 
-      // Update linked prospect if exists
+      // ═══ SYNC: update prospect status ═══
       if (followUp.prospectId) {
-        await Prospect.findByIdAndUpdate(followUp.prospectId, {
-          $set: { status: "LOST" },
-        });
+        await Prospect.findByIdAndUpdate(followUp.prospectId, { $set: { status: "LOST" } });
       }
 
-      // Log activity
-      await Activity.create({
-        title: "Prospect lost",
-        detail: `${followUp.customerName} marked as lost`,
-        time: getNowLocalISO(),
-        type: "lost",
-        userId: user.userId,
-        dseName: user.name,
-      });
+      const response = Response.json({ followUp });
 
-      return Response.json({ followUp });
+      // ═══ DEFERRED: activity log only ═══
+      defer(async () => {
+        await Activity.create({
+          title: "Prospect lost",
+          detail: `${followUp.customerName} marked as lost`,
+          time: getNowLocalISO(),
+          type: "lost",
+          userId: user.userId,
+          dseName: user.name,
+        });
+      }, request.signal);
+
+      return response;
     }
 
     // === SCHEDULE VISIT ===
@@ -148,29 +165,17 @@ export async function PATCH(
 
       const followUp = await FollowUp.findByIdAndUpdate(
         id,
-        {
-          $set: {
-            outcome: "VISIT_SCHEDULED",
-            status: "COMPLETED",
-            lastContacted: today,
-            visitDate,
-          },
-        },
+        { $set: { outcome: "VISIT_SCHEDULED", status: "COMPLETED", lastContacted: today, visitDate } },
         { new: true }
       ).lean();
 
-      if (!followUp) {
-        return Response.json({ error: "Follow-up not found." }, { status: 404 });
-      }
+      if (!followUp) return Response.json({ error: "Follow-up not found." }, { status: 404 });
 
-      // Update linked prospect if exists
+      // ═══ SYNC: update prospect + create visit followup ═══
       if (followUp.prospectId) {
-        await Prospect.findByIdAndUpdate(followUp.prospectId, {
-          $set: { status: "VISIT SCHEDULED" },
-        });
+        await Prospect.findByIdAndUpdate(followUp.prospectId, { $set: { status: "VISIT SCHEDULED" } });
       }
 
-      // Create a new follow-up for the visit
       const visitComputedStatus = visitDate === today ? "TODAY" : "UPCOMING";
       await FollowUp.create({
         customerName: followUp.customerName,
@@ -186,26 +191,28 @@ export async function PATCH(
         notes: body.notes || "",
       });
 
-      // Create notification
-      await Notification.create({
-        title: "Visit Scheduled",
-        message: `Visit scheduled for ${followUp.customerName} on ${visitDate || "soon"}`,
-        time: getNowLocalISO(),
-        unread: true,
-        userId: user.userId,
-      });
+      const response = Response.json({ followUp });
 
-      // Log activity
-      await Activity.create({
-        title: "Visit scheduled",
-        detail: `Visit scheduled for ${followUp.customerName} on ${visitDate || "soon"}`,
-        time: getNowLocalISO(),
-        type: "visit",
-        userId: user.userId,
-        dseName: user.name,
-      });
+      defer(async () => {
+        await Notification.create({
+          title: "Visit Scheduled",
+          message: `Visit scheduled for ${followUp.customerName} on ${visitDate || "soon"}`,
+          time: getNowLocalISO(),
+          unread: true,
+          userId: user.userId,
+        });
 
-      return Response.json({ followUp });
+        await Activity.create({
+          title: "Visit scheduled",
+          detail: `Visit scheduled for ${followUp.customerName} on ${visitDate || "soon"}`,
+          time: getNowLocalISO(),
+          type: "visit",
+          userId: user.userId,
+          dseName: user.name,
+        });
+      }, request.signal);
+
+      return response;
     }
 
     // === POSTPONE ===
@@ -214,28 +221,17 @@ export async function PATCH(
 
       const followUp = await FollowUp.findByIdAndUpdate(
         id,
-        {
-          $set: {
-            outcome: "POSTPONED",
-            status: "COMPLETED",
-            lastContacted: today,
-          },
-        },
+        { $set: { outcome: "POSTPONED", status: "COMPLETED", lastContacted: today } },
         { new: true }
       ).lean();
 
-      if (!followUp) {
-        return Response.json({ error: "Follow-up not found." }, { status: 404 });
-      }
+      if (!followUp) return Response.json({ error: "Follow-up not found." }, { status: 404 });
 
-      // Update linked prospect if exists
+      // ═══ SYNC: update prospect + create postponed followup ═══
       if (followUp.prospectId) {
-        await Prospect.findByIdAndUpdate(followUp.prospectId, {
-          $set: { status: "POSTPONED" },
-        });
+        await Prospect.findByIdAndUpdate(followUp.prospectId, { $set: { status: "POSTPONED" } });
       }
 
-      // Create a new follow-up with the postponed date
       const newComputedStatus = newDate === today ? "TODAY" : newDate < today ? "OVERDUE" : "UPCOMING";
       await FollowUp.create({
         customerName: followUp.customerName,
@@ -250,17 +246,20 @@ export async function PATCH(
         notes: body.notes || `Postponed from ${followUp.expectedPurchaseDate}`,
       });
 
-      // Log activity
-      await Activity.create({
-        title: "Follow-up postponed",
-        detail: `${followUp.customerName} postponed to ${newDate}`,
-        time: getNowLocalISO(),
-        type: "followup",
-        userId: user.userId,
-        dseName: user.name,
-      });
+      const response = Response.json({ followUp });
 
-      return Response.json({ followUp });
+      defer(async () => {
+        await Activity.create({
+          title: "Follow-up postponed",
+          detail: `${followUp.customerName} postponed to ${newDate}`,
+          time: getNowLocalISO(),
+          type: "followup",
+          userId: user.userId,
+          dseName: user.name,
+        });
+      }, request.signal);
+
+      return response;
     }
 
     // === Fallback: update specific fields ===
@@ -268,9 +267,7 @@ export async function PATCH(
     const updates: Record<string, unknown> = {};
 
     for (const field of allowedFields) {
-      if (body[field] !== undefined) {
-        updates[field] = body[field];
-      }
+      if (body[field] !== undefined) updates[field] = body[field];
     }
 
     if (Object.keys(updates).length === 0) {
@@ -278,10 +275,7 @@ export async function PATCH(
     }
 
     const followUp = await FollowUp.findByIdAndUpdate(id, { $set: updates }, { new: true }).lean();
-
-    if (!followUp) {
-      return Response.json({ error: "Follow-up not found." }, { status: 404 });
-    }
+    if (!followUp) return Response.json({ error: "Follow-up not found." }, { status: 404 });
 
     return Response.json({ followUp });
   } catch (error) {

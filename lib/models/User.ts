@@ -13,6 +13,7 @@ export interface IUser extends Document {
   avatarUrl: string;
   avatarColor: string;
   lastLogin: string;
+  lastActiveAt: string;
   supervisorCheckedAt: number;
   createdAt: Date;
   updatedAt: Date;
@@ -30,6 +31,7 @@ const UserSchema = new Schema<IUser>(
     avatarUrl: { type: String, default: "" },
     avatarColor: { type: String, default: "" },
     lastLogin: { type: String, default: "" },
+    lastActiveAt: { type: String, default: "" },
     supervisorCheckedAt: { type: Number, default: 0 },
   },
   { timestamps: true }

@@ -6,6 +6,7 @@ import { Activity } from "@/lib/models/Activity";
 import { User } from "@/lib/models/User";
 import { getUserFromRequest, unauthorizedResponse } from "@/lib/auth";
 import { getSupervisorUserId, sendNotification, notifyAllSuperadmins } from "@/lib/send-notification";
+import { defer } from "@/lib/defer";
 
 export async function GET(request: NextRequest) {
   const user = getUserFromRequest(request);
@@ -25,7 +26,6 @@ export async function GET(request: NextRequest) {
     const filter: Record<string, any> = {};
 
     if (soldBy) {
-      // Supervisor must verify the DSE is on their team
       if (user.role === "SUPERVISOR") {
         const dse = await User.findOne({ role: "DSE", name: soldBy, supervisor: user.name }).lean();
         if (!dse) return Response.json({ sales: [] });
@@ -34,7 +34,6 @@ export async function GET(request: NextRequest) {
     } else if (user.role === "DSE") {
       filter.soldBy = user.name;
     } else if (user.role === "SUPERVISOR") {
-      // Supervisor only sees sales from DSEs on their team
       const teamDses = await User.find({ role: "DSE", supervisor: user.name }).select("name").lean();
       const dseNames = teamDses.map((d) => d.name);
       if (dseNames.length > 0) {
@@ -45,7 +44,6 @@ export async function GET(request: NextRequest) {
     }
 
     if (month) {
-      // Match sales where date starts with YYYY-MM
       filter.date = { $regex: `^${month}` };
     } else if (dateFrom || dateTo) {
       filter.date = {};
@@ -80,6 +78,7 @@ export async function POST(request: NextRequest) {
 
     const today = getTodayLocal();
 
+    // ═══ CRITICAL PATH: create sale ═══
     const sale = await Sale.create({
       customer: customer.trim(),
       packageName: packageName || "ODU",
@@ -88,39 +87,42 @@ export async function POST(request: NextRequest) {
       date: date || today,
     });
 
-    // Log activity
-    await Activity.create({
-      title: "Sale completed",
-      detail: `Sale logged for ${sale.customer}`,
-      time: getNowLocalISO(),
-      type: "sale",
-      userId: user.userId,
-      dseName: user.name,
-    });
+    // ═══ RESPOND IMMEDIATELY ═══
+    const response = Response.json({ sale }, { status: 201 });
 
-    // ── Notify the DSE's supervisor about the sale ──
-    if (user.role === "DSE") {
-      const supervisorUserId = await getSupervisorUserId(user.name);
-      if (supervisorUserId) {
-        sendNotification({
-          title: "Sale closed",
-          message: `${user.name} closed a sale with ${sale.customer} (${sale.packageName} — K${sale.amount})`,
-          userId: supervisorUserId,
-          url: "/supervisor/sales",
-          tag: "sale",
-        }).catch(() => {});
+    // ═══ DEFERRED SIDE EFFECTS ═══
+    defer(async () => {
+      await Activity.create({
+        title: "Sale completed",
+        detail: `Sale logged for ${sale.customer}`,
+        time: getNowLocalISO(),
+        type: "sale",
+        userId: user.userId,
+        dseName: user.name,
+      });
+
+      if (user.role === "DSE") {
+        const supervisorUserId = await getSupervisorUserId(user.name);
+        if (supervisorUserId) {
+          await sendNotification({
+            title: "Sale closed",
+            message: `${user.name} closed a sale with ${sale.customer} (${sale.packageName} — K${sale.amount})`,
+            userId: supervisorUserId,
+            url: "/supervisor/sales",
+            tag: "sale",
+          });
+        }
       }
-    }
 
-    // ── Notify all superadmins about the sale ──
-    notifyAllSuperadmins({
-      title: "Sale closed",
-      message: `${user.name} closed a sale with ${sale.customer} (${sale.packageName} — K${sale.amount})`,
-      url: "/developer/dashboard",
-      tag: "sale",
-    }).catch(() => {});
+      await notifyAllSuperadmins({
+        title: "Sale closed",
+        message: `${user.name} closed a sale with ${sale.customer} (${sale.packageName} — K${sale.amount})`,
+        url: "/developer/dashboard",
+        tag: "sale",
+      });
+    }, request.signal);
 
-    return Response.json({ sale }, { status: 201 });
+    return response;
   } catch (error) {
     console.error("Create sale error:", error);
     return Response.json({ error: "Internal server error." }, { status: 500 });

@@ -116,6 +116,9 @@ export function DseProspectPanel({ dseName, prospects, defaultExpanded = false }
                           <a href={`tel:${prospect.phone}`} className="text-[#E60012] hover:underline">{prospect.phone}</a>
                         </p>
                         <p className="mt-0.5 truncate text-xs text-gray-500">{prospect.location}</p>
+                        <p className="mt-0.5 text-[10px] text-gray-400">
+                          DSE: <span className="font-medium text-gray-600">{prospect.assignedDse}</span>
+                        </p>
                         {prospect.status === "CONTACTED" && prospect.lastContacted && (
                           <p className="mt-1 text-[10px] text-blue-600">📞 Contacted {formatRelativeTime(prospect.lastContacted)}</p>
                         )}
@@ -146,6 +149,9 @@ export function DseProspectPanel({ dseName, prospects, defaultExpanded = false }
                       <div className="min-w-0">
                         <p className="truncate text-sm font-semibold text-gray-900">{prospect.name}</p>
                         <p className="mt-0.5 text-xs text-gray-500">{prospect.location}</p>
+                        <p className="mt-0.5 text-[10px] text-gray-400">
+                          DSE: <span className="font-medium text-gray-600">{prospect.assignedDse}</span>
+                        </p>
                       </div>
                       <StatusBadge status={prospect.status} className="shrink-0 px-2 py-0.5 text-[10px]" />
                     </div>

@@ -1,7 +1,7 @@
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Phone, StickyNote } from "lucide-react";
 import { FaWhatsapp } from "react-icons/fa";
-import { useMemo } from "react";
+import { useMemo, useCallback } from "react";
 
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { buildWhatsAppUrl, buildWhatsAppMessage } from "@/lib/whatsapp";
@@ -25,11 +25,29 @@ interface ProspectCardProps {
 }
 
 export function ProspectCard({ prospect }: ProspectCardProps) {
+  const router = useRouter();
   const prospectId = prospect._id ?? prospect.id ?? "";
   const dseName = useMemo(() => getStoredProfile().name, []);
   
+  const handleCardClick = useCallback(() => {
+    router.push("/followups");
+  }, [router]);
+
+  const handleCardKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      router.push("/followups");
+    }
+  }, [router]);
+
   return (
-    <Link href="/followups" className="block rounded-2xl border border-gray-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={handleCardClick}
+      onKeyDown={handleCardKeyDown}
+      className="block cursor-pointer rounded-2xl border border-gray-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+    >
       <div className="flex items-start justify-between gap-3">
         <div>
           <h3 className="font-semibold text-gray-900">{prospect.name}</h3>
@@ -78,6 +96,6 @@ export function ProspectCard({ prospect }: ProspectCardProps) {
           <FaWhatsapp className="h-3.5 w-3.5" /> WhatsApp
         </a>
       </div>
-    </Link>
+    </div>
   );
 }

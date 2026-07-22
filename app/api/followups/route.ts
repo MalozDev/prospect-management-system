@@ -6,6 +6,7 @@ import { Notification } from "@/lib/models/Notification";
 import { User } from "@/lib/models/User";
 import { getUserFromRequest, unauthorizedResponse } from "@/lib/auth";
 import { sendPushToUser } from "@/lib/push-notification";
+import { defer } from "@/lib/defer";
 
 export async function GET(request: NextRequest) {
   const user = getUserFromRequest(request);
@@ -25,7 +26,6 @@ export async function GET(request: NextRequest) {
     const filter: Record<string, any> = {};
 
     if (assignedDse) {
-      // Supervisor must verify the DSE is on their team
       if (user.role === "SUPERVISOR") {
         const dse = await User.findOne({ role: "DSE", name: assignedDse, supervisor: user.name }).lean();
         if (!dse) return Response.json({ followUps: [] });
@@ -34,7 +34,6 @@ export async function GET(request: NextRequest) {
     } else if (user.role === "DSE") {
       filter.assignedDse = user.name;
     } else if (user.role === "SUPERVISOR") {
-      // Supervisor only sees follow-ups from DSEs on their team
       const teamDses = await User.find({ role: "DSE", supervisor: user.name }).select("name").lean();
       const dseNames = teamDses.map((d) => d.name);
       if (dseNames.length > 0) {
@@ -44,11 +43,8 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    if (status) {
-      filter.status = status;
-    }
+    if (status) filter.status = status;
 
-    // For DSEs, exclude items with final outcomes
     if (user.role === "DSE" && !assignedDse) {
       filter.outcome = { $nin: ["SOLD", "LOST"] };
     }
@@ -58,17 +54,13 @@ export async function GET(request: NextRequest) {
     const followUps = await query.lean();
     const today = getTodayLocal();
 
-    // Auto-update statuses based on dates, and create notifications for due items
-    // Batch all updates into a single bulkWrite operation
+    // Auto-update statuses + create notifications (single bulkWrite)
     const bulkOps: import('mongoose').AnyBulkWriteOperation[] = [];
     const notificationsToCreate: { title: string; message: string; userId: string }[] = [];
 
     for (const fu of followUps) {
-      // Reset PENDING_REVIEW items from previous days back to TODAY
-      // so the DSE must re-contact them on the new day
       const isOldPending =
-        fu.outcome === "PENDING_REVIEW" &&
-        fu.expectedPurchaseDate < today;
+        fu.outcome === "PENDING_REVIEW" && fu.expectedPurchaseDate < today;
 
       if (isOldPending) {
         bulkOps.push({
@@ -109,7 +101,6 @@ export async function GET(request: NextRequest) {
         (fu as Record<string, unknown>).status = "OVERDUE";
       }
 
-      // Also check if an upcoming visit is due
       if (fu.category === "VISIT" && fu.visitDate && fu.visitDate <= today && fu.status === "UPCOMING") {
         bulkOps.push({
           updateOne: {
@@ -127,12 +118,11 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Execute ALL status updates as a single database round-trip
     if (bulkOps.length > 0) {
       await FollowUp.bulkWrite(bulkOps);
     }
 
-    // Create notifications — dedup by checking existing in a single query
+    // Create + push notifications (deferred — not blocking the response)
     if (notificationsToCreate.length > 0) {
       const existingNotifs = await Notification.find({
         userId: user.userId,
@@ -152,17 +142,18 @@ export async function GET(request: NextRequest) {
         }));
 
       if (newNotifs.length > 0) {
-        await Notification.insertMany(newNotifs);
-
-        // Send browser push notifications (non-blocking, fire-and-forget)
-        for (const notif of newNotifs) {
-          sendPushToUser(notif.userId, {
-            title: notif.title,
-            message: notif.message,
-            url: "/followups",
-            tag: "followup",
-          }).catch(() => {});
-        }
+        // Defer DB write + push — user already sees their data, no need to wait
+        defer(async () => {
+          await Notification.insertMany(newNotifs);
+          for (const notif of newNotifs) {
+            await sendPushToUser(notif.userId, {
+              title: notif.title,
+              message: notif.message,
+              url: "/followups",
+              tag: "followup",
+            }).catch(() => {});
+          }
+        }, request.signal);
       }
     }
 
@@ -206,26 +197,30 @@ export async function POST(request: NextRequest) {
       notes: notes || "",
     });
 
-    // Create notification for new follow-up
-    if (computedStatus === "TODAY") {
-      await Notification.create({
-        title: "Follow-up Due Today",
-        message: `Follow-up due today for ${followUp.customerName} (${followUp.phone})`,
-        time: getTodayLocal(),
-        unread: true,
-        userId: user.userId,
-      });
+    // ═══ RESPOND IMMEDIATELY ═══
+    const response = Response.json({ followUp }, { status: 201 });
 
-      // Send browser push notification (non-blocking)
-      sendPushToUser(user.userId, {
-        title: "Follow-up Due Today",
-        message: `Follow-up due today for ${followUp.customerName} (${followUp.phone})`,
-        url: "/followups",
-        tag: "followup",
-      }).catch(() => {});
+    // ═══ DEFERRED: notification + push ═══
+    if (computedStatus === "TODAY") {
+      defer(async () => {
+        await Notification.create({
+          title: "Follow-up Due Today",
+          message: `Follow-up due today for ${followUp.customerName} (${followUp.phone})`,
+          time: getTodayLocal(),
+          unread: true,
+          userId: user.userId,
+        });
+
+        await sendPushToUser(user.userId, {
+          title: "Follow-up Due Today",
+          message: `Follow-up due today for ${followUp.customerName} (${followUp.phone})`,
+          url: "/followups",
+          tag: "followup",
+        });
+      }, request.signal);
     }
 
-    return Response.json({ followUp }, { status: 201 });
+    return response;
   } catch (error) {
     console.error("Create follow-up error:", error);
     return Response.json({ error: "Internal server error." }, { status: 500 });

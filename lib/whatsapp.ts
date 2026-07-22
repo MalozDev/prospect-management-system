@@ -26,9 +26,8 @@ export function buildWhatsAppMessage(params: {
   title?: string;
   location?: string;
   date?: string;
-  notes?: string;
 }): string {
-  const { customerName, dseName, title, location, date, notes } = params;
+  const { customerName, dseName, title, location, date} = params;
 
   const greetingName = title ? `${title} ${customerName}` : customerName;
   let msg = `Hello ${greetingName}, this is ${dseName} from Airtel.`;
@@ -42,10 +41,6 @@ export function buildWhatsAppMessage(params: {
   }
 
   msg += " What time will the router be delivered? Kindly share your location via WhatsApp so we can check the 5G coverage in your area if you haven't already.";
-
-  if (notes?.trim()) {
-    msg += ` Note: ${notes.trim()}`;
-  }
 
   msg += " Thank you!";
 

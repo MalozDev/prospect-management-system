@@ -2,6 +2,8 @@ import type { NextConfig } from "next";
 import path from "path";
 
 const nextConfig: NextConfig = {
+  // Allow ngrok domains in development for phone testing
+  allowedDevOrigins: ["paging-undermost-ultra.ngrok-free.dev"],
   turbopack: {
     root: path.resolve(import.meta.dirname),
   },

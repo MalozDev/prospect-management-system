@@ -21,6 +21,10 @@ export async function sendNotification(payload: NotificationPayload) {
   try {
     await connectToDatabase();
 
+    console.log("[SEND-NOTIF-DEBUG] Creating in-app notification for user:", payload.userId);
+    console.log("[SEND-NOTIF-DEBUG] Title:", payload.title);
+    console.log("[SEND-NOTIF-DEBUG] Message:", payload.message);
+
     // Create in-app notification
     const notification = await Notification.create({
       title: payload.title,
@@ -30,12 +34,15 @@ export async function sendNotification(payload: NotificationPayload) {
       userId: payload.userId,
     });
 
+    console.log("[SEND-NOTIF-DEBUG] ✅ In-app notification created, _id:", String(notification._id));
+
     // Emit SSE event for real-time badge update (non-blocking)
     // Count unread notifications for the user to include in the event
     Notification.countDocuments({
       userId: payload.userId,
       unread: true,
     }).then((count) => {
+      console.log("[SEND-NOTIF-DEBUG] Emitting SSE event — unread count:", count);
       emitSseEvent(payload.userId, "notification", {
         unreadCount: count,
         notification: {
@@ -45,17 +52,27 @@ export async function sendNotification(payload: NotificationPayload) {
           url: payload.url,
         },
       });
-    }).catch(() => {});
+    }).catch((err) => {
+      console.error("[SEND-NOTIF-DEBUG] SSE emit failed:", err);
+    });
 
-    // Send browser push (non-blocking)
+    // Send browser push (non-blocking, fire-and-forget)
+    console.log("[SEND-NOTIF-DEBUG] Calling sendPushToUser for user:", payload.userId);
     sendPushToUser(payload.userId, {
       title: payload.title,
       message: payload.message,
       url: payload.url || "/",
       tag: payload.tag || "default",
-    }).catch(() => {});
+    }).then((result) => {
+      console.log("[SEND-NOTIF-DEBUG] sendPushToUser result:", JSON.stringify(result));
+    }).catch((err) => {
+      console.error("[SEND-NOTIF-DEBUG] sendPushToUser rejected:", err);
+    });
   } catch (error) {
-    console.error("sendNotification error:", error);
+    console.error("[SEND-NOTIF-DEBUG] sendNotification error:", error);
+    if (error instanceof Error) {
+      console.error("[SEND-NOTIF-DEBUG] Error stack:", error.stack);
+    }
   }
 }
 

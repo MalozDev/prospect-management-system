@@ -31,9 +31,9 @@ export async function GET(request: NextRequest) {
       .sort({ name: 1 })
       .lean();
 
-    // Get all DSEs grouped by supervisor (include lastName for active tracking)
+    // Get all DSEs grouped by supervisor
     const allDse = await User.find({ role: "DSE" })
-      .select("name cugSuffix region supervisor lastLogin")
+      .select("name cugSuffix region supervisor lastLogin lastActiveAt")
       .sort({ name: 1 })
       .lean();
 
@@ -82,7 +82,7 @@ export async function GET(request: NextRequest) {
         dseMembers: teamDse.map((d) => {
           const dseProspects = allProspects.filter((p) => p.assignedDse === d.name);
           const dseSales = allSales.filter((s) => s.soldBy === d.name);
-          const isActive = d.lastLogin?.startsWith(today) || false;
+          const isActive = d.lastActiveAt?.startsWith(today) || false;
           return {
             name: d.name,
             cugSuffix: d.cugSuffix,

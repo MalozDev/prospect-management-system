@@ -135,11 +135,11 @@ export default function DeveloperDashboardPage() {
     }
 
     // Active supervisors from users data
-    const activeSupervisors = users.filter((u) => u.role === "SUPERVISOR" && u.lastLogin?.startsWith(today)).map((u) => ({
+    const activeSupervisors = users.filter((u) => u.role === "SUPERVISOR" && u.lastActiveAt?.startsWith(today)).map((u) => ({
       name: u.name,
       region: u.region,
       cugSuffix: u.cugSuffix,
-      lastLogin: u.lastLogin || "",
+      lastLogin: u.lastActiveAt || "",
     }));
 
     let activeToday = activeDses.length + activeSupervisors.length;

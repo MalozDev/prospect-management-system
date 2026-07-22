@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import { User } from "@/lib/models/User";
 import { signToken, getTokenFromRequest, decodeTokenIgnoreExpiry, unauthorizedResponse } from "@/lib/auth";
+import { getNowLocalISO } from "@/lib/time-utils";
 
 export async function POST(request: NextRequest) {
   try {
@@ -20,6 +21,14 @@ export async function POST(request: NextRequest) {
     if (!dbUser) {
       return Response.json({ error: "User not found." }, { status: 401 });
     }
+
+    // ── Heartbeat: mark this user as active right now ──
+    // Token refresh fires on every page load and API re-auth,
+    // so it's the most reliable "user is active" signal.
+    // Fire-and-forget — non-critical if this update fails.
+    User.findByIdAndUpdate(payload.userId, {
+      $set: { lastActiveAt: getNowLocalISO() },
+    }).catch(() => {});
 
     // Issue a fresh token with a new 1-year expiry
     const newToken = signToken({

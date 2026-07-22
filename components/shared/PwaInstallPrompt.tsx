@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { X, Download, Bell, CheckCircle2 } from "lucide-react";
-import { getToken } from "@/lib/api-client";
+import { subscribeToPush } from "@/lib/push-subscribe";
 
 // BeforeInstallPromptEvent - Chrome-specific but widely supported
 interface BeforeInstallPromptEvent extends Event {
@@ -17,23 +17,6 @@ export function PwaInstallPrompt() {
   const [showBanner, setShowBanner] = useState(false);
   const [dismissed, setDismissed] = useState(false);
   const [notificationStatus, setNotificationStatus] = useState<NotifStatus>("idle");
-
-  // Register service worker on mount
-  useEffect(() => {
-    if ("serviceWorker" in navigator) {
-      // Cache-busting version forces browser to fetch latest sw.js
-      // Bump this number on each deploy to force a SW update.
-      const swUrl = `/sw.js?v=2`;
-      navigator.serviceWorker
-        .register(swUrl)
-        .then(() => {
-          // Service worker registered
-        })
-        .catch(() => {
-          // SW registration failed - not critical
-        });
-    }
-  }, []);
 
   // Check notification permission on mount
   useEffect(() => {
@@ -90,85 +73,42 @@ export function PwaInstallPrompt() {
     localStorage.setItem("pwa-install-dismissed", "true");
   };
 
-  // Subscribe to push notifications
-  const subscribeToPush = useCallback(async () => {
-    if (!("serviceWorker" in navigator) || !("PushManager" in window)) return;
-
-    try {
-      setNotificationStatus("subscribing");
-
-      // Get VAPID public key from server
-      const keyRes = await fetch("/api/push/vapid-public-key");
-      const keyData = await keyRes.json();
-      if (!keyData.publicKey) throw new Error("No public key");
-
-      // Get service worker registration
-      const registration = await navigator.serviceWorker.ready;
-
-      // Subscribe to push
-      const subscription = await registration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: keyData.publicKey,
-      });
-
-      // Build auth headers with Bearer token (required by /api/push/subscribe)
-      const token = getToken();
-      const headers: Record<string, string> = {
-        "Content-Type": "application/json",
-      };
-      if (token) {
-        headers["Authorization"] = `Bearer ${token}`;
-      }
-
-      // Send subscription to server
-      const subJson = subscription.toJSON();
-      await fetch("/api/push/subscribe", {
-        method: "POST",
-        headers,
-        body: JSON.stringify({
-          endpoint: subJson.endpoint,
-          keys: subJson.keys,
-          userAgent: navigator.userAgent,
-        }),
-      });
-
-      setNotificationStatus("granted");
-    } catch {
-      // Push subscription failed - still mark as granted for in-app notifications
-      setNotificationStatus("granted");
-    }
-  }, []);
-
-  const handleRequestNotification = async () => {
+  // Handle notification permission request and push subscription via Firebase
+  const handleRequestNotification = useCallback(async () => {
     if (!("Notification" in window)) return;
 
     try {
+      setNotificationStatus("subscribing");
       const permission = await Notification.requestPermission();
 
       if (permission === "granted") {
-        // Now subscribe for push
+        // Use the shared Firebase-based subscribeToPush
         await subscribeToPush();
+        setNotificationStatus("granted");
       } else {
         setNotificationStatus("denied");
       }
     } catch {
       setNotificationStatus("denied");
     }
-  };
+  }, []);
 
-  // Use a helper to avoid TS narrowing false positives with compound conditions
+  // Auto-hide the success confirmation after 4 seconds
+  useEffect(() => {
+    if (notificationStatus === "granted") {
+      const timer = setTimeout(() => setDismissed(true), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [notificationStatus]);
+
+  // Show the card for: idle (need prompt), subscribing (in progress), granted (success)
   function shouldShow(): boolean {
-    // If dismissed, hide unless there's still a pending notification prompt
-    if (dismissed) {
-      return notificationStatus === "idle" || notificationStatus === "subscribing";
-    }
-
-    // If no install banner, hide when notification prompt is resolved
+    if (dismissed) return false;
     if (!showBanner) {
-      return notificationStatus === "idle" || notificationStatus === "subscribing";
+      return notificationStatus === "idle" ||
+             notificationStatus === "subscribing" ||
+             notificationStatus === "granted";
     }
-
-    // Show install banner
     return true;
   }
 

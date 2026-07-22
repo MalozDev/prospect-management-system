@@ -8,6 +8,7 @@ import { Activity } from "@/lib/models/Activity";
 import { User } from "@/lib/models/User";
 import { getUserFromRequest, unauthorizedResponse } from "@/lib/auth";
 import { getSupervisorUserId, sendNotification, notifyAllSuperadmins } from "@/lib/send-notification";
+import { defer } from "@/lib/defer";
 
 export async function GET(request: NextRequest) {
   const user = getUserFromRequest(request);
@@ -27,7 +28,6 @@ export async function GET(request: NextRequest) {
     const filter: Record<string, any> = {};
 
     if (assignedDse) {
-      // Supervisor must verify the DSE is on their team
       if (user.role === "SUPERVISOR") {
         const dse = await User.findOne({ role: "DSE", name: assignedDse, supervisor: user.name }).lean();
         if (!dse) return Response.json({ prospects: [] });
@@ -36,21 +36,16 @@ export async function GET(request: NextRequest) {
     } else if (user.role === "DSE") {
       filter.assignedDse = user.name;
     } else if (user.role === "SUPERVISOR") {
-      // Supervisor only sees prospects from DSEs on their team
       const teamDses = await User.find({ role: "DSE", supervisor: user.name }).select("name").lean();
       const dseNames = teamDses.map((d) => d.name);
       if (dseNames.length > 0) {
         filter.assignedDse = { $in: dseNames };
       } else {
-        // No DSEs on this team — return nothing
         return Response.json({ prospects: [] });
       }
     }
 
-    if (status) {
-      filter.status = status;
-    }
-
+    if (status) filter.status = status;
     if (createdFrom || createdTo) {
       filter.createdAt = {};
       if (createdFrom) filter.createdAt.$gte = createdFrom;
@@ -73,8 +68,6 @@ export async function POST(request: NextRequest) {
   if (!user) return unauthorizedResponse();
 
   try {
-    await connectToDatabase();
-
     const body = await request.json();
     const { title, name, phone, location, address, expectedPurchaseDate, status, notes } = body;
 
@@ -85,8 +78,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    await connectToDatabase();
+
     const today = getTodayLocal();
 
+    // ═══ CRITICAL PATH: create prospect + followup ═══
     const prospect = await Prospect.create({
       title: title || "Mr",
       name: name.trim(),
@@ -100,17 +96,6 @@ export async function POST(request: NextRequest) {
       notes: notes || "",
     });
 
-    // Log activity
-    await Activity.create({
-      title: "Prospect created",
-      detail: `${prospect.name} added as a new prospect`,
-      time: getNowLocalISO(),
-      type: "prospect",
-      userId: user.userId,
-      dseName: user.name,
-    });
-
-    // Create linked follow-up
     const computedStatus = expectedPurchaseDate === today ? "TODAY" : expectedPurchaseDate < today ? "OVERDUE" : "UPCOMING";
 
     const followUp = await FollowUp.create({
@@ -125,40 +110,52 @@ export async function POST(request: NextRequest) {
       notes: notes || "",
     });
 
-    // Create notification if follow-up is due today
-    if (computedStatus === "TODAY") {
-      await Notification.create({
-        title: "Follow-up Due Today",
-        message: `Follow-up due today for ${followUp.customerName} (${followUp.phone})`,
+    // ═══ RESPOND IMMEDIATELY ═══
+    const response = Response.json({ prospect, followUp }, { status: 201 });
+
+    // ═══ DEFERRED SIDE EFFECTS (after response) ═══
+    defer(async () => {
+      await Activity.create({
+        title: "Prospect created",
+        detail: `${prospect.name} added as a new prospect`,
         time: getNowLocalISO(),
-        unread: true,
+        type: "prospect",
         userId: user.userId,
+        dseName: user.name,
       });
-    }
 
-    // ── Notify the DSE's supervisor about the new prospect ──
-    if (user.role === "DSE") {
-      const supervisorUserId = await getSupervisorUserId(user.name);
-      if (supervisorUserId) {
-        sendNotification({
-          title: "New prospect captured",
-          message: `${user.name} captured a new prospect: ${prospect.name} from ${prospect.location}`,
-          userId: supervisorUserId,
-          url: "/supervisor/prospects",
-          tag: "prospect",
-        }).catch(() => {});
+      if (computedStatus === "TODAY") {
+        await Notification.create({
+          title: "Follow-up Due Today",
+          message: `Follow-up due today for ${followUp.customerName} (${followUp.phone})`,
+          time: getNowLocalISO(),
+          unread: true,
+          userId: user.userId,
+        });
       }
-    }
 
-    // ── Notify all superadmins about the new prospect ──
-    notifyAllSuperadmins({
-      title: "New prospect captured",
-      message: `${user.name} captured a new prospect: ${prospect.name} from ${prospect.location}`,
-      url: "/developer/dashboard",
-      tag: "prospect",
-    }).catch(() => {});
+      if (user.role === "DSE") {
+        const supervisorUserId = await getSupervisorUserId(user.name);
+        if (supervisorUserId) {
+          await sendNotification({
+            title: "New prospect captured",
+            message: `${user.name} captured a new prospect: ${prospect.name} from ${prospect.location}`,
+            userId: supervisorUserId,
+            url: "/supervisor/prospects",
+            tag: "prospect",
+          });
+        }
+      }
 
-    return Response.json({ prospect, followUp }, { status: 201 });
+      await notifyAllSuperadmins({
+        title: "New prospect captured",
+        message: `${user.name} captured a new prospect: ${prospect.name} from ${prospect.location}`,
+        url: "/developer/dashboard",
+        tag: "prospect",
+      });
+    }, request.signal);
+
+    return response;
   } catch (error) {
     console.error("Create prospect error:", error);
     return Response.json({ error: "Internal server error." }, { status: 500 });

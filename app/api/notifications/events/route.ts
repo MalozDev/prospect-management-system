@@ -3,6 +3,8 @@ import { getUserFromRequest, unauthorizedResponse, getTokenFromRequest, decodeTo
 import { addSseClient, removeSseClient } from "@/lib/notification-events";
 import { connectToDatabase } from "@/lib/mongodb";
 import { Notification } from "@/lib/models/Notification";
+import { User } from "@/lib/models/User";
+import { getNowLocalISO } from "@/lib/time-utils";
 
 /**
  * SSE (Server-Sent Events) endpoint for real-time notification push.
@@ -33,6 +35,12 @@ export async function GET(request: NextRequest) {
   }
 
   if (!user) return unauthorizedResponse();
+
+  // ── Heartbeat: mark this user as active right now ──
+  // Having an open SSE connection means they're actively using the app.
+  User.findByIdAndUpdate(user.userId, {
+    $set: { lastActiveAt: getNowLocalISO() },
+  }).catch(() => {});
 
   // Send initial unread count immediately
   let initialCount = 0;

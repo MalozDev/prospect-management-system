@@ -3,6 +3,13 @@ import { connectToDatabase } from "@/lib/mongodb";
 import { PushSubscription } from "@/lib/models/PushSubscription";
 import { getUserFromRequest, unauthorizedResponse } from "@/lib/auth";
 
+/**
+ * POST /api/push/subscribe
+ *
+ * Registers an FCM push subscription for the authenticated user.
+ * Only accepts Firebase Cloud Messaging (FCM) tokens — the old
+ * Web Push endpoint/keys method has been removed.
+ */
 export async function POST(request: NextRequest) {
   const user = getUserFromRequest(request);
   if (!user) return unauthorizedResponse();
@@ -10,23 +17,24 @@ export async function POST(request: NextRequest) {
   try {
     await connectToDatabase();
 
-    const { endpoint, keys, userAgent } = await request.json();
+    const body = await request.json();
+    const { fcmToken, userAgent } = body;
 
-    if (!endpoint || !keys?.p256dh || !keys?.auth) {
-      return Response.json({ error: "Invalid subscription object." }, { status: 400 });
+    if (!fcmToken) {
+      return Response.json(
+        { error: "fcmToken is required." },
+        { status: 400 }
+      );
     }
 
-    // Remove old subscription with same endpoint if exists
-    await PushSubscription.findOneAndDelete({ endpoint });
+    // Remove any existing subscription with same FCM token
+    await PushSubscription.findOneAndDelete({ fcmToken });
 
     // Save new subscription
     await PushSubscription.create({
       userId: user.userId,
-      endpoint,
-      keys: {
-        p256dh: keys.p256dh,
-        auth: keys.auth,
-      },
+      endpoint: "",
+      fcmToken,
       userAgent: userAgent || "",
     });
 
