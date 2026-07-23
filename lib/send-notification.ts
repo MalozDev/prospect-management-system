@@ -21,27 +21,21 @@ export async function sendNotification(payload: NotificationPayload) {
   try {
     await connectToDatabase();
 
-    console.log("[SEND-NOTIF-DEBUG] Creating in-app notification for user:", payload.userId);
-    console.log("[SEND-NOTIF-DEBUG] Title:", payload.title);
-    console.log("[SEND-NOTIF-DEBUG] Message:", payload.message);
-
-    // Create in-app notification
+    // Create in-app notification with optional url for click navigation
     const notification = await Notification.create({
       title: payload.title,
       message: payload.message,
       time: getNowLocalISO(),
       unread: true,
       userId: payload.userId,
+      url: payload.url || "",
     });
-
-    console.log("[SEND-NOTIF-DEBUG] ✅ In-app notification created, _id:", String(notification._id));
 
     // Emit SSE event for real-time badge update (non-blocking, fire-and-forget)
     Notification.countDocuments({
       userId: payload.userId,
       unread: true,
     }).then((count) => {
-      console.log("[SEND-NOTIF-DEBUG] Emitting SSE event — unread count:", count);
       emitSseEvent(payload.userId, "notification", {
         unreadCount: count,
         notification: {
@@ -51,30 +45,17 @@ export async function sendNotification(payload: NotificationPayload) {
           url: payload.url,
         },
       });
-    }).catch((err) => {
-      console.error("[SEND-NOTIF-DEBUG] SSE emit failed:", err);
-    });
+    }).catch(() => {});
 
     // Send browser push (non-blocking, fire-and-forget)
-    // Runs independently from SSE — a count query failure won't block push delivery.
-    // For the badge count, we pass 0 as fallback; the SW already handles badge updates
-    // via the SET_BADGE message from use-unread-count.ts.
-    console.log("[SEND-NOTIF-DEBUG] Calling sendPushToUser for user:", payload.userId);
     sendPushToUser(payload.userId, {
       title: payload.title,
       message: payload.message,
       url: payload.url || "/",
       tag: payload.tag || "default",
-    }).then((result) => {
-      console.log("[SEND-NOTIF-DEBUG] sendPushToUser result:", JSON.stringify(result));
-    }).catch((err) => {
-      console.error("[SEND-NOTIF-DEBUG] sendPushToUser rejected:", err);
-    });
-  } catch (error) {
-    console.error("[SEND-NOTIF-DEBUG] sendNotification error:", error);
-    if (error instanceof Error) {
-      console.error("[SEND-NOTIF-DEBUG] Error stack:", error.stack);
-    }
+    }).catch(() => {});
+  } catch {
+    // Silent fail — notification delivery is non-critical
   }
 }
 

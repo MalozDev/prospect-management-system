@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useApiData } from "@/lib/use-api-data";
 import { apiFetch } from "@/lib/api-client";
 import type { INotification } from "@/lib/models/Notification";
@@ -103,7 +104,11 @@ export default function DeveloperNotificationsPage() {
                     : "border-gray-700/50 bg-[#1a1a3e]/50"
                 }`}
               >
-                <div className="flex-1 min-w-0">
+                <Link
+                  href={item.url || "/developer/dashboard"}
+                  className="flex-1 min-w-0"
+                  onClick={() => { if (item.unread) handleMarkRead(id); }}
+                >
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <div className="flex items-center gap-2">
@@ -120,7 +125,7 @@ export default function DeveloperNotificationsPage() {
                     </div>
                     <span className="shrink-0 text-xs text-gray-500">{formatRelativeTime(item.time)}</span>
                   </div>
-                </div>
+                </Link>
 
                 <div className="flex shrink-0 items-center gap-1">
                   {item.unread && (

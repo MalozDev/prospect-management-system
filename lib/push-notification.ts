@@ -94,10 +94,6 @@ export async function sendPushToUser(
           },
         };
 
-        console.log("[PUSH] 📤 Sending to endpoint:", sub.endpoint?.slice(0, 70) + "...");
-        console.log("[PUSH] 📤 p256dh:", sub.keys?.p256dh?.slice(0, 30) + "...");
-        console.log("[PUSH] 📤 auth:", sub.keys?.auth?.slice(0, 15) + "...");
-
         await webpush.sendNotification(pushSubscription, notificationPayload, {
           TTL: 86400, // 24 hours — deliver when device comes online
         });
@@ -112,23 +108,12 @@ export async function sendPushToUser(
             err.statusCode === 403     // Invalid
           ) {
             console.warn(`[PUSH] ⚠️ Subscription expired (HTTP ${err.statusCode}) — deleting`);
-            if (err.statusCode === 403 || err.statusCode === 410) {
-              console.error(`[PUSH] 🔍 ${err.statusCode} body:`, (err as any).body || err.message);
-              console.error(`[PUSH] 🔍 ${err.statusCode} headers:`, JSON.stringify((err as any).headers || {}));
-            }
             await PushSubscription.findByIdAndDelete(sub._id).catch(() => {});
           } else {
             console.error(`[PUSH] ❌ WebPush error (HTTP ${err.statusCode}):`, err.message);
           }
         } else {
           console.error("[PUSH] ❌ Unexpected error:", err);
-          if (err instanceof AggregateError && Array.isArray((err as any).errors)) {
-            for (const e of (err as any).errors) {
-              console.error("[PUSH]   → Sub-error:", e.message || e);
-              if (e.statusCode) console.error("[PUSH]     statusCode:", e.statusCode);
-              if (e.body) console.error("[PUSH]     body:", e.body);
-            }
-          }
         }
         failed++;
       }

@@ -6,6 +6,8 @@ export interface INotification extends Document {
   time: string;
   unread: boolean;
   userId: string;
+  /** Optional URL to navigate to when the notification is clicked */
+  url?: string;
 }
 
 const NotificationSchema = new Schema<INotification>(
@@ -15,6 +17,7 @@ const NotificationSchema = new Schema<INotification>(
     time: { type: String, required: true },
     unread: { type: Boolean, required: true, default: true },
     userId: { type: String, default: "" },
+    url: { type: String, default: "" },
   },
   { timestamps: true }
 );

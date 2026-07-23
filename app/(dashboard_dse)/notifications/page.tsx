@@ -95,7 +95,7 @@ export default function NotificationsPage() {
                 }`}
               >
                 <Link
-                  href="/followups"
+                  href={item.url || "/followups"}
                   className="flex-1 min-w-0"
                   onClick={() => { if (item.unread) handleMarkRead(id); }}
                 >

@@ -27,8 +27,7 @@ export function NotificationBadge({ href = "/notifications" }: NotificationBadge
       <Bell className="h-5 w-5" />
       {unreadCount > 0 && (
         <span
-          className="absolute z-50 -right-0.5 -top-0.5 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-[#E60012] px-1 text-[10px] font-bold leading-none text-white ring-2 ring-white shadow-sm animate-scale-in"
-          style={{ color: "white" }}
+          className="absolute z-50 -right-0.5 -top-0.5 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-white px-1 text-[10px] font-bold leading-none text-[#E60012] ring-2 ring-gray-200 shadow-sm animate-scale-in"
         >
           {unreadCount > 99 ? "99+" : unreadCount}
         </span>

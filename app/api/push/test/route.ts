@@ -15,18 +15,11 @@ export async function POST(request: NextRequest) {
   if (!user) return unauthorizedResponse();
 
   const body = await request.json().catch(() => ({}));
-  const title = body.title || "🔔 Test Push Notification";
-  const message = body.message || "If you can read this, push notifications are working! 🎉";
+  const title = body.title || "🔔 Test Push";
+  const message = body.message || "Push notifications are working!";
   const url = body.url || "/";
 
-  console.log("\n===========================================");
-  console.log("[TEST-PUSH] ====== TEST PUSH TRIGGERED ======");
-  console.log("[TEST-PUSH] User ID:", user.userId);
-  console.log("[TEST-PUSH] User name:", user.name);
-  console.log("[TEST-PUSH] Title:", title);
-  console.log("[TEST-PUSH] Message:", message);
-  console.log("[TEST-PUSH] URL:", url);
-  console.log("===========================================\n");
+  console.log("[TEST-PUSH] Triggered by:", user.name, "(" + user.userId + ")");
 
   try {
     // Send to the requesting user
