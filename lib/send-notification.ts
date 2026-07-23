@@ -36,8 +36,7 @@ export async function sendNotification(payload: NotificationPayload) {
 
     console.log("[SEND-NOTIF-DEBUG] ✅ In-app notification created, _id:", String(notification._id));
 
-    // Emit SSE event for real-time badge update (non-blocking)
-    // Count unread notifications for the user to include in the event
+    // Emit SSE event for real-time badge update (non-blocking, fire-and-forget)
     Notification.countDocuments({
       userId: payload.userId,
       unread: true,
@@ -57,6 +56,9 @@ export async function sendNotification(payload: NotificationPayload) {
     });
 
     // Send browser push (non-blocking, fire-and-forget)
+    // Runs independently from SSE — a count query failure won't block push delivery.
+    // For the badge count, we pass 0 as fallback; the SW already handles badge updates
+    // via the SET_BADGE message from use-unread-count.ts.
     console.log("[SEND-NOTIF-DEBUG] Calling sendPushToUser for user:", payload.userId);
     sendPushToUser(payload.userId, {
       title: payload.title,

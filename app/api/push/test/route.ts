@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { getUserFromRequest, unauthorizedResponse } from "@/lib/auth";
-import { sendNotification } from "@/lib/send-notification";
+import { sendNotification, notifyAllSuperadmins } from "@/lib/send-notification";
 
 /**
  * 🔧 TEST / DEBUG endpoint for push notifications.
@@ -9,7 +9,6 @@ import { sendNotification } from "@/lib/send-notification";
  * Body: { title?: string, message?: string, url?: string }
  *
  * Triggers a test notification to the currently authenticated user.
- * Check your server console for [PUSH-DEBUG] logs to trace the flow.
  */
 export async function POST(request: NextRequest) {
   const user = getUserFromRequest(request);
@@ -30,6 +29,7 @@ export async function POST(request: NextRequest) {
   console.log("===========================================\n");
 
   try {
+    // Send to the requesting user
     await sendNotification({
       title,
       message,
@@ -38,9 +38,17 @@ export async function POST(request: NextRequest) {
       tag: "test-push",
     });
 
+    // Also send to all superadmins (covers the phone user "Stephan Malobeka")
+    notifyAllSuperadmins({
+      title: `${title} (superadmin)`,
+      message,
+      url,
+      tag: "test-push-superadmin",
+    }).catch(() => {});
+
     return Response.json({
       success: true,
-      message: "Test notification sent. Check server console for [PUSH-DEBUG] logs.",
+      message: "Test notification sent. Check server console for [PUSH] logs.",
     });
   } catch (error) {
     console.error("[TEST-PUSH] Error:", error);

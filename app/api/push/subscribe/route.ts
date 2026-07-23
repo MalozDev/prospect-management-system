@@ -6,9 +6,12 @@ import { getUserFromRequest, unauthorizedResponse } from "@/lib/auth";
 /**
  * POST /api/push/subscribe
  *
- * Registers an FCM push subscription for the authenticated user.
- * Only accepts Firebase Cloud Messaging (FCM) tokens — the old
- * Web Push endpoint/keys method has been removed.
+ * Registers a standard Web Push subscription for the authenticated user.
+ * Accepts the push subscription object (endpoint + keys) that was created
+ * via `PushManager.subscribe()` on the client.
+ *
+ * Body:
+ *   { subscription: { endpoint: string, keys: { p256dh: string, auth: string } }, userAgent?: string }
  */
 export async function POST(request: NextRequest) {
   const user = getUserFromRequest(request);
@@ -18,29 +21,34 @@ export async function POST(request: NextRequest) {
     await connectToDatabase();
 
     const body = await request.json();
-    const { fcmToken, userAgent } = body;
+    const { subscription, userAgent } = body;
 
-    if (!fcmToken) {
+    if (!subscription || !subscription.endpoint || !subscription.keys?.p256dh || !subscription.keys?.auth) {
       return Response.json(
-        { error: "fcmToken is required." },
+        { error: "Invalid subscription object. Requires endpoint and keys (p256dh, auth)." },
         { status: 400 }
       );
     }
 
-    // Remove any existing subscription with same FCM token
-    await PushSubscription.findOneAndDelete({ fcmToken });
+    // Remove any existing subscription with the same endpoint (re-registration)
+    await PushSubscription.findOneAndDelete({ endpoint: subscription.endpoint });
 
-    // Save new subscription
+    // Save the new subscription
     await PushSubscription.create({
       userId: user.userId,
-      endpoint: "",
-      fcmToken,
+      endpoint: subscription.endpoint,
+      keys: {
+        p256dh: subscription.keys.p256dh,
+        auth: subscription.keys.auth,
+      },
       userAgent: userAgent || "",
     });
 
+    console.log("[PUSH] ✅ Subscription saved for user", user.userId);
+
     return Response.json({ success: true });
   } catch (error) {
-    console.error("Subscribe push error:", error);
+    console.error("[PUSH] Subscribe error:", error);
     return Response.json({ error: "Failed to subscribe." }, { status: 500 });
   }
 }

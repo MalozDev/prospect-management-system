@@ -73,16 +73,16 @@ export function PwaInstallPrompt() {
     localStorage.setItem("pwa-install-dismissed", "true");
   };
 
-  // Handle notification permission request and push subscription via Firebase
+  // Handle notification permission request and push subscription
   const handleRequestNotification = useCallback(async () => {
-    if (!("Notification" in window)) return;
+    if (!("Notification" in window) || !("PushManager" in window)) return;
 
     try {
       setNotificationStatus("subscribing");
       const permission = await Notification.requestPermission();
 
       if (permission === "granted") {
-        // Use the shared Firebase-based subscribeToPush
+        // Subscribe via the standard PushManager API
         await subscribeToPush();
         setNotificationStatus("granted");
       } else {

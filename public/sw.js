@@ -1,6 +1,8 @@
 // 🔄 Increment this version whenever you deploy service worker changes.
 // The browser detects the change and activates the new SW immediately.
-const CACHE_NAME = "prospects-" + new Date().toISOString().slice(0, 10);
+// Increment on each deploy to force a fresh SW install.
+// Current: 2026-07-23 (v5)
+const CACHE_NAME = "prospects-v5-" + new Date().toISOString().slice(0, 10);
 
 const STATIC_ASSETS = [
   "/",
@@ -78,7 +80,7 @@ self.addEventListener("push", (event) => {
       body: data.message || "You have a new notification.",
       icon: "/icons/icon-192.svg",
       badge: "/icons/icon-192.svg",
-      // Strong vibration pattern for mobile: vibrate-pause-vibrate-pause-vibrate
+      // Strong vibration pattern for mobile (Android only; iOS ignores)
       vibrate: [300, 100, 200, 100, 300],
       tag: data.tag || "default",
       // Keep the notification visible until the user interacts with it
@@ -98,7 +100,7 @@ self.addEventListener("push", (event) => {
         // Show the notification
         await self.registration.showNotification(title, options);
 
-        // Update app badge on the home screen icon (Android Chrome)
+        // Update app badge on the home screen icon (Android Chrome, iOS)
         // Uses the Badge API via ServiceWorkerRegistration
         if (typeof data.unreadCount === "number") {
           try {
@@ -143,15 +145,17 @@ self.addEventListener("message", (event) => {
 
     case "SET_BADGE":
       // Update the app badge with a specific unread count
-      if (typeof event.data.count === "number" && self.registration.setAppBadge) {
-        try {
-          if (event.data.count > 0) {
-            self.registration.setAppBadge(event.data.count);
-          } else {
-            self.registration.clearAppBadge();
+      if (typeof event.data.count === "number") {
+        if (self.registration.setAppBadge) {
+          try {
+            if (event.data.count > 0) {
+              self.registration.setAppBadge(event.data.count);
+            } else {
+              self.registration.clearAppBadge();
+            }
+          } catch {
+            // Badge API not supported
           }
-        } catch {
-          // Badge API not supported
         }
       }
       break;
@@ -159,6 +163,8 @@ self.addEventListener("message", (event) => {
 });
 
 // ── Notification click event ──
+// Opens the app and navigates to the notification's target URL.
+// Works on all platforms: Android, iOS, Desktop.
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
 

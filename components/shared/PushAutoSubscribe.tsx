@@ -32,17 +32,21 @@ export function PushAutoSubscribe() {
     if (!token) return;
 
     // Check browser support
-    if (
-      !("serviceWorker" in navigator) ||
-      !("PushManager" in window) ||
-      !("Notification" in window)
-    ) {
+    const pushSupported =
+      "serviceWorker" in navigator &&
+      "PushManager" in window &&
+      "Notification" in window;
+
+    if (!pushSupported) {
+      console.warn(
+        "[PUSH] Push notifications not supported in this browser. " +
+        "Requires: serviceWorker, PushManager, and Notification APIs."
+      );
       return;
     }
 
     // ── Secure context check ──
     // Push notifications require either HTTPS or localhost.
-    // If testing on a phone via http://192.168.x.x, push will NOT work.
     const isSecureContext =
       window.location.protocol === "https:" ||
       window.location.hostname === "localhost" ||
@@ -51,11 +55,10 @@ export function PushAutoSubscribe() {
     if (!isSecureContext) {
       console.warn(
         "📵 Push notifications require HTTPS or localhost. " +
-        "Testing via HTTP (e.g. http://192.168.x.x) will NOT trigger push notifications on your phone.\n" +
-        "  → Run: ngrok http 3000  (get ngrok at https://ngrok.com)\n" +
-        "  → Then open the HTTPS ngrok URL on your phone to test push notifications."
+        "Testing via HTTP (e.g. http://192.168.x.x) will NOT trigger push notifications.\n" +
+        "  → Run: ngrok http 3000\n" +
+        "  → Then open the HTTPS ngrok URL on your phone to test."
       );
-      // Attempt anyway in case the browser supports it
     }
 
     // ── Permission handling ──
@@ -66,19 +69,19 @@ export function PushAutoSubscribe() {
       });
     } else if (Notification.permission === "default") {
       // Never asked before — request permission now
-      // This ensures the user gets asked even if the PwaInstallPrompt
-      // was dismissed on a previous session.
-      Notification.requestPermission().then((permission) => {
-        if (permission === "granted") {
-          subscribeToPush().catch((err) => {
-            console.warn("📵 Push subscription after permission grant failed:", err);
-          });
-        } else if (permission === "denied") {
-          console.warn("📵 Notification permission denied. Enable it in your browser settings.");
-        }
-      }).catch((err) => {
-        console.warn("📵 Notification permission request failed:", err);
-      });
+      Notification.requestPermission()
+        .then((permission) => {
+          if (permission === "granted") {
+            subscribeToPush().catch((err) => {
+              console.warn("📵 Push subscription after permission grant failed:", err);
+            });
+          } else if (permission === "denied") {
+            console.warn("📵 Notification permission denied. Enable it in your browser settings.");
+          }
+        })
+        .catch((err) => {
+          console.warn("📵 Notification permission request failed:", err);
+        });
     }
     // If "denied", the user must enable in browser settings — we can't ask again
 

@@ -7,6 +7,9 @@ import { useEffect } from "react";
  * First unregisters any existing service worker to clean up stale
  * registrations (which can cause "Unknown" script errors), then
  * registers the fresh one.
+ *
+ * On iOS Safari 16.4+, the service worker enables push notifications
+ * and offline caching for the installed PWA.
  */
 export function ServiceWorkerRegister() {
   useEffect(() => {
@@ -16,10 +19,8 @@ export function ServiceWorkerRegister() {
 
     // Add a version query string so the browser always fetches
     // the latest sw.js after a deploy (CACHE_NAME changed).
-    // Using a fixed version per deploy avoids re-installing on
-    // every page load (which Date.now() would cause).
     // Bump this number on each deploy to force a SW update.
-    const SW_VERSION = "3";
+    const SW_VERSION = "5";
     const swUrl = `/sw.js?v=${SW_VERSION}`;
 
     async function setupServiceWorker() {
@@ -30,24 +31,25 @@ export function ServiceWorkerRegister() {
         const registrations = await navigator.serviceWorker.getRegistrations();
         if (cancelled) return;
 
-        // Unregister any stale registrations that don't match our SW URL.
-        // This cleans up corrupted or extension-injected SWs while
-        // leaving a healthy existing registration intact.
-        let hasValidRegistration = false;
+        // Check existing registrations.
+        // If the active SW is already the latest version, skip re-registering.
+        // Otherwise, unregister everything stale and register fresh.
+        let isCurrentVersionActive = false;
         for (const reg of registrations) {
-          const scriptUrl = reg.active?.scriptURL || reg.installing?.scriptURL || "";
-          if (scriptUrl.includes("/sw.js")) {
-            hasValidRegistration = true;
+          const scriptUrl = reg.active?.scriptURL || "";
+          if (scriptUrl.includes(`/sw.js?v=${SW_VERSION}`)) {
+            isCurrentVersionActive = true;
           } else {
-            await reg.unregister();
+            // Unregister stale or corrupted registrations
+            await reg.unregister().catch(() => {});
           }
         }
 
-        // If a valid registration already exists, skip re-registering
-        if (hasValidRegistration) return;
+        // If current version is already active, skip re-registering
+        if (isCurrentVersionActive) return;
         if (cancelled) return;
 
-        // Now register the fresh one
+        // Register the fresh version
         const registration = await navigator.serviceWorker.register(swUrl);
         if (cancelled) return;
 
