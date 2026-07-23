@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { X, Download, Bell, CheckCircle2 } from "lucide-react";
 import { subscribeToPush } from "@/lib/push-subscribe";
 
@@ -17,6 +17,7 @@ export function PwaInstallPrompt() {
   const [showBanner, setShowBanner] = useState(false);
   const [dismissed, setDismissed] = useState(false);
   const [notificationStatus, setNotificationStatus] = useState<NotifStatus>("idle");
+  const wasAlreadyGrantedRef = useRef(false);
 
   // Check notification permission on mount
   useEffect(() => {
@@ -24,13 +25,15 @@ export function PwaInstallPrompt() {
       setNotificationStatus("unsupported");
       return;
     }
+    const isGranted = Notification.permission === "granted";
     setNotificationStatus(
-      Notification.permission === "granted"
+      isGranted
         ? "granted"
         : Notification.permission === "denied"
         ? "denied"
         : "idle"
     );
+    wasAlreadyGrantedRef.current = isGranted;
   }, []);
 
   // Listen for install prompt
@@ -105,6 +108,10 @@ export function PwaInstallPrompt() {
   function shouldShow(): boolean {
     if (dismissed) return false;
     if (!showBanner) {
+      // Don't show success banner if permission was already granted before this page load
+      if (notificationStatus === "granted" && wasAlreadyGrantedRef.current) return false;
+      // Don't show the question prompt if user has previously dismissed it
+      if (notificationStatus === "idle" && typeof window !== "undefined" && localStorage.getItem("notif-prompt-dismissed")) return false;
       return notificationStatus === "idle" ||
              notificationStatus === "subscribing" ||
              notificationStatus === "granted";
@@ -117,8 +124,11 @@ export function PwaInstallPrompt() {
   const showInstallBanner = showBanner && !!installPrompt;
   const isIdle = notificationStatus === "idle";
   const isSubscribing = notificationStatus === "subscribing";
-  const showNotificationPrompt = isIdle && !showBanner;
-  const showSuccess = notificationStatus === "granted" && !showBanner;
+  // Don't show notification question if it was previously dismissed
+  const notifDismissed = typeof window !== "undefined" && localStorage.getItem("notif-prompt-dismissed");
+  const showNotificationPrompt = isIdle && !showBanner && !notifDismissed;
+  // Only show success banner if the user JUST granted permission via the button
+  const showSuccess = notificationStatus === "granted" && !wasAlreadyGrantedRef.current && !showBanner;
 
   return (
     <div className="fixed top-4 left-4 right-4 z-50 md:top-6 md:left-auto md:right-6 md:w-80">
@@ -200,14 +210,16 @@ export function PwaInstallPrompt() {
                 Allow Notifications
               </>
             )}
-          </button>
-          <button
-            type="button"
-            onClick={handleDismiss}
-            className="mt-2 w-full text-center text-xs text-gray-400 hover:text-gray-600"
-          >
-            Dismiss
-          </button>
+          </button>            <button
+              type="button"
+              onClick={() => {
+                localStorage.setItem("notif-prompt-dismissed", "true");
+                handleDismiss();
+              }}
+              className="mt-2 w-full text-center text-xs text-gray-400 hover:text-gray-600"
+            >
+              Not now
+            </button>
         </div>
       )}
 

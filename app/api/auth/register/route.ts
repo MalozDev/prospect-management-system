@@ -111,7 +111,7 @@ export async function POST(request: NextRequest) {
       await notifyAllSuperadmins({
         title: `New ${role === "DSE" ? "DSE" : "Supervisor"} registered`,
         message: `${name.trim()} registered as a ${role === "DSE" ? "Direct Sales Executive" : "Supervisor"} (CUG: ${cugSuffix}).`,
-        url: role === "DSE" ? "/developer/dse" : "/developer/users",
+        url: "/developer/users",
         tag: "user-registration",
       });
     }, request.signal);

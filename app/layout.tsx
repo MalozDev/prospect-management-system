@@ -12,10 +12,9 @@ export const metadata: Metadata = {
     capable: true,
     title: "Prospects",
     statusBarStyle: "black-translucent",
-  },
-  icons: {
+  },      icons: {
     icon: "/icons/icon-192.svg",
-    apple: "/icons/icon-512.svg",
+    apple: "/icons/notif-icon-192.png",
   },
   other: {
     "mobile-web-app-capable": "yes",
@@ -39,7 +38,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        <link rel="apple-touch-icon" href="/icons/icon-512.svg" />
+        <link rel="apple-touch-icon" href="/icons/notif-icon-192.png" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="apple-mobile-web-app-title" content="Prospects" />

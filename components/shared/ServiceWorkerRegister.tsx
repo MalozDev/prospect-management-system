@@ -20,7 +20,7 @@ export function ServiceWorkerRegister() {
     // Add a version query string so the browser always fetches
     // the latest sw.js after a deploy (CACHE_NAME changed).
     // Bump this number on each deploy to force a SW update.
-    const SW_VERSION = "5";
+    const SW_VERSION = "6";
     const swUrl = `/sw.js?v=${SW_VERSION}`;
 
     async function setupServiceWorker() {

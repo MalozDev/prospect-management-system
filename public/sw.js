@@ -1,8 +1,8 @@
 // 🔄 Increment this version whenever you deploy service worker changes.
 // The browser detects the change and activates the new SW immediately.
 // Increment on each deploy to force a fresh SW install.
-// Current: 2026-07-23 (v5)
-const CACHE_NAME = "prospects-v5-" + new Date().toISOString().slice(0, 10);
+// Current: 2026-07-23 (v6)
+const CACHE_NAME = "prospects-v6-" + new Date().toISOString().slice(0, 10);
 
 const STATIC_ASSETS = [
   "/",
@@ -76,12 +76,25 @@ self.addEventListener("push", (event) => {
     const title = data.title || "Prospects";
 
     // Build notification options with maximum compatibility
+    //
+    // ── ICONS ──
+    //   icon:     Large notification image (PNG required; SVG shows as blank on Android)
+    //   badge:    Small status-bar icon — Android renders the alpha channel as a
+    //             monochrome silhouette in the system accent color. A red-on-white
+    //             PNG will show as the alpha silhouette of the white background.
+    //             For best results, use a white shape on transparent background.
+    //
+    // ── VIBRATION ──
+    //   Android:  Uses the vibrate[] pattern below.
+    //   iOS:      Does NOT support the Vibration API in service workers or web pages.
+    //             This is a platform limitation — iOS web notifications never vibrate.
+    //
     const options = {
       body: data.message || "You have a new notification.",
-      icon: "/icons/icon-192.svg",
-      badge: "/icons/icon-192.svg",
-      // Strong vibration pattern for mobile (Android only; iOS ignores)
-      vibrate: [300, 100, 200, 100, 300],
+      icon: "/icons/notif-icon-192.png",
+      badge: "/icons/badge-96.png",
+      // Strong vibration pattern for Android: ½s vibrate × 3 with short pauses
+      vibrate: [500, 150, 500, 150, 500],
       tag: data.tag || "default",
       // Keep the notification visible until the user interacts with it
       requireInteraction: true,
@@ -121,9 +134,9 @@ self.addEventListener("push", (event) => {
     event.waitUntil(
       self.registration.showNotification("Prospects", {
         body: event.data.text(),
-        icon: "/icons/icon-192.svg",
-        badge: "/icons/icon-192.svg",
-        vibrate: [200, 100, 200],
+        icon: "/icons/notif-icon-192.png",
+        badge: "/icons/badge-96.png",
+        vibrate: [500, 150, 500],
         requireInteraction: true,
         silent: false,
       })
