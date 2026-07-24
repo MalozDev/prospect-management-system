@@ -137,9 +137,12 @@ export async function POST(request: NextRequest) {
       if (user.role === "DSE") {
         const supervisorUserId = await getSupervisorUserId(user.name);
         if (supervisorUserId) {
+          // Get supervisor name for the notification
+          const dseUser = await User.findOne({ name: user.name }).select('supervisor').lean();
+          const supervisorName = dseUser?.supervisor || 'N/A';
           await sendNotification({
-            title: "New prospect captured",
-            message: `${user.name} captured a new prospect: ${prospect.name} from ${prospect.location}`,
+            title: "New Prospect",
+            message: `${prospect.name} — DSE: ${user.name} — Supervisor: ${supervisorName}`,
             userId: supervisorUserId,
             url: "/supervisor/prospects",
             tag: "prospect",
@@ -147,9 +150,12 @@ export async function POST(request: NextRequest) {
         }
       }
 
+      // Look up supervisor name for superadmin notification
+      const dseInfo = await User.findOne({ name: user.name }).select('supervisor').lean();
+      const globalSupervisorName = dseInfo?.supervisor || 'N/A';
       await notifyAllSuperadmins({
-        title: "New prospect captured",
-        message: `${user.name} captured a new prospect: ${prospect.name} from ${prospect.location}`,
+        title: "New Prospect",
+        message: `${prospect.name} — DSE: ${user.name} — Supervisor: ${globalSupervisorName}`,
         url: "/developer/dashboard",
         tag: "prospect",
       });

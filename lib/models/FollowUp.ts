@@ -17,6 +17,7 @@ export interface IFollowUp extends Document {
   prospectId: string;
   visitDate: string;
   notes: string;
+  lastRemindedAt: string;
 }
 
 const FollowUpSchema = new Schema<IFollowUp>(
@@ -45,8 +46,13 @@ const FollowUpSchema = new Schema<IFollowUp>(
       enum: ["", "PENDING_REVIEW", "SOLD", "LOST", "POSTPONED", "VISIT_SCHEDULED"],
     },
     prospectId: { type: String, default: "" },
-    visitDate: { type: String, default: "" },
-    notes: { type: String, default: "" },
+  visitDate: { type: String, default: "" },
+  notes: { type: String, default: "" },
+  /**
+   * ISO timestamp of the last time a 15-min push reminder was sent.
+   * Empty string means never reminded.
+   */
+  lastRemindedAt: { type: String, default: "" },
   },
   { timestamps: true }
 );

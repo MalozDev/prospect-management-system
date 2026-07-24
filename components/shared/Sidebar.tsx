@@ -23,6 +23,7 @@ const supervisorItems = [
   { href: "/supervisor/dse", label: "DSE Team", icon: Users2 },
   { href: "/supervisor/prospects", label: "All Prospects", icon: ClipboardList },
   { href: "/supervisor/sales", label: "All Sales", icon: ShoppingCart },
+  { href: "/supervisor/notifications", label: "Notifications", icon: Bell },
   { href: "/supervisor/settings", label: "Settings", icon: Settings },
 ];
 

@@ -94,7 +94,7 @@ self.addEventListener("push", (event) => {
       icon: "/icons/notif-icon-192.png",
       badge: "/icons/badge-96.png",
       // Strong vibration pattern for Android: ½s vibrate × 3 with short pauses
-      vibrate: [500, 150, 500, 150, 500],
+      vibrate: [1000, 500, 1000, 500, 1000],
       tag: data.tag || "default",
       // Keep the notification visible until the user interacts with it
       requireInteraction: true,
@@ -136,7 +136,7 @@ self.addEventListener("push", (event) => {
         body: event.data.text(),
         icon: "/icons/notif-icon-192.png",
         badge: "/icons/badge-96.png",
-        vibrate: [500, 150, 500],
+        vibrate: [1000, 500, 1000, 500, 1000],
         requireInteraction: true,
         silent: false,
       })

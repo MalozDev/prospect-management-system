@@ -1,14 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 
 import { PageShell } from "@/components/shared/PageShell";
+import { NotificationCard } from "@/components/shared/NotificationCard";
 import { useApiData } from "@/lib/use-api-data";
 import { apiFetch } from "@/lib/api-client";
 import type { INotification } from "@/lib/models/Notification";
-import { CheckCheck, Trash2 } from "lucide-react";
-import { formatRelativeTime } from "@/lib/time-utils";
+import { CheckCheck, Bell } from "lucide-react";
 
 export default function NotificationsPage() {
   const { data, refetch } = useApiData<{ notifications: INotification[] }>("/api/notifications", { notifications: [] });
@@ -81,61 +80,20 @@ export default function NotificationsPage() {
 
       <div className="grid gap-3">
         {notifications.length > 0 ? (
-          notifications.map((item) => {
-            const id = String(item._id);
-            return (
-              <div
-                key={id}
-                className={`group relative flex items-start gap-3 rounded-3xl border p-4 shadow-sm transition ${
-                  dismissing.has(id) ? "opacity-50" : ""
-                } ${
-                  item.unread
-                    ? "border-[#E60012]/20 bg-[#fff8f8]"
-                    : "border-gray-200 bg-white"
-                }`}
-              >
-                <Link
-                  href={item.url || "/followups"}
-                  className="flex-1 min-w-0"
-                  onClick={() => { if (item.unread) handleMarkRead(id); }}
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <h3 className="font-semibold text-gray-900">{item.title}</h3>
-                      <p className="mt-0.5 text-sm text-gray-600">{item.message}</p>
-                    </div>
-                    <span className="shrink-0 text-xs text-gray-400">{formatRelativeTime(item.time)}</span>
-                  </div>
-                </Link>
-
-                <div className="flex shrink-0 items-center gap-1">
-                  {item.unread && (
-                    <button
-                      type="button"
-                      onClick={(e) => { e.stopPropagation(); handleMarkRead(id); }}
-                      className="flex h-8 w-8 items-center justify-center rounded-full text-gray-400 opacity-0 transition hover:bg-gray-100 hover:text-gray-600 group-hover:opacity-100"
-                      title="Mark as read"
-                    >
-                      <CheckCheck className="h-4 w-4" />
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    onClick={(e) => { e.stopPropagation(); handleDismiss(id); }}
-                    disabled={dismissing.has(id)}
-                    className="flex h-8 w-8 items-center justify-center rounded-full text-gray-400 opacity-0 transition hover:bg-red-50 hover:text-red-500 group-hover:opacity-100 disabled:opacity-30"
-                    title="Dismiss"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </div>
-              </div>
-            );
-          })
+          notifications.map((item) => (
+            <NotificationCard
+              key={String(item._id)}
+              notification={item}
+              onMarkRead={handleMarkRead}
+              onDismiss={handleDismiss}
+              dismissing={dismissing.has(String(item._id))}
+              theme="dse"
+            />
+          ))
         ) : (
           <div className="rounded-3xl border border-dashed border-gray-200 bg-white p-8 text-center text-sm text-gray-500">
             <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-gray-50">
-              <CheckCheck className="h-6 w-6 text-gray-300" />
+              <Bell className="h-6 w-6 text-gray-300" />
             </div>
             No notifications yet.
           </div>

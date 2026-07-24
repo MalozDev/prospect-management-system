@@ -104,9 +104,11 @@ export async function POST(request: NextRequest) {
       if (user.role === "DSE") {
         const supervisorUserId = await getSupervisorUserId(user.name);
         if (supervisorUserId) {
+          const dseUser = await User.findOne({ name: user.name }).select('supervisor').lean();
+          const supervisorName = dseUser?.supervisor || 'N/A';
           await sendNotification({
-            title: "Sale closed",
-            message: `${user.name} closed a sale with ${sale.customer} (${sale.packageName} — K${sale.amount})`,
+            title: "Sale Closed",
+            message: `${sale.customer} — DSE: ${user.name} — Supervisor: ${supervisorName}`,
             userId: supervisorUserId,
             url: "/supervisor/sales",
             tag: "sale",
@@ -114,9 +116,12 @@ export async function POST(request: NextRequest) {
         }
       }
 
+      // Look up supervisor name for superadmin notification
+      const dseInfo = await User.findOne({ name: user.name }).select('supervisor').lean();
+      const globalSupervisorName = dseInfo?.supervisor || 'N/A';
       await notifyAllSuperadmins({
-        title: "Sale closed",
-        message: `${user.name} closed a sale with ${sale.customer} (${sale.packageName} — K${sale.amount})`,
+        title: "Sale Closed",
+        message: `${sale.customer} — DSE: ${user.name} — Supervisor: ${globalSupervisorName}`,
         url: "/developer/dashboard",
         tag: "sale",
       });
