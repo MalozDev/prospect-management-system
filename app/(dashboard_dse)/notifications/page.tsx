@@ -7,11 +7,12 @@ import { NotificationCard } from "@/components/shared/NotificationCard";
 import { useApiData } from "@/lib/use-api-data";
 import { apiFetch } from "@/lib/api-client";
 import type { INotification } from "@/lib/models/Notification";
-import { CheckCheck, Bell } from "lucide-react";
+import { CheckCheck, Bell, Trash2 } from "lucide-react";
 
 export default function NotificationsPage() {
   const { data, refetch } = useApiData<{ notifications: INotification[] }>("/api/notifications", { notifications: [] });
   const [dismissing, setDismissing] = useState<Set<string>>(new Set());
+  const [markingRead, setMarkingRead] = useState<Set<string>>(new Set());
 
   const notifications = data.notifications;
   const unreadCount = notifications.filter((n) => n.unread).length;
@@ -21,12 +22,19 @@ export default function NotificationsPage() {
   };
 
   const handleMarkRead = async (id: string) => {
+    setMarkingRead((prev) => new Set(prev).add(id));
     try {
       await apiFetch(`/api/notifications/${id}`, { method: "PATCH" });
       refetch();
       triggerRefresh();
     } catch {
       // Silently fail
+    } finally {
+      setMarkingRead((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
     }
   };
 
@@ -50,31 +58,60 @@ export default function NotificationsPage() {
   const handleMarkAllRead = async () => {
     const unread = notifications.filter((n) => n.unread);
     for (const n of unread) {
+      setMarkingRead((prev) => new Set(prev).add(String(n._id)));
       try {
         await apiFetch(`/api/notifications/${String(n._id)}`, { method: "PATCH" });
       } catch {
         // Continue
+      } finally {
+        setMarkingRead((prev) => {
+          const next = new Set(prev);
+          next.delete(String(n._id));
+          return next;
+        });
       }
     }
     refetch();
     triggerRefresh();
   };
 
+  const handleClearAll = async () => {
+    try {
+      await apiFetch("/api/notifications/clear", { method: "DELETE" });
+      refetch();
+      triggerRefresh();
+    } catch {
+      // Silently fail
+    }
+  };
+
   return (
     <PageShell title="Notifications" description="Stay updated with reminders and important updates.">
-      {unreadCount > 0 && (
+      {notifications.length > 0 && (
         <div className="mb-4 flex items-center justify-between rounded-2xl border border-gray-200 bg-white p-3 shadow-sm">
           <p className="text-sm text-gray-600">
-            <span className="font-semibold text-gray-900">{unreadCount}</span> unread notification{unreadCount !== 1 ? "s" : ""}
+            <span className="font-semibold text-gray-900">{unreadCount}</span> unread · {notifications.length} total
           </p>
-          <button
-            type="button"
-            onClick={handleMarkAllRead}
-            className="flex items-center gap-1.5 rounded-full border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 transition hover:bg-gray-50"
-          >
-            <CheckCheck className="h-3.5 w-3.5" />
-            Mark all read
-          </button>
+          <div className="flex items-center gap-2">
+            {unreadCount > 0 && (
+              <button
+                type="button"
+                onClick={handleMarkAllRead}
+                className="flex items-center gap-1.5 rounded-full border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 transition hover:bg-gray-50"
+              >
+                <CheckCheck className="h-3.5 w-3.5" />
+                Mark all read
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={handleClearAll}
+              className="flex items-center gap-1.5 rounded-full border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 transition hover:bg-red-50"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              Clear all
+            </button>
+          </div>
         </div>
       )}
 
@@ -87,6 +124,7 @@ export default function NotificationsPage() {
               onMarkRead={handleMarkRead}
               onDismiss={handleDismiss}
               dismissing={dismissing.has(String(item._id))}
+              markingRead={markingRead.has(String(item._id))}
               theme="dse"
             />
           ))

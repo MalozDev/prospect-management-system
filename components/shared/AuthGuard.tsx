@@ -1,12 +1,31 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getToken, setToken, setStoredApiUser } from "@/lib/api-client";
+
+/**
+ * Send a lightweight heartbeat to mark the user as active.
+ * Fire-and-forget — non-critical if it fails.
+ */
+function sendHeartbeat() {
+  const token = getToken();
+  if (!token) return;
+  fetch("/api/users/heartbeat", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+  }).catch(() => {
+    // Silently ignore — non-critical
+  });
+}
 
 export function AuthGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const [authorized, setAuthorized] = useState(false);
+  const heartbeatIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -56,7 +75,21 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     }
 
     checkAuth();
-    return () => { cancelled = true; };
+
+    // ── Periodic heartbeat (every 2 minutes) ──
+    // Sends a lightweight request to update `lastActiveAt` so the system
+    // can track who is actively using the app. Starts after auth succeeds.
+    // Sends one immediately on mount so the user is marked active right away.
+    sendHeartbeat();
+    heartbeatIntervalRef.current = setInterval(sendHeartbeat, 120_000);
+
+    return () => {
+      cancelled = true;
+      if (heartbeatIntervalRef.current) {
+        clearInterval(heartbeatIntervalRef.current);
+        heartbeatIntervalRef.current = null;
+      }
+    };
   }, [router]);
 
   if (!authorized) {

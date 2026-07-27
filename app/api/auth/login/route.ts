@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import { User } from "@/lib/models/User";
 import { signToken } from "@/lib/auth";
-import { getTodayLocal, getNowLocalISO } from "@/lib/time-utils";
+import { getNowLocalISO } from "@/lib/time-utils";
 
 export async function POST(request: NextRequest) {
   try {
@@ -24,10 +24,9 @@ export async function POST(request: NextRequest) {
       return Response.json({ error: "Invalid CUG suffix or password." }, { status: 401 });
     }
 
-    // Track last login for "active today" tracking
-    const today = getTodayLocal();
+    // Track last login + mark as active right now
     await User.findByIdAndUpdate(user._id, {
-      $set: { lastLogin: getNowLocalISO() },
+      $set: { lastLogin: getNowLocalISO(), lastActiveAt: getNowLocalISO() },
     });
 
     // ── Smart supervisor check ──

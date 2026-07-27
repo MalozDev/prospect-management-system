@@ -53,8 +53,12 @@ export default function DashboardPage() {
   );
 
   const prospectsDueToday = useMemo(
-    () => prospectsData.prospects.filter((p) => p.expectedPurchaseDate === today && p.status !== "SOLD" && p.status !== "LOST"),
-    [prospectsData.prospects, today]
+    () => followUpsData.followUps.filter(
+      (item) => (item.status === "TODAY" || item.status === "OVERDUE") &&
+        item.outcome !== "SOLD" &&
+        item.outcome !== "LOST"
+    ),
+    [followUpsData.followUps]
   );
 
   const soldToday = useMemo(
@@ -220,33 +224,33 @@ export default function DashboardPage() {
           </div>
 
           <div className="mt-3 grid gap-2 sm:grid-cols-3">
-            {prospectsDueToday.slice(0, 6).map((prospect) => (
-              <Link href="/followups" key={String(prospect._id)} className="rounded-2xl border border-gray-200 bg-gray-50 p-3">
-                <p className="text-sm font-semibold text-gray-900">{prospect.name}</p>
-                <p className="mt-1 text-xs text-gray-500">{prospect.location}</p>
+            {prospectsDueToday.slice(0, 6).map((item) => (
+              <Link href="/followups" key={String(item._id)} className="rounded-2xl border border-gray-200 bg-gray-50 p-3">
+                <p className="text-sm font-semibold text-gray-900">{item.customerName}</p>
+                <p className="mt-1 text-xs text-gray-500">{item.expectedPurchaseDate && `Expected: ${item.expectedPurchaseDate}`}</p>
                 <p className="mt-2 flex items-center gap-1 text-xs text-[#E60012]">
-                  <PhoneCall className="h-3.5 w-3.5" /> {prospect.phone}
+                  <PhoneCall className="h-3.5 w-3.5" /> {item.phone}
                 </p>
-                {prospect.notes?.trim() && (
+                {item.notes?.trim() && (
                   <p className="mt-1.5 flex items-start gap-1 rounded-lg bg-amber-50 p-1.5 text-[10px] text-amber-800">
                     <StickyNote className="mt-0.5 h-3 w-3 shrink-0 text-amber-500" />
-                    <span>{prospect.notes}</span>
+                    <span>{item.notes}</span>
                   </p>
                 )}
                 <div className="mt-2 flex gap-1.5">
                   <a
-                    href={`tel:${prospect.phone}`}
+                    href={`tel:${item.phone}`}
                     className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-white px-2 py-1 text-[10px] font-medium text-[#E60012] transition hover:bg-red-50"
-                    aria-label={`Call ${prospect.name}`}
+                    aria-label={`Call ${item.customerName}`}
                   >
                     <PhoneCall className="h-3 w-3" /> Call
                   </a>
                   <a
-                    href={buildWhatsAppUrl(prospect.phone, buildWhatsAppMessage({ customerName: prospect.name, dseName, title: prospect.title, location: prospect.location, notes: prospect.notes }))}
+                    href={buildWhatsAppUrl(item.phone, buildWhatsAppMessage({ customerName: item.customerName, dseName, date: item.expectedPurchaseDate ? new Date(item.expectedPurchaseDate).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }) : undefined, notes: item.notes }))}
                     target="_blank"
                     rel="noreferrer"
                     className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-white px-2 py-1 text-[10px] font-medium text-green-600 transition hover:bg-green-50"
-                    aria-label={`WhatsApp ${prospect.name}`}
+                    aria-label={`WhatsApp ${item.customerName}`}
                   >
                     <FaWhatsapp className="h-3 w-3" /> WhatsApp
                   </a>

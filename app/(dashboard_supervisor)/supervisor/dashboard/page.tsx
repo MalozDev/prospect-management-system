@@ -59,7 +59,7 @@ export default function SupervisorDashboardPage() {
       .map((name) => {
         const dseProspects = prospectsData.prospects.filter((p) => p.assignedDse === name);
         const dseSales = salesData.sales.filter((s) => s.soldBy === name);
-        const todayProspects = dseProspects.filter((p) => p.createdAt === today && p.status !== "SOLD" && p.status !== "LOST").length;
+        const todayProspects = dseProspects.filter((p) => p.createdAt === today && p.status !== "SOLD" && p.status !== "LOST" && p.status !== "POSTPONED").length;
         const todaySalesCount = dseSales.filter((s) => s.date === today).length;
         const weekStart = new Date();
         weekStart.setDate(weekStart.getDate() - 6);
@@ -96,7 +96,7 @@ export default function SupervisorDashboardPage() {
   const todayByDse = useMemo(() => {
     const grouped: Record<string, IProspect[]> = {};
     prospectsData.prospects
-      .filter((p) => p.createdAt === today && p.status !== "SOLD" && p.status !== "LOST")
+      .filter((p) => p.createdAt === today && p.status !== "SOLD" && p.status !== "LOST" && p.status !== "POSTPONED")
       .forEach((prospect) => {
         if (!grouped[prospect.assignedDse]) {
           grouped[prospect.assignedDse] = [];
@@ -109,7 +109,7 @@ export default function SupervisorDashboardPage() {
   // Compute stats
   const stats = useMemo(() => {
     const totalDse = dseUsersData.dseUsers.length;
-    const todayProspects = prospectsData.prospects.filter((p) => p.createdAt === today).length;
+    const todayProspects = prospectsData.prospects.filter((p) => p.createdAt === today && p.status !== "POSTPONED").length;
     const todaySalesCount = salesData.sales.filter((s) => s.date === today).length;
     const totalRevenue = salesData.sales.length * COMMISSION_PER_SALE;
     const currentMonth = today.slice(0, 7);

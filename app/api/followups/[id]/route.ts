@@ -233,9 +233,11 @@ export async function PATCH(
 
       if (!followUp) return Response.json({ error: "Follow-up not found." }, { status: 404 });
 
-      // ═══ SYNC: update prospect + create postponed followup ═══
+      // ═══ SYNC: update prospect (status + expectedPurchaseDate) + create postponed followup ═══
       if (followUp.prospectId) {
-        await Prospect.findByIdAndUpdate(followUp.prospectId, { $set: { status: "POSTPONED" } });
+        await Prospect.findByIdAndUpdate(followUp.prospectId, {
+          $set: { status: "POSTPONED", expectedPurchaseDate: newDate },
+        });
       }
 
       const newComputedStatus = newDate === today ? "TODAY" : newDate < today ? "OVERDUE" : "UPCOMING";

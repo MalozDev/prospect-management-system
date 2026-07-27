@@ -19,6 +19,7 @@ export function useApiData<T>(
   const [loading, setLoading] = useState(!cached); // skip loading if we have cache
   const [error, setError] = useState<string | null>(null);
   const mountedRef = useRef(true);
+  const fetchedRef = useRef(false); // true once the first fetch completes
 
   const refetch = useCallback(async () => {
     if (!url) {
@@ -32,13 +33,20 @@ export function useApiData<T>(
       return;
     }
 
-    setLoading(true);
+    // ── Only show loading spinner on the very first fetch ──
+    // If cached data exists, skip the flash even on first mount.
+    // Background refetches also skip loading to avoid flicker.
+    const isFirstFetch = !fetchedRef.current && !cached;
+    if (isFirstFetch) {
+      setLoading(true);
+    }
     setError(null);
 
     try {
       const result = await apiFetch<T>(url);
       if (mountedRef.current) {
         setData(result);
+        fetchedRef.current = true;
         // Write to cache for instant navigation next time
         writeCache(url, result);
       }
@@ -48,7 +56,7 @@ export function useApiData<T>(
         // Keep old data on error
       }
     } finally {
-      if (mountedRef.current) {
+      if (mountedRef.current && isFirstFetch) {
         setLoading(false);
       }
     }

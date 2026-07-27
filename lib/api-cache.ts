@@ -1,7 +1,7 @@
 const CACHE_PREFIX = "crm-cache:";
 const CACHE_VERSION_KEY = "crm-cache-version";
 const CACHE_VERSION = "v1";
-const DEFAULT_TTL_MS = 30_000; // 30 seconds — fast navigation, fresh enough
+const DEFAULT_TTL_MS = 300_000; // 5 minutes — avoids refetch spinners on navigation, fresh enough
 
 interface CacheEntry<T> {
   data: T;

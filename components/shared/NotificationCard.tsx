@@ -16,6 +16,8 @@ interface NotificationCardProps {
   dismissing: boolean;
   /** Visual theme — controls colors and styling */
   theme?: NotificationTheme;
+  /** Whether a mark-read action is currently being processed for this card */
+  markingRead?: boolean;
 }
 
 /**
@@ -31,17 +33,21 @@ export function NotificationCard({
   onMarkRead,
   onDismiss,
   dismissing,
+  markingRead = false,
   theme = "dse",
 }: NotificationCardProps) {
-  const id = String(notification._id);
+  const id = String(notification._id);    const showMarkReadSpinner = markingRead;
+    const showDismissSpinner = dismissing;
 
-  if (theme === "developer") {
+    if (theme === "developer") {
     return (
       <div
         className={`group relative flex items-start gap-3 rounded-2xl border p-4 transition ${
-          dismissing ? "opacity-50" : ""
+          dismissing || markingRead ? "opacity-60" : ""
         } ${
-          notification.unread
+          markingRead ? "border-emerald-500/40 bg-emerald-500/5" : ""
+        } ${
+          !markingRead && notification.unread
             ? "border-purple-500/30 bg-[#1a1a3e]"
             : "border-gray-700/50 bg-[#1a1a3e]/50"
         }`}
@@ -50,14 +56,17 @@ export function NotificationCard({
           href={notification.url || "/developer/dashboard"}
           className="flex-1 min-w-0"
           onClick={() => {
-            if (notification.unread) onMarkRead(id);
+            if (notification.unread && !markingRead) onMarkRead(id);
           }}
         >
           <div className="flex items-start justify-between gap-3">
             <div>
               <div className="flex items-center gap-2">
-                {notification.unread && (
+                {notification.unread && !markingRead && (
                   <span className="h-2 w-2 rounded-full bg-purple-500 animate-pulse" />
+                )}
+                {markingRead && (
+                  <CheckCheck className="h-3.5 w-3.5 text-emerald-400" />
                 )}
                 <h3
                   className={`font-semibold ${
@@ -85,21 +94,38 @@ export function NotificationCard({
           {notification.unread && (
             <button
               type="button"
-              onClick={() => onMarkRead(id)}
-              className="flex h-8 w-8 items-center justify-center rounded-full text-gray-500 opacity-0 transition hover:bg-[#252550] hover:text-purple-400 group-hover:opacity-100"
+              onClick={() => { if (!markingRead) onMarkRead(id); }}
+              disabled={markingRead}
+              className={`flex h-8 w-8 items-center justify-center rounded-full transition ${
+                markingRead
+                  ? "bg-emerald-500/20 text-emerald-400 opacity-100"
+                  : "text-gray-500 opacity-0 hover:bg-[#252550] hover:text-purple-400 group-hover:opacity-100"
+              } disabled:opacity-100`}
               title="Mark as read"
             >
-              <CheckCheck className="h-4 w-4" />
+              {showMarkReadSpinner ? (
+                <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-emerald-400 border-t-transparent" />
+              ) : (
+                <CheckCheck className="h-4 w-4" />
+              )}
             </button>
           )}
           <button
             type="button"
             onClick={() => onDismiss(id)}
-            disabled={dismissing}
-            className="flex h-8 w-8 items-center justify-center rounded-full text-gray-500 opacity-0 transition hover:bg-[#252550] hover:text-red-400 group-hover:opacity-100 disabled:opacity-30"
+            disabled={dismissing || markingRead}
+            className={`flex h-8 w-8 items-center justify-center rounded-full transition ${
+              showDismissSpinner
+                ? "bg-red-500/20 text-red-400 opacity-100"
+                : "text-gray-500 opacity-0 hover:bg-[#252550] hover:text-red-400 group-hover:opacity-100"
+            } disabled:opacity-100`}
             title="Dismiss"
           >
-            <Trash2 className="h-4 w-4" />
+            {showDismissSpinner ? (
+              <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-red-400 border-t-transparent" />
+            ) : (
+              <Trash2 className="h-4 w-4" />
+            )}
           </button>
         </div>
       </div>
@@ -110,9 +136,11 @@ export function NotificationCard({
   return (
     <div
       className={`group relative flex items-start gap-3 rounded-3xl border p-4 shadow-sm transition ${
-        dismissing ? "opacity-50" : ""
+        dismissing || markingRead ? "opacity-60" : ""
       } ${
-        notification.unread
+        markingRead
+          ? "border-emerald-400/30 bg-emerald-50/50"
+          : notification.unread
           ? "border-[#E60012]/20 bg-[#fff8f8]"
           : "border-gray-200 bg-white"
       }`}
@@ -121,14 +149,17 @@ export function NotificationCard({
         href={notification.url || (theme === "supervisor" ? "/supervisor/dashboard" : "/followups")}
         className="flex-1 min-w-0"
         onClick={() => {
-          if (notification.unread) onMarkRead(id);
+          if (notification.unread && !markingRead) onMarkRead(id);
         }}
       >
         <div className="flex items-start justify-between gap-3">
           <div>
             <div className="flex items-center gap-2">
-              {notification.unread && (
+              {notification.unread && !markingRead && (
                 <span className="h-2 w-2 rounded-full bg-[#E60012] animate-pulse" />
+              )}
+              {markingRead && (
+                <CheckCheck className="h-3.5 w-3.5 text-emerald-600" />
               )}
               <h3 className="font-semibold text-gray-900">{notification.title}</h3>
             </div>
@@ -144,21 +175,38 @@ export function NotificationCard({
         {notification.unread && (
           <button
             type="button"
-            onClick={() => onMarkRead(id)}
-            className="flex h-8 w-8 items-center justify-center rounded-full text-gray-400 opacity-0 transition hover:bg-gray-100 hover:text-gray-600 group-hover:opacity-100"
+            onClick={() => { if (!markingRead) onMarkRead(id); }}
+            disabled={markingRead}
+            className={`flex h-8 w-8 items-center justify-center rounded-full transition ${
+              markingRead
+                ? "bg-emerald-100 text-emerald-600 opacity-100"
+                : "text-gray-400 opacity-0 hover:bg-gray-100 hover:text-gray-600 group-hover:opacity-100"
+            } disabled:opacity-100`}
             title="Mark as read"
           >
-            <CheckCheck className="h-4 w-4" />
+            {showMarkReadSpinner ? (
+              <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-emerald-600 border-t-transparent" />
+            ) : (
+              <CheckCheck className="h-4 w-4" />
+            )}
           </button>
         )}
         <button
           type="button"
           onClick={() => onDismiss(id)}
-          disabled={dismissing}
-          className="flex h-8 w-8 items-center justify-center rounded-full text-gray-400 opacity-0 transition hover:bg-red-50 hover:text-red-500 group-hover:opacity-100 disabled:opacity-30"
+          disabled={dismissing || markingRead}
+          className={`flex h-8 w-8 items-center justify-center rounded-full transition ${
+            showDismissSpinner
+              ? "bg-red-100 text-red-500 opacity-100"
+              : "text-gray-400 opacity-0 hover:bg-red-50 hover:text-red-500 group-hover:opacity-100"
+          } disabled:opacity-100`}
           title="Dismiss"
         >
-          <Trash2 className="h-4 w-4" />
+          {showDismissSpinner ? (
+            <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-red-500 border-t-transparent" />
+          ) : (
+            <Trash2 className="h-4 w-4" />
+          )}
         </button>
       </div>
     </div>
