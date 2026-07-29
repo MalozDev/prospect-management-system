@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f8f8f8;
+  --background: #0f0f23;
   --foreground: #111827;
 
   --primary: #e60012;
@@ -11,6 +11,10 @@
   --border: #e5e7eb;
 
   --radius: 0.75rem;
+}
+
+html {
+  overflow-x: hidden;
 }
 
 body {

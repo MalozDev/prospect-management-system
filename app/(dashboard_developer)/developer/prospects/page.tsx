@@ -126,7 +126,7 @@ export default function DeveloperProspectsPage() {
   }, [prospects]);
 
   return (
-    <div className="max-w-full overflow-x-hidden space-y-6">
+    <div className="w-full max-w-full min-w-0 overflow-x-hidden space-y-6">
       {/* Header */}
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
@@ -169,9 +169,9 @@ export default function DeveloperProspectsPage() {
       </div>
 
       {/* Filters */}
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
-        <div className="relative flex-1">
-          <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
+      <div className="w-full max-w-full flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+        <div className="relative w-full max-w-full sm:flex-1">
+          <Search className="absolute left-3 sm:left-4 top-1/2 h-3.5 w-3.5 sm:h-4 sm:w-4 -translate-y-1/2 text-gray-500" />
           <input
             type="text"
             value={search}
@@ -180,33 +180,39 @@ export default function DeveloperProspectsPage() {
             className="h-10 w-full rounded-xl border border-gray-700/50 bg-[#1a1a3e] pl-9 pr-3 text-xs text-white placeholder-gray-500 outline-none transition focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/30 sm:h-11 sm:pl-10 sm:pr-4 sm:text-sm"
           />
         </div>
-        <div className="flex gap-2">
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="flex-1 h-10 rounded-xl border border-gray-700/50 bg-[#1a1a3e] px-3 text-xs text-gray-200 outline-none transition focus:border-purple-500/50 sm:h-11 sm:px-4 sm:text-sm"
-          >
-          <option value="all">All Statuses</option>
-          <option value="NEW">New</option>
-          <option value="CONTACTED">Contacted</option>
-          <option value="FOLLOW UP">Follow Up</option>
-          <option value="VISIT SCHEDULED">Visit Scheduled</option>
-          <option value="SCHEDULEVISIT">Schedule Visit</option>
-          <option value="ONSITE">Onsite</option>
-          <option value="POSTPONED">Postponed</option>
-          <option value="SOLD">Sold</option>
-          <option value="LOST">Lost</option>
-        </select>
-          <select
-            value={dseFilter}
-            onChange={(e) => setDseFilter(e.target.value)}
-            className="flex-1 h-10 rounded-xl border border-gray-700/50 bg-[#1a1a3e] px-3 text-xs text-gray-200 outline-none transition focus:border-purple-500/50 sm:h-11 sm:px-4 sm:text-sm"
-          >
-            <option value="all">All DSEs</option>
-            {dseNames.map((name) => (
-              <option key={name} value={name}>{name}</option>
-            ))}
+        <div className="w-full max-w-full flex flex-col gap-2 sm:flex-row sm:gap-3">
+          <div className="relative w-full sm:w-auto sm:flex-1">
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="appearance-none min-w-0 w-full h-10 rounded-xl border border-gray-700/50 bg-[#1a1a3e] px-3 text-xs text-gray-200 outline-none transition focus:border-purple-500/50 sm:h-11 sm:px-4 sm:text-sm"
+            >
+            <option value="all">All Statuses</option>
+            <option value="NEW">New</option>
+            <option value="CONTACTED">Contacted</option>
+            <option value="FOLLOW UP">Follow Up</option>
+            <option value="VISIT SCHEDULED">Visit Scheduled</option>
+            <option value="SCHEDULEVISIT">Schedule Visit</option>
+            <option value="ONSITE">Onsite</option>
+            <option value="POSTPONED">Postponed</option>
+            <option value="SOLD">Sold</option>
+            <option value="LOST">Lost</option>
           </select>
+            <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-500 sm:right-3 sm:h-4 sm:w-4" />
+          </div>
+          <div className="relative w-full sm:w-auto sm:flex-1">
+            <select
+              value={dseFilter}
+              onChange={(e) => setDseFilter(e.target.value)}
+              className="appearance-none min-w-0 w-full h-10 rounded-xl border border-gray-700/50 bg-[#1a1a3e] px-3 text-xs text-gray-200 outline-none transition focus:border-purple-500/50 sm:h-11 sm:px-4 sm:text-sm"
+            >
+              <option value="all">All DSEs</option>
+              {dseNames.map((name) => (
+                <option key={name} value={name}>{name}</option>
+              ))}
+            </select>
+            <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-500 sm:right-3 sm:h-4 sm:w-4" />
+          </div>
         </div>
       </div>
 
@@ -250,7 +256,7 @@ export default function DeveloperProspectsPage() {
                             <span className="text-sm font-medium text-white truncate">
                               {prospect.name}
                             </span>
-                            <StatusBadge status={prospect.status} />
+                            <StatusBadge status={prospect.status} dark />
                           </div>
                           <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px] text-gray-400">
                             <span className="inline-flex items-center gap-1">

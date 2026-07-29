@@ -217,45 +217,44 @@ export default function DeveloperFollowupsPage() {
   };
 
   return (
-    <div className="max-w-full overflow-x-hidden space-y-6">
-      {/* Page Header */}
+    <div className="w-full max-w-full min-w-0 overflow-x-hidden space-y-6">
+      {/* ── Page Header ── */}
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-          <PhoneCall className="h-4 w-4 shrink-0 text-purple-400 sm:h-5 sm:w-5" />
-          <div className="min-w-0">
-            <h2 className="text-lg font-bold text-white truncate sm:text-xl">Follow-ups Overview</h2>
-            <p className="mt-0.5 text-xs text-gray-400 truncate sm:text-sm">
-              All follow-ups across every DSE — send reminders, WhatsApp, and track acknowledgment.
+        <div className="flex items-center gap-3">
+          <PhoneCall className="h-5 w-5 text-purple-400 shrink-0" />
+          <div>
+            <h2 className="text-xl font-bold text-white">All Follow-ups</h2>
+            <p className="mt-1 text-sm text-gray-400">
+              Every follow-up across all DSEs — send reminders, WhatsApp, and track acknowledgment.
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-          {/* Send Today's Batch button */}
+        <div className="flex items-center gap-2 shrink-0">
           {todayCount > 0 && (
             <button
               type="button"
               onClick={() => setShowBatchModal(true)}
-              className="flex items-center gap-1 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-2 py-1.5 text-[10px] font-medium text-emerald-300 transition hover:bg-emerald-500/20 sm:px-3 sm:py-2 sm:text-xs sm:gap-2"
+              className="flex items-center gap-1.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-xs font-medium text-emerald-300 transition hover:bg-emerald-500/20"
             >
-              <Sun className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
-              <span className="hidden sm:inline">Send Today&apos;s Batch</span>
-              <span className="sm:hidden">Batch</span>
+              <Sun className="h-3.5 w-3.5" />
+              Batch
+              <span className="hidden sm:inline">Today</span>
               <span>({todayCount})</span>
             </button>
           )}
           <button
             type="button"
             onClick={() => refetchFollowUps()}
-            className="flex items-center gap-1 rounded-xl border border-gray-700 bg-[#252550] px-2 py-1.5 text-[10px] text-gray-300 transition hover:bg-[#2f2f60] sm:px-3 sm:py-2 sm:text-xs"
+            className="flex items-center gap-2 rounded-xl border border-gray-700 bg-[#252550] px-3 py-2 text-xs text-gray-300 transition hover:bg-[#2f2f60]"
           >
-            <RefreshCw className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
-            <span className="hidden sm:inline">Refresh</span>
+            <RefreshCw className="h-3.5 w-3.5" />
+            Refresh
           </button>
         </div>
       </div>
 
-      {/* Stats bar */}
-      <div className="w-full max-w-full grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6 sm:gap-3">
+      {/* ── Stats ── */}
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6 sm:gap-3">
         <StatBox icon={PhoneCall} label="Total" value={String(stats.total)} color="purple" />
         <StatBox icon={Clock} label="Today" value={String(stats.today)} color="orange" />
         <StatBox icon={AlertTriangle} label="Overdue" value={String(stats.overdue)} color="red" />
@@ -264,44 +263,50 @@ export default function DeveloperFollowupsPage() {
         <StatBox icon={UserCheck} label="Unseen" value={String(stats.unseen)} color="pink" />
       </div>
 
-      {/* Filters */}
-      <div className="w-full max-w-full flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
-        <div className="relative w-full max-w-full sm:flex-1">
-          <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-500 sm:left-4 sm:h-4 sm:w-4" />
+      {/* ── Filters ── */}
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 sm:left-4 top-1/2 h-3.5 w-3.5 sm:h-4 sm:w-4 -translate-y-1/2 text-gray-500" />
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search DSE..."
-            className="h-10 w-full rounded-xl border border-gray-700/50 bg-[#1a1a3e] pl-9 pr-3 text-xs text-white placeholder-gray-500 outline-none transition focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/30 sm:h-11 sm:pl-10 sm:pr-4 sm:text-sm"
+            className="h-10 sm:h-11 w-full rounded-xl border border-gray-700/50 bg-[#1a1a3e] pl-9 sm:pl-10 pr-3 sm:pr-4 text-xs sm:text-sm text-white placeholder-gray-500 outline-none transition focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/30"
           />
         </div>
-        <div className="w-full max-w-full flex flex-col gap-2 sm:flex-row sm:gap-3">
-          <select
-            value={selectedDse}
-            onChange={(e) => setSelectedDse(e.target.value)}
-            className="w-full sm:w-auto sm:flex-1 h-10 rounded-xl border border-gray-700/50 bg-[#1a1a3e] px-3 text-xs text-gray-200 outline-none transition focus:border-purple-500/50 sm:h-11 sm:px-4 sm:text-sm"
-          >
-            <option value="all">All DSEs</option>
-            {dseNames.map((name) => (
-              <option key={name} value={name}>{name}</option>
-            ))}
-          </select>
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="w-full sm:w-auto sm:flex-1 h-10 rounded-xl border border-gray-700/50 bg-[#1a1a3e] px-3 text-xs text-gray-200 outline-none transition focus:border-purple-500/50 sm:h-11 sm:px-4 sm:text-sm"
-          >
-            <option value="all">All</option>
-            <option value="TODAY">Today</option>
-            <option value="OVERDUE">Overdue</option>
-            <option value="UPCOMING">Upcoming</option>
-            <option value="COMPLETED">Done</option>
-          </select>
+        <div className="flex flex-col gap-2 sm:flex-row sm:gap-3">
+          <div className="relative w-full sm:flex-1">
+            <select
+              value={selectedDse}
+              onChange={(e) => setSelectedDse(e.target.value)}
+              className="appearance-none min-w-0 w-full h-10 sm:h-11 rounded-xl border border-gray-700/50 bg-[#1a1a3e] px-3 sm:px-4 text-xs sm:text-sm text-gray-200 outline-none transition focus:border-purple-500/50"
+            >
+              <option value="all">All DSEs</option>
+              {dseNames.map((name) => (
+                <option key={name} value={name}>{name}</option>
+              ))}
+            </select>
+            <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-500 sm:right-3 sm:h-4 sm:w-4" />
+          </div>
+          <div className="relative w-full sm:flex-1">
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="appearance-none min-w-0 w-full h-10 sm:h-11 rounded-xl border border-gray-700/50 bg-[#1a1a3e] px-3 sm:px-4 text-xs sm:text-sm text-gray-200 outline-none transition focus:border-purple-500/50"
+            >
+              <option value="all">All</option>
+              <option value="TODAY">Today</option>
+              <option value="OVERDUE">Overdue</option>
+              <option value="UPCOMING">Upcoming</option>
+              <option value="COMPLETED">Done</option>
+            </select>
+            <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-500 sm:right-3 sm:h-4 sm:w-4" />
+          </div>
         </div>
       </div>
 
-      {/* Loading */}
+      {/* ── Loading / Content ── */}
       {loadingFollowUps || loadingUsers ? (
         <div className="flex items-center justify-center py-20">
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-gray-600 border-t-purple-500" />
@@ -317,59 +322,61 @@ export default function DeveloperFollowupsPage() {
                 key={dseName}
                 className="rounded-2xl border border-gray-700/50 bg-[#1a1a3e] overflow-hidden"
               >
-                {/* DSE Header (collapsible) */}
+                {/* ── DSE Header ── */}
                 <button
                   type="button"
                   onClick={() => toggleDse(dseName)}
-                  className="flex w-full items-center gap-2 p-3 text-left transition hover:bg-[#252550]/50 sm:gap-4 sm:p-4"
+                  className="flex w-full items-center gap-2 p-3 text-left transition hover:bg-[#252550]/30 sm:gap-4 sm:p-4"
                 >
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-purple-500/20 text-xs font-bold text-purple-400 sm:h-10 sm:w-10 sm:text-sm">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-purple-500/20 text-xs font-bold text-purple-400">
                     {dseName.charAt(0)}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-1.5 sm:gap-2">
-                      <span className="truncate text-sm font-semibold text-white">{dseName}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium text-white truncate">
+                        {dseName}
+                      </span>
                       {counts.unseen > 0 && (
-                        <span className="shrink-0 rounded-full bg-pink-500/20 px-1.5 py-0.5 text-[9px] font-medium text-pink-400 sm:px-2 sm:text-[10px]">
+                        <span className="shrink-0 rounded-full bg-pink-500/20 px-2 py-0.5 text-[10px] font-medium text-pink-400">
                           {counts.unseen}u
                         </span>
                       )}
                     </div>
-                    <div className="mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[10px] text-gray-400 sm:gap-x-2 sm:text-[11px]">
-                      <span className="inline-flex items-center gap-0.5 sm:gap-1">
-                        <Shield className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
-                        <span className="truncate max-w-[60px] sm:max-w-none">{supervisor}</span>
+                    <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px] text-gray-400">
+                      <span className="inline-flex items-center gap-1">
+                        <Shield className="h-3 w-3" />
+                        Sup: {supervisor}
                       </span>
                       {dseInfo?.cugSuffix && (
-                        <span className="hidden sm:inline text-gray-600">·</span>
+                        <span className="inline-flex items-center gap-1 hidden sm:inline-flex">
+                          <PhoneCall className="h-3 w-3" />
+                          CUG: {dseInfo.cugSuffix}
+                        </span>
                       )}
-                      {dseInfo?.cugSuffix && (
-                        <span className="hidden sm:inline">CUG: {dseInfo.cugSuffix}</span>
-                      )}
-                      <span className="text-gray-600 hidden sm:inline">·</span>
+                      <span className="hidden sm:inline text-gray-600">·</span>
                       <span className="hidden sm:inline">{counts.total} follow-ups</span>
                     </div>
                   </div>
-                  <div className="flex shrink-0 items-center gap-1 sm:gap-3">
+                  <div className="flex shrink-0 items-center gap-2">
                     {counts.today > 0 && (
-                      <span className="rounded-full bg-orange-500/20 px-1.5 py-0.5 text-[9px] font-medium text-orange-400 sm:px-2 sm:text-[10px]">
+                      <span className="rounded-full bg-orange-500/20 px-2.5 py-0.5 text-[10px] font-medium text-orange-400">
                         {counts.today}d
                       </span>
                     )}
                     {counts.overdue > 0 && (
-                      <span className="rounded-full bg-red-500/20 px-1.5 py-0.5 text-[9px] font-medium text-red-400 sm:px-2 sm:text-[10px]">
+                      <span className="rounded-full bg-red-500/20 px-2.5 py-0.5 text-[10px] font-medium text-red-400">
                         {counts.overdue}o
                       </span>
                     )}
                     {expandedDse[dseName] ? (
-                      <ChevronDown className="h-3.5 w-3.5 text-gray-400 sm:h-4 sm:w-4" />
+                      <ChevronDown className="h-4 w-4 text-gray-400" />
                     ) : (
-                      <ChevronRight className="h-3.5 w-3.5 text-gray-400 sm:h-4 sm:w-4" />
+                      <ChevronRight className="h-4 w-4 text-gray-400" />
                     )}
                   </div>
                 </button>
 
-                {/* Expanded follow-ups list */}
+                {/* ── Expanded follow-ups ── */}
                 {expandedDse[dseName] && (
                   <div className="border-t border-gray-700/50 px-4 pb-4 pt-3">
                     {getFilteredFollowupsForDse(dseName).length > 0 ? (
@@ -427,7 +434,6 @@ export default function DeveloperFollowupsPage() {
 
                                 {/* Action buttons */}
                                 <div className="flex flex-row items-center gap-1.5 sm:flex-col sm:items-end">
-                                  {/* Send Reminder button */}
                                   <button
                                     type="button"
                                     onClick={() => handleSendReminder(fuId)}
@@ -446,7 +452,6 @@ export default function DeveloperFollowupsPage() {
                                     )}
                                   </button>
 
-                                  {/* WhatsApp button */}
                                   {dseInfo?.cugSuffix && (
                                     <button
                                       type="button"
@@ -510,7 +515,6 @@ export default function DeveloperFollowupsPage() {
         <div className="fixed inset-0 z-[99999] flex items-start justify-center overflow-y-auto pt-4 pb-8 sm:pt-10">
           <div className="fixed inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setShowBatchModal(false)} />
           <div className="relative z-10 mx-auto w-[calc(100%-1rem)] max-w-2xl rounded-2xl border border-gray-700/50 bg-[#1a1a3e] shadow-2xl shadow-emerald-500/10 sm:w-[calc(100%-2rem)]">
-            {/* Header */}
             <div className="flex items-center justify-between border-b border-gray-700/50 px-5 py-4">
               <div className="flex items-center gap-2">
                 <Sun className="h-5 w-5 text-emerald-400" />
@@ -529,15 +533,10 @@ export default function DeveloperFollowupsPage() {
                 <X className="h-4 w-4" />
               </button>
             </div>
-
-            {/* Batch list */}
             <div className="max-h-[65vh] overflow-y-auto p-5 space-y-4">
               {batchData.length > 0 ? (
                 batchData.map(({ dseName, count, message, waUrl, items }) => (
-                  <div
-                    key={dseName}
-                    className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4"
-                  >
+                  <div key={dseName} className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4">
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-3">
                         <div className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-500/20 text-xs font-bold text-emerald-400">
@@ -545,9 +544,7 @@ export default function DeveloperFollowupsPage() {
                         </div>
                         <div>
                           <p className="text-sm font-semibold text-white">{dseName}</p>
-                          <p className="text-xs text-gray-400">
-                            {count} follow-up{count !== 1 ? "s" : ""} due today
-                          </p>
+                          <p className="text-xs text-gray-400">{count} follow-up{count !== 1 ? "s" : ""} due today</p>
                         </div>
                       </div>
                       {waUrl ? (
@@ -555,7 +552,6 @@ export default function DeveloperFollowupsPage() {
                           type="button"
                           onClick={() => {
                             window.open(waUrl, "_blank", "noopener,noreferrer");
-                            console.log(`[BATCH] Opened WhatsApp for ${dseName} (CUG: ${dseInfoMap[dseName]?.cugSuffix})`);
                           }}
                           className="flex items-center gap-1.5 rounded-xl bg-green-600 px-3 py-2 text-xs font-medium text-white transition hover:bg-green-700"
                         >
@@ -563,55 +559,45 @@ export default function DeveloperFollowupsPage() {
                           Send on WhatsApp
                         </button>
                       ) : (
-                        <span className="text-[10px] text-gray-500">No CUG on file</span>
+                        <span className="text-[10px] text-gray-500">No CUG</span>
                       )}
                     </div>
-
-                    {/* Preview of prospects in this batch */}
                     <div className="space-y-1">
                       {items.map((fu) => (
                         <div key={String(fu._id)} className="flex items-center gap-2 rounded-lg bg-black/20 px-2.5 py-1.5">
-                          <span className="h-1.5 w-1.5 rounded-full bg-orange-400" />
-                          <span className="text-xs text-gray-300">{fu.customerName}</span>
-                          <span className="text-[10px] text-gray-500">Due: {fu.expectedPurchaseDate}</span>
+                          <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-orange-400" />
+                          <span className="text-xs text-gray-300 truncate">{fu.customerName}</span>
+                          <span className="text-[10px] text-gray-500 shrink-0">Due: {fu.expectedPurchaseDate}</span>
                         </div>
                       ))}
                     </div>
-
-                    {/* Message preview (collapsed) */}
                     <details className="mt-2">
-                      <summary className="cursor-pointer text-[10px] text-gray-500 hover:text-gray-300">
-        Preview message
-      </summary>
-                        <pre className="mt-1 rounded-lg bg-black/30 p-2 text-[10px] text-gray-400 font-mono whitespace-pre-wrap">
-                          {message}
-                        </pre>
-                      </details>
-                    </div>
-                  ))
-                ) : (
-                  <div className="flex flex-col items-center py-10 text-center">
-                    <Sun className="h-12 w-12 text-gray-600" />
-                    <p className="mt-3 text-sm text-gray-500">No follow-ups due today.</p>
+                      <summary className="cursor-pointer text-[10px] text-gray-500 hover:text-gray-300">Preview message</summary>
+                      <pre className="mt-1 rounded-lg bg-black/30 p-2 text-[10px] text-gray-400 font-mono whitespace-pre-wrap">
+                        {message}
+                      </pre>
+                    </details>
                   </div>
-                )}
+                ))
+              ) : (
+                <div className="flex flex-col items-center py-10 text-center">
+                  <Sun className="h-12 w-12 text-gray-600" />
+                  <p className="mt-3 text-sm text-gray-500">No follow-ups due today.</p>
+                </div>
+              )}
             </div>
-
-            {/* Footer with send-all button */}
             <div className="border-t border-gray-700/50 px-5 py-3">
               <p className="text-[10px] text-gray-500 mb-2">
-                Tip: Click each DSE&apos;s WhatsApp button to open their chat with the pre-filled message. Press Send in WhatsApp to deliver.
+                Tip: Click each DSE&apos;s WhatsApp button to open their chat with the pre-filled message.
               </p>
               <div className="flex justify-end">
                 <button
                   type="button"
                   onClick={() => {
-                    // Open all WhatsApp links in sequence (browser may block some)
                     batchData.forEach(({ waUrl, dseName }, idx) => {
                       if (waUrl) {
                         setTimeout(() => {
                           window.open(waUrl, "_blank", "noopener,noreferrer");
-                          console.log(`[BATCH] #${idx + 1} Opening WhatsApp for ${dseName}`);
                         }, idx * 500);
                       }
                     });
@@ -627,11 +613,11 @@ export default function DeveloperFollowupsPage() {
         </div>
       )}
 
-      {/* Console summary */}
-      <div className="w-full max-w-full rounded-2xl border border-gray-700/50 bg-[#1a1a3e] p-4">
+      {/* ── Console ── */}
+      <div className="rounded-2xl border border-gray-700/50 bg-[#1a1a3e] p-3 sm:p-4">
         <div className="flex items-center gap-2 mb-2">
-          <Terminal className="h-4 w-4 text-gray-500" />
-          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Debug Console</p>
+          <Terminal className="h-3.5 w-3.5 text-gray-500 sm:h-4 sm:w-4" />
+          <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider sm:text-xs">Debug Console</p>
         </div>
         <pre className="text-[9px] sm:text-[10px] text-gray-500 font-mono leading-relaxed whitespace-pre-wrap break-all overflow-x-auto max-w-full">
 {`[FOLLOWUPS] Total: ${stats.total} | Today: ${stats.today} | Overdue: ${stats.overdue} | Unseen: ${stats.unseen}
@@ -666,7 +652,7 @@ function StatBox({
   const c = colorMap[color];
 
   return (
-    <div className={`rounded-xl border border-gray-700/50 ${c.bg} p-3`}>
+    <div className={`w-full rounded-xl border border-gray-700/50 ${c.bg} p-3`}>
       <div className="flex items-center gap-2">
         <Icon className={`h-3.5 w-3.5 ${c.icon}`} />
         <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">{label}</p>
