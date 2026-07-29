@@ -321,50 +321,50 @@ export default function DeveloperFollowupsPage() {
                 <button
                   type="button"
                   onClick={() => toggleDse(dseName)}
-                  className="flex w-full items-center gap-4 p-4 text-left transition hover:bg-[#252550]/50"
+                  className="flex w-full items-center gap-2 p-3 text-left transition hover:bg-[#252550]/50 sm:gap-4 sm:p-4"
                 >
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-purple-500/20 text-sm font-bold text-purple-400">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-purple-500/20 text-xs font-bold text-purple-400 sm:h-10 sm:w-10 sm:text-sm">
                     {dseName.charAt(0)}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-semibold text-white">{dseName}</span>
+                    <div className="flex items-center gap-1.5 sm:gap-2">
+                      <span className="truncate text-sm font-semibold text-white">{dseName}</span>
                       {counts.unseen > 0 && (
-                        <span className="rounded-full bg-pink-500/20 px-2 py-0.5 text-[10px] font-medium text-pink-400">
-                          {counts.unseen} unseen
+                        <span className="shrink-0 rounded-full bg-pink-500/20 px-1.5 py-0.5 text-[9px] font-medium text-pink-400 sm:px-2 sm:text-[10px]">
+                          {counts.unseen}u
                         </span>
                       )}
                     </div>
-                    <div className="mt-0.5 flex flex-wrap items-center gap-2 text-[11px] text-gray-400">
-                      <span className="inline-flex items-center gap-1">
-                        <Shield className="h-3 w-3" />
-                        {supervisor}
+                    <div className="mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[10px] text-gray-400 sm:gap-x-2 sm:text-[11px]">
+                      <span className="inline-flex items-center gap-0.5 sm:gap-1">
+                        <Shield className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+                        <span className="truncate max-w-[60px] sm:max-w-none">{supervisor}</span>
                       </span>
                       {dseInfo?.cugSuffix && (
-                        <>
-                          <span className="text-gray-600">·</span>
-                          <span>CUG: {dseInfo.cugSuffix}</span>
-                        </>
+                        <span className="hidden sm:inline text-gray-600">·</span>
                       )}
-                      <span className="text-gray-600">·</span>
-                      <span>{counts.total} follow-ups</span>
+                      {dseInfo?.cugSuffix && (
+                        <span className="hidden sm:inline">CUG: {dseInfo.cugSuffix}</span>
+                      )}
+                      <span className="text-gray-600 hidden sm:inline">·</span>
+                      <span className="hidden sm:inline">{counts.total} follow-ups</span>
                     </div>
                   </div>
-                  <div className="flex shrink-0 items-center gap-3">
+                  <div className="flex shrink-0 items-center gap-1 sm:gap-3">
                     {counts.today > 0 && (
-                      <span className="rounded-full bg-orange-500/20 px-2 py-0.5 text-[10px] font-medium text-orange-400">
-                        {counts.today} today
+                      <span className="rounded-full bg-orange-500/20 px-1.5 py-0.5 text-[9px] font-medium text-orange-400 sm:px-2 sm:text-[10px]">
+                        {counts.today}d
                       </span>
                     )}
                     {counts.overdue > 0 && (
-                      <span className="rounded-full bg-red-500/20 px-2 py-0.5 text-[10px] font-medium text-red-400">
-                        {counts.overdue} overdue
+                      <span className="rounded-full bg-red-500/20 px-1.5 py-0.5 text-[9px] font-medium text-red-400 sm:px-2 sm:text-[10px]">
+                        {counts.overdue}o
                       </span>
                     )}
                     {expandedDse[dseName] ? (
-                      <ChevronDown className="h-4 w-4 text-gray-400" />
+                      <ChevronDown className="h-3.5 w-3.5 text-gray-400 sm:h-4 sm:w-4" />
                     ) : (
-                      <ChevronRight className="h-4 w-4 text-gray-400" />
+                      <ChevronRight className="h-3.5 w-3.5 text-gray-400 sm:h-4 sm:w-4" />
                     )}
                   </div>
                 </button>
@@ -400,7 +400,7 @@ export default function DeveloperFollowupsPage() {
                                     <h4 className="text-sm font-semibold text-white truncate">
                                       {prospectName}
                                     </h4>
-                                    <StatusBadge status={fu.status} />
+                                    <StatusBadge status={fu.status} dark />
                                   </div>
                                   <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-gray-400">
                                     <span className="inline-flex items-center gap-1">

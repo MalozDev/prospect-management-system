@@ -144,21 +144,21 @@ export default function DeveloperLayout({
 
         {/* Main content */}
         <main className="flex-1 pb-24 md:pb-8">
-          <div className="overflow-x-auto border-b border-gray-800 bg-[#1a1a3e]/80 px-4 py-4 backdrop-blur sm:px-6">
-            <div className="flex items-center justify-between min-w-0">
-              <div className="flex items-center gap-3">
-                <Shield className="h-5 w-5 text-purple-400" />
-                <h1 className="text-lg font-semibold text-white">Developer Console</h1>
+          <div className="border-b border-gray-800 bg-[#1a1a3e]/80 px-4 py-4 backdrop-blur sm:px-6">
+            <div className="flex items-center justify-between gap-3 min-w-0">
+              <div className="flex items-center gap-3 min-w-0 flex-1">
+                <Shield className="h-5 w-5 shrink-0 text-purple-400" />
+                <h1 className="truncate text-lg font-semibold text-white">Developer Console</h1>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex shrink-0 items-center gap-2">
                 <NotificationBadge href="/developer/notifications" />
                 <button
                   type="button"
                   onClick={handleLogout}
-                  className="flex items-center gap-2 rounded-xl border border-gray-700 bg-[#252550] px-4 py-2 text-sm text-red-400 transition hover:bg-[#2f2f60] md:hidden"
+                  className="flex shrink-0 items-center gap-2 rounded-xl border border-gray-700 bg-[#252550] px-4 py-2 text-sm text-red-400 transition hover:bg-[#2f2f60] md:hidden"
                 >
                   <LogOut className="h-4 w-4" />
-                  Logout
+                  <span className="hidden sm:inline">Logout</span>
                 </button>
               </div>
             </div>

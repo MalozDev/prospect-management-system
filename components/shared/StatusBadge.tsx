@@ -3,6 +3,7 @@ import { cn } from "@/lib/utils";
 interface StatusBadgeProps {
   status: string;
   className?: string;
+  dark?: boolean;
 }
 
 const toneMap: Record<string, string> = {
@@ -21,9 +22,26 @@ const toneMap: Record<string, string> = {
   OVERDUE: "bg-[#fef3c7] text-[#92400e]",
 };
 
-export function StatusBadge({ status, className }: StatusBadgeProps) {
+const darkToneMap: Record<string, string> = {
+  NEW: "bg-red-500/15 text-red-300",
+  CONTACTED: "bg-blue-500/15 text-blue-300",
+  POSTPONED: "bg-amber-500/15 text-amber-300",
+  SCHEDULEVISIT: "bg-sky-500/15 text-sky-300",
+  "FOLLOW UP": "bg-amber-500/15 text-amber-300",
+  "VISIT SCHEDULED": "bg-sky-500/15 text-sky-300",
+  ONSITE: "bg-lime-500/15 text-lime-300",
+  SOLD: "bg-emerald-500/15 text-emerald-300",
+  LOST: "bg-gray-500/20 text-gray-400",
+  TODAY: "bg-red-500/15 text-red-300",
+  UPCOMING: "bg-sky-500/15 text-sky-300",
+  COMPLETED: "bg-emerald-500/15 text-emerald-300",
+  OVERDUE: "bg-amber-500/15 text-amber-300",
+};
+
+export function StatusBadge({ status, className, dark }: StatusBadgeProps) {
+  const map = dark ? darkToneMap : toneMap;
   return (
-    <span className={cn("inline-flex rounded-full px-3 py-1 text-xs font-semibold", toneMap[status] ?? "bg-gray-100 text-gray-700", className)}>
+    <span className={cn("inline-flex rounded-full px-3 py-1 text-xs font-semibold", map[status] ?? (dark ? "bg-gray-500/20 text-gray-400" : "bg-gray-100 text-gray-700"), className)}>
       {status}
     </span>
   );

@@ -3,13 +3,13 @@
  * suitable for WhatsApp links.
  *
  * The phone prefix is configured via the NEXT_PUBLIC_CUG_PHONE_PREFIX
- * environment variable. For Airtel Zambia this would typically be "26096"
- * so CUG "1234" becomes "+260961234".
+ * environment variable. In Zambia for Airtel/MTN this would be "26097898"
+ * so CUG "1234" becomes "+260978981234".
  *
- * Falls back to "26096" if the env var is not set.
+ * Falls back to "26097898" if the env var is not set.
  */
 
-const DEFAULT_PREFIX = "26096";
+const DEFAULT_PREFIX = "26097898";
 
 export function getCugPhonePrefix(): string {
   return process.env.NEXT_PUBLIC_CUG_PHONE_PREFIX || DEFAULT_PREFIX;
@@ -17,7 +17,7 @@ export function getCugPhonePrefix(): string {
 
 /**
  * Build a full phone number from a CUG suffix.
- * Example: CUG "1234" → "+260961234" (with default prefix "26096")
+ * Example: CUG "1234" → "+260978981234" (with default prefix "26097898")
  */
 export function buildPhoneFromCug(cugSuffix: string): string {
   const prefix = getCugPhonePrefix();
