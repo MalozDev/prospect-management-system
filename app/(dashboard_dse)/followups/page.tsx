@@ -194,6 +194,9 @@ export default function FollowUpsPage() {
     setFeedbackItem(item);
     setShowFeedback(true);
     setFeedbackCollapsed(false);
+
+    // Scroll to top so the DSE sees the feedback popup
+    setTimeout(() => window.scrollTo({ top: 0, behavior: "smooth" }), 50);
   }, [pendingContactId, feedbackItem]);
 
   const handleFeedbackSubmit = useCallback(async () => {

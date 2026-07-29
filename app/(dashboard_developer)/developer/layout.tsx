@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
   LayoutDashboard,
@@ -13,6 +13,7 @@ import {
   ClipboardList,
   ShoppingCart,
   PhoneCall,
+  User,
 } from "lucide-react";
 
 import { clearToken, getStoredApiUser } from "@/lib/api-client";
@@ -24,7 +25,6 @@ const navItems = [
   { href: "/developer/prospects", label: "Prospects", icon: ClipboardList },
   { href: "/developer/sales", label: "Sales", icon: ShoppingCart },
   { href: "/developer/followups", label: "Follow Ups", icon: PhoneCall },
-  { href: "/developer/settings", label: "Settings", icon: Settings },
 ];
 
 export default function DeveloperLayout({
@@ -33,6 +33,7 @@ export default function DeveloperLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [apiUser, setApiUser] = useState<ReturnType<typeof getStoredApiUser>>(null);
   const [showLogout, setShowLogout] = useState(false);
 
@@ -46,6 +47,11 @@ export default function DeveloperLayout({
   const handleLogout = () => {
     clearToken();
     window.location.href = "/login";
+  };
+
+  const handleProfileClick = () => {
+    setShowLogout(false);
+    router.push("/developer/settings");
   };
 
   return (
@@ -86,6 +92,15 @@ export default function DeveloperLayout({
 
             {showLogout && (
               <div className="absolute left-0 right-0 top-full z-10 mt-2 rounded-xl border border-gray-700 bg-[#1a1a3e] py-2 shadow-xl">
+                <button
+                  type="button"
+                  onClick={handleProfileClick}
+                  className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:bg-[#252550] transition-colors"
+                >
+                  <User className="h-4 w-4" />
+                  My Profile
+                </button>
+                <div className="mx-3 my-1 border-t border-gray-700/50" />
                 <button
                   type="button"
                   onClick={handleLogout}
@@ -130,8 +145,8 @@ export default function DeveloperLayout({
 
         {/* Main content */}
         <main className="flex-1 pb-24 md:pb-8">
-          <div className="border-b border-gray-800 bg-[#1a1a3e]/80 px-4 py-4 backdrop-blur sm:px-6">
-            <div className="flex items-center justify-between">
+          <div className="overflow-x-auto border-b border-gray-800 bg-[#1a1a3e]/80 px-4 py-4 backdrop-blur sm:px-6">
+            <div className="flex items-center justify-between min-w-0">
               <div className="flex items-center gap-3">
                 <Shield className="h-5 w-5 text-purple-400" />
                 <h1 className="text-lg font-semibold text-white">Developer Console</h1>
@@ -156,7 +171,7 @@ export default function DeveloperLayout({
       {/* Mobile bottom nav */}
       <nav className="fixed bottom-0 left-0 right-0 border-t border-gray-800 bg-[#1a1a3e]/95 backdrop-blur md:hidden">
         <div className="mx-auto flex max-w-5xl items-center justify-around px-2 py-2">
-          {navItems.map(({ href, label, icon: Icon }) => {
+          {[...navItems, { href: "/developer/settings", label: "Settings", icon: Settings }].map(({ href, label, icon: Icon }) => {
             const isActive = pathname.startsWith(href);
             return (
               <Link

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import {
   Search,
   Shield,
@@ -10,7 +10,10 @@ import {
   XCircle,
   Users,
   UserPlus,
+  ArrowUpRight,
 } from "lucide-react";
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 
 import { useApiData } from "@/lib/use-api-data";
 import { apiFetch } from "@/lib/api-client";
@@ -20,6 +23,15 @@ export default function DeveloperUsersPage() {
   const { data, loading, refetch } = useApiData<{ users: IUser[] }>("/api/users", { users: [] });
   const [search, setSearch] = useState("");
   const [resettingCug, setResettingCug] = useState<string | null>(null);
+  const searchParams = useSearchParams();
+
+  // Pre-filter by ?role= query param (for stat card clicks)
+  useEffect(() => {
+    const role = searchParams.get("role");
+    if (role) {
+      setSearch(role);
+    }
+  }, [searchParams]);
   const [newPassword, setNewPassword] = useState("");
   const [showResetModal, setShowResetModal] = useState(false);
   const [resetError, setResetError] = useState("");
@@ -86,33 +98,51 @@ export default function DeveloperUsersPage() {
         </p>
       </div>
 
-      {/* Stats summary */}
+      {/* Stats summary — clickable cards */}
       <div className="grid gap-3 sm:grid-cols-3">
-        <div className="rounded-xl border border-gray-700/50 bg-[#1a1a3e] p-4">
+        <Link
+          href="/developer/users"
+          className="group block rounded-xl border border-gray-700/50 bg-[#1a1a3e] p-4 transition hover:border-purple-500/50 hover:bg-[#252550]"
+        >
           <div className="flex items-center gap-2 text-purple-400">
             <Users className="h-4 w-4" />
             <p className="text-xs font-semibold uppercase tracking-wider">Total Users</p>
           </div>
-          <p className="mt-2 text-2xl font-bold text-white">{data.users.length}</p>
-        </div>
-        <div className="rounded-xl border border-gray-700/50 bg-[#1a1a3e] p-4">
+          <div className="mt-2 flex items-center justify-between">
+            <p className="text-2xl font-bold text-white">{data.users.length}</p>
+            <ArrowUpRight className="h-4 w-4 text-purple-400 opacity-0 transition group-hover:opacity-100" />
+          </div>
+        </Link>
+        <Link
+          href="/developer/users?role=DSE"
+          className="group block rounded-xl border border-gray-700/50 bg-[#1a1a3e] p-4 transition hover:border-blue-500/50 hover:bg-[#252550]"
+        >
           <div className="flex items-center gap-2 text-blue-400">
             <UserPlus className="h-4 w-4" />
             <p className="text-xs font-semibold uppercase tracking-wider">DSE</p>
           </div>
-          <p className="mt-2 text-2xl font-bold text-white">
-            {data.users.filter((u) => u.role === "DSE").length}
-          </p>
-        </div>
-        <div className="rounded-xl border border-gray-700/50 bg-[#1a1a3e] p-4">
+          <div className="mt-2 flex items-center justify-between">
+            <p className="text-2xl font-bold text-white">
+              {data.users.filter((u) => u.role === "DSE").length}
+            </p>
+            <ArrowUpRight className="h-4 w-4 text-blue-400 opacity-0 transition group-hover:opacity-100" />
+          </div>
+        </Link>
+        <Link
+          href="/developer/users?role=SUPERVISOR"
+          className="group block rounded-xl border border-gray-700/50 bg-[#1a1a3e] p-4 transition hover:border-emerald-500/50 hover:bg-[#252550]"
+        >
           <div className="flex items-center gap-2 text-emerald-400">
             <Shield className="h-4 w-4" />
             <p className="text-xs font-semibold uppercase tracking-wider">Supervisors</p>
           </div>
-          <p className="mt-2 text-2xl font-bold text-white">
-            {data.users.filter((u) => u.role === "SUPERVISOR").length}
-          </p>
-        </div>
+          <div className="mt-2 flex items-center justify-between">
+            <p className="text-2xl font-bold text-white">
+              {data.users.filter((u) => u.role === "SUPERVISOR").length}
+            </p>
+            <ArrowUpRight className="h-4 w-4 text-emerald-400 opacity-0 transition group-hover:opacity-100" />
+          </div>
+        </Link>
       </div>
 
       {/* Search */}
