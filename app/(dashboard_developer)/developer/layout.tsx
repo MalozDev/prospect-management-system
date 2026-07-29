@@ -6,7 +6,6 @@ import { useEffect, useState } from "react";
 import {
   LayoutDashboard,
   Users,
-  Settings,
   Shield,
   LogOut,
   ChevronDown,
@@ -171,7 +170,7 @@ export default function DeveloperLayout({
       {/* Mobile bottom nav */}
       <nav className="fixed bottom-0 left-0 right-0 border-t border-gray-800 bg-[#1a1a3e]/95 backdrop-blur md:hidden">
         <div className="mx-auto flex max-w-5xl items-center justify-around px-2 py-2">
-          {[...navItems, { href: "/developer/settings", label: "Settings", icon: Settings }].map(({ href, label, icon: Icon }) => {
+          {navItems.map(({ href, label, icon: Icon }) => {
             const isActive = pathname.startsWith(href);
             return (
               <Link

@@ -255,7 +255,7 @@ export default function DeveloperFollowupsPage() {
       </div>
 
       {/* Stats bar */}
-      <div className="grid grid-cols-3 gap-2 sm:grid-cols-3 lg:grid-cols-6 sm:gap-3">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6 sm:gap-3">
         <StatBox icon={PhoneCall} label="Total" value={String(stats.total)} color="purple" />
         <StatBox icon={Clock} label="Today" value={String(stats.today)} color="orange" />
         <StatBox icon={AlertTriangle} label="Overdue" value={String(stats.overdue)} color="red" />
@@ -394,9 +394,9 @@ export default function DeveloperFollowupsPage() {
                                   : "border-gray-700/50 bg-[#252550]/50"
                               }`}
                             >
-                              <div className="flex items-start justify-between gap-3">
+                              <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
                                 <div className="min-w-0 flex-1">
-                                  <div className="flex items-center gap-2">
+                                  <div className="flex flex-wrap items-center gap-2">
                                     <h4 className="text-sm font-semibold text-white truncate">
                                       {prospectName}
                                     </h4>
@@ -426,59 +426,58 @@ export default function DeveloperFollowupsPage() {
                                 </div>
 
                                 {/* Action buttons */}
-                                <div className="flex shrink-0 flex-col items-end gap-1.5">
-                                  <div className="flex items-center gap-1.5">
-                                    {/* Send Reminder button */}
+                                <div className="flex flex-row items-center gap-1.5 sm:flex-col sm:items-end">
+                                  {/* Send Reminder button */}
+                                  <button
+                                    type="button"
+                                    onClick={() => handleSendReminder(fuId)}
+                                    disabled={isSending}
+                                    className={`flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-xs font-medium transition disabled:opacity-50 ${
+                                      isSeen
+                                        ? "border border-gray-700 bg-[#252550] text-gray-300 hover:bg-[#2f2f60]"
+                                        : "border border-orange-500/40 bg-orange-500/15 text-orange-300 hover:bg-orange-500/25"
+                                    }`}
+                                    title={isSeen ? "Send reminder anyway" : "Send reminder to DSE"}
+                                  >
+                                    {isSending ? (
+                                      <span className="h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                                    ) : (
+                                      <BellRing className="h-3.5 w-3.5" />
+                                    )}
+                                  </button>
+
+                                  {/* WhatsApp button */}
+                                  {dseInfo?.cugSuffix && (
                                     <button
                                       type="button"
-                                      onClick={() => handleSendReminder(fuId)}
-                                      disabled={isSending}
-                                      className={`flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-xs font-medium transition disabled:opacity-50 ${
-                                        isSeen
-                                          ? "border border-gray-700 bg-[#252550] text-gray-300 hover:bg-[#2f2f60]"
-                                          : "border border-orange-500/40 bg-orange-500/15 text-orange-300 hover:bg-orange-500/25"
-                                      }`}
-                                      title={isSeen ? "Send reminder anyway" : "Send reminder to DSE"}
+                                      onClick={() => {
+                                        const msg = buildDseReminderMessage({
+                                          dseName,
+                                          prospectName,
+                                          status: fu.status,
+                                          dueDate: fu.expectedPurchaseDate,
+                                        });
+                                        handleWhatsAppDse(dseInfo.cugSuffix, msg);
+                                      }}
+                                      className="flex items-center gap-1.5 rounded-xl border border-green-700/40 bg-green-500/10 px-2.5 py-1.5 text-xs font-medium text-green-400 transition hover:bg-green-500/20"
+                                      title="Send WhatsApp reminder to DSE"
                                     >
-                                      {isSending ? (
-                                        <>
-                                          <span className="h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                                        </>
-                                      ) : (
-                                        <>
-                                          <BellRing className="h-3.5 w-3.5" />
-                                        </>
-                                      )}
+                                      <FaWhatsapp className="h-3.5 w-3.5" />
                                     </button>
-
-                                    {/* WhatsApp button */}
-                                    {dseInfo?.cugSuffix && (
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          const msg = buildDseReminderMessage({
-                                            dseName,
-                                            prospectName,
-                                            status: fu.status,
-                                            dueDate: fu.expectedPurchaseDate,
-                                          });
-                                          handleWhatsAppDse(dseInfo.cugSuffix, msg);
-                                        }}
-                                        className="flex items-center gap-1.5 rounded-xl border border-green-700/40 bg-green-500/10 px-2.5 py-1.5 text-xs font-medium text-green-400 transition hover:bg-green-500/20"
-                                        title="Send WhatsApp reminder to DSE"
-                                      >
-                                        <FaWhatsapp className="h-3.5 w-3.5" />
-                                      </button>
-                                    )}
-                                  </div>
+                                  )}
 
                                   {feedback && (
-                                    <span className={`text-[10px] ${feedback.ok ? "text-emerald-400" : "text-red-400"}`}>
+                                    <span className={`text-[10px] ${feedback.ok ? "text-emerald-400" : "text-red-400"} hidden sm:block`}>
                                       {feedback.message}
                                     </span>
                                   )}
                                 </div>
                               </div>
+                              {feedback && (
+                                <span className={`mt-1 block text-[10px] sm:hidden ${feedback.ok ? "text-emerald-400" : "text-red-400"}`}>
+                                  {feedback.message}
+                                </span>
+                              )}
                             </div>
                           );
                         })}

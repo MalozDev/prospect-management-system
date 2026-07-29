@@ -149,22 +149,22 @@ export default function DeveloperProspectsPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid gap-3 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">
         <div className="rounded-xl border border-gray-700/50 bg-[#1a1a3e] p-3">
           <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">Total</p>
-          <p className="mt-1 text-xl font-bold text-purple-400">{stats.total}</p>
+          <p className="mt-1 text-lg font-bold text-purple-400 sm:text-xl">{stats.total}</p>
         </div>
         <div className="rounded-xl border border-gray-700/50 bg-[#1a1a3e] p-3">
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">Added Today</p>
-          <p className="mt-1 text-xl font-bold text-orange-400">{stats.today}</p>
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">Today</p>
+          <p className="mt-1 text-lg font-bold text-orange-400 sm:text-xl">{stats.today}</p>
         </div>
         <div className="rounded-xl border border-gray-700/50 bg-[#1a1a3e] p-3">
           <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">Active</p>
-          <p className="mt-1 text-xl font-bold text-blue-400">{stats.active}</p>
+          <p className="mt-1 text-lg font-bold text-blue-400 sm:text-xl">{stats.active}</p>
         </div>
         <div className="rounded-xl border border-gray-700/50 bg-[#1a1a3e] p-3">
           <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">Sold</p>
-          <p className="mt-1 text-xl font-bold text-emerald-400">{stats.sold}</p>
+          <p className="mt-1 text-lg font-bold text-emerald-400 sm:text-xl">{stats.sold}</p>
         </div>
       </div>
 
@@ -236,41 +236,43 @@ export default function DeveloperProspectsPage() {
                   return (
                     <div
                       key={prospectId}
-                      className="flex items-center gap-4 px-4 py-3 transition hover:bg-[#252550]/30"
+                      className="flex flex-col gap-2 px-4 py-3 transition hover:bg-[#252550]/30 sm:flex-row sm:items-center sm:gap-4"
                     >
-                      {/* DSE Avatar */}
-                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-purple-500/20 text-xs font-bold text-purple-400">
-                        {prospect.assignedDse.charAt(0)}
-                      </div>
-
-                      {/* Prospect Info */}
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium text-white truncate">
-                            {prospect.name}
-                          </span>
-                          <StatusBadge status={prospect.status} />
+                      <div className="flex items-start gap-3 min-w-0 flex-1">
+                        {/* DSE Avatar */}
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-purple-500/20 text-xs font-bold text-purple-400">
+                          {prospect.assignedDse.charAt(0)}
                         </div>
-                        <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px] text-gray-400">
-                          <span className="inline-flex items-center gap-1">
-                            <Users className="h-3 w-3" />
-                            DSE: {prospect.assignedDse}
-                          </span>
-                          <span className="inline-flex items-center gap-1">
-                            <Shield className="h-3 w-3" />
-                            Sup: {supervisor}
-                          </span>
-                          <span className="inline-flex items-center gap-1">
-                            <MapPin className="h-3 w-3" />
-                            {prospect.location}
-                          </span>
+
+                        {/* Prospect Info */}
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium text-white truncate">
+                              {prospect.name}
+                            </span>
+                            <StatusBadge status={prospect.status} />
+                          </div>
+                          <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px] text-gray-400">
+                            <span className="inline-flex items-center gap-1">
+                              <Users className="h-3 w-3" />
+                              DSE: {prospect.assignedDse}
+                            </span>
+                            <span className="inline-flex items-center gap-1">
+                              <Shield className="h-3 w-3" />
+                              Sup: {supervisor}
+                            </span>
+                            <span className="inline-flex items-center gap-1">
+                              <MapPin className="h-3 w-3" />
+                              {prospect.location}
+                            </span>
+                          </div>
                         </div>
                       </div>
 
                       {/* Phone & Link */}
-                      <div className="flex shrink-0 items-center gap-3 text-xs text-gray-500">
-                        <span>{prospect.phone}</span>
-                        <ArrowUpRight className="h-3.5 w-3.5 text-gray-500" />
+                      <div className="flex shrink-0 items-center gap-2 pl-12 text-xs text-gray-500 sm:pl-0 sm:gap-3">
+                        <span className="truncate max-w-[120px] sm:max-w-none">{prospect.phone}</span>
+                        <ArrowUpRight className="h-3.5 w-3.5 shrink-0 text-gray-500" />
                       </div>
                     </div>
                   );

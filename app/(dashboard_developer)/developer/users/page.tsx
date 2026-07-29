@@ -147,13 +147,13 @@ export default function DeveloperUsersPage() {
 
       {/* Search */}
       <div className="relative">
-        <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
+        <Search className="absolute left-3 sm:left-4 top-1/2 h-3.5 w-3.5 sm:h-4 sm:w-4 -translate-y-1/2 text-gray-500" />
         <input
           type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search by name, CUG, role, or region..."
-          className="h-12 w-full rounded-xl border border-gray-700/50 bg-[#1a1a3e] pl-11 pr-4 text-sm text-white placeholder-gray-500 outline-none transition focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/30"
+          className="h-10 sm:h-12 w-full rounded-xl border border-gray-700/50 bg-[#1a1a3e] pl-9 sm:pl-11 pr-3 sm:pr-4 text-xs sm:text-sm text-white placeholder-gray-500 outline-none transition focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/30"
         />
       </div>
 
@@ -164,48 +164,45 @@ export default function DeveloperUsersPage() {
         </div>
       ) : filteredUsers.length > 0 ? (
         <div className="grid gap-3">
-          {filteredUsers.map((user) => (
-            <div
+          {filteredUsers.map((user) => (                <div
               key={String(user._id)}
-              className="rounded-xl border border-gray-700/50 bg-[#1a1a3e] p-4 transition hover:border-purple-500/30"
+              className="rounded-xl border border-gray-700/50 bg-[#1a1a3e] p-3 sm:p-4 transition hover:border-purple-500/30"
             >
-              <div className="flex items-center justify-between gap-4">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div
-                    className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
-                      user.role === "SUPERVISOR"
-                        ? "bg-blue-500/20 text-blue-400"
-                        : "bg-purple-500/20 text-purple-400"
-                    }`}
-                  >
-                    {user.name.charAt(0).toUpperCase()}
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium text-white truncate">
-                      {user.name}
-                    </p>
-                    <div className="mt-0.5 flex flex-wrap items-center gap-2">
-                      <span className="text-xs text-gray-400">CUG: {user.cugSuffix}</span>
-                      <span
-                        className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${
-                          user.role === "SUPERVISOR"
-                            ? "bg-blue-500/10 text-blue-400"
-                            : "bg-purple-500/10 text-purple-400"
-                        }`}
-                      >
-                        {user.role}
-                      </span>
-                      <span className="text-xs text-gray-500">{user.region || "—"}</span>
-                    </div>
+              <div className="flex items-center gap-3 sm:gap-4">
+                <div
+                  className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
+                    user.role === "SUPERVISOR"
+                      ? "bg-blue-500/20 text-blue-400"
+                      : "bg-purple-500/20 text-purple-400"
+                  }`}
+                >
+                  {user.name.charAt(0).toUpperCase()}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium text-white truncate">
+                    {user.name}
+                  </p>
+                  <div className="mt-0.5 flex flex-wrap items-center gap-1.5 sm:gap-2">
+                    <span className="text-xs text-gray-400">CUG: {user.cugSuffix}</span>
+                    <span
+                      className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                        user.role === "SUPERVISOR"
+                          ? "bg-blue-500/10 text-blue-400"
+                          : "bg-purple-500/10 text-purple-400"
+                      }`}
+                    >
+                      {user.role}
+                    </span>
+                    <span className="text-xs text-gray-500 truncate max-w-[80px] sm:max-w-none">{user.region || "—"}</span>
                   </div>
                 </div>
                 <button
                   type="button"
                   onClick={() => openResetModal(user.cugSuffix)}
-                  className="flex shrink-0 items-center gap-2 rounded-xl border border-gray-700 bg-[#252550] px-4 py-2 text-xs font-medium text-gray-300 transition hover:border-amber-500/30 hover:bg-amber-500/10 hover:text-amber-400"
+                  className="flex shrink-0 items-center justify-center gap-1.5 rounded-xl border border-gray-700 bg-[#252550] px-2.5 py-2 sm:px-4 sm:py-2 text-xs font-medium text-gray-300 transition hover:border-amber-500/30 hover:bg-amber-500/10 hover:text-amber-400"
                 >
-                  <KeyRound className="h-3.5 w-3.5" />
-                  Reset
+                  <KeyRound className="h-3.5 w-3.5 shrink-0" />
+                  <span className="hidden sm:inline">Reset</span>
                 </button>
               </div>
             </div>
