@@ -255,7 +255,7 @@ export default function DeveloperFollowupsPage() {
       </div>
 
       {/* Stats bar */}
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6 sm:gap-3">
+      <div className="w-full max-w-full grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6 sm:gap-3">
         <StatBox icon={PhoneCall} label="Total" value={String(stats.total)} color="purple" />
         <StatBox icon={Clock} label="Today" value={String(stats.today)} color="orange" />
         <StatBox icon={AlertTriangle} label="Overdue" value={String(stats.overdue)} color="red" />
@@ -265,8 +265,8 @@ export default function DeveloperFollowupsPage() {
       </div>
 
       {/* Filters */}
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
-        <div className="relative flex-1">
+      <div className="w-full max-w-full flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+        <div className="relative w-full max-w-full sm:flex-1">
           <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-500 sm:left-4 sm:h-4 sm:w-4" />
           <input
             type="text"
@@ -276,11 +276,11 @@ export default function DeveloperFollowupsPage() {
             className="h-10 w-full rounded-xl border border-gray-700/50 bg-[#1a1a3e] pl-9 pr-3 text-xs text-white placeholder-gray-500 outline-none transition focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/30 sm:h-11 sm:pl-10 sm:pr-4 sm:text-sm"
           />
         </div>
-        <div className="flex gap-2">
+        <div className="w-full max-w-full flex flex-col gap-2 sm:flex-row sm:gap-3">
           <select
             value={selectedDse}
             onChange={(e) => setSelectedDse(e.target.value)}
-            className="flex-1 h-10 rounded-xl border border-gray-700/50 bg-[#1a1a3e] px-3 text-xs text-gray-200 outline-none transition focus:border-purple-500/50 sm:h-11 sm:px-4 sm:text-sm"
+            className="w-full sm:w-auto sm:flex-1 h-10 rounded-xl border border-gray-700/50 bg-[#1a1a3e] px-3 text-xs text-gray-200 outline-none transition focus:border-purple-500/50 sm:h-11 sm:px-4 sm:text-sm"
           >
             <option value="all">All DSEs</option>
             {dseNames.map((name) => (
@@ -290,7 +290,7 @@ export default function DeveloperFollowupsPage() {
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="flex-1 h-10 rounded-xl border border-gray-700/50 bg-[#1a1a3e] px-3 text-xs text-gray-200 outline-none transition focus:border-purple-500/50 sm:h-11 sm:px-4 sm:text-sm"
+            className="w-full sm:w-auto sm:flex-1 h-10 rounded-xl border border-gray-700/50 bg-[#1a1a3e] px-3 text-xs text-gray-200 outline-none transition focus:border-purple-500/50 sm:h-11 sm:px-4 sm:text-sm"
           >
             <option value="all">All</option>
             <option value="TODAY">Today</option>
@@ -628,7 +628,7 @@ export default function DeveloperFollowupsPage() {
       )}
 
       {/* Console summary */}
-      <div className="rounded-2xl border border-gray-700/50 bg-[#1a1a3e] p-4">
+      <div className="w-full max-w-full rounded-2xl border border-gray-700/50 bg-[#1a1a3e] p-4">
         <div className="flex items-center gap-2 mb-2">
           <Terminal className="h-4 w-4 text-gray-500" />
           <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Debug Console</p>
