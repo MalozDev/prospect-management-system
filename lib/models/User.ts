@@ -10,6 +10,7 @@ export interface IUser extends Document {
   role: UserRole;
   region: string;
   supervisor: string;
+  phone: string;
   avatarUrl: string;
   avatarColor: string;
   lastLogin: string;
@@ -28,6 +29,7 @@ const UserSchema = new Schema<IUser>(
     role: { type: String, required: true, enum: ["DSE", "SUPERVISOR", "SUPERADMIN"] },
     region: { type: String, required: true, default: "Lusaka" },
     supervisor: { type: String, default: "" },
+    phone: { type: String, default: "" },
     avatarUrl: { type: String, default: "" },
     avatarColor: { type: String, default: "" },
     lastLogin: { type: String, default: "" },

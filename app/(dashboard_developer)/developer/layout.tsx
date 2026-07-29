@@ -10,6 +10,10 @@ import {
   Shield,
   LogOut,
   ChevronDown,
+  ClipboardList,
+  ShoppingCart,
+  Bell,
+  PhoneCall,
 } from "lucide-react";
 
 import { clearToken, getStoredApiUser } from "@/lib/api-client";
@@ -18,6 +22,10 @@ import { NotificationBadge } from "@/components/shared/NotificationBadge";
 const navItems = [
   { href: "/developer/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/developer/users", label: "Users", icon: Users },
+  { href: "/developer/prospects", label: "Prospects", icon: ClipboardList },
+  { href: "/developer/sales", label: "Sales", icon: ShoppingCart },
+  { href: "/developer/followups", label: "Follow Ups", icon: PhoneCall },
+  { href: "/developer/notifications", label: "Notifications", icon: Bell },
   { href: "/developer/settings", label: "Settings", icon: Settings },
 ];
 

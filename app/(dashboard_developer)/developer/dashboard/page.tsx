@@ -23,9 +23,11 @@ import {
   MapPin,
   Phone,
   Award,
+  Trophy,
 } from "lucide-react";
 import Link from "next/link";
-import { useMemo, useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
+import { useMemo, useState, useEffect } from "react";
 
 import { useApiData } from "@/lib/use-api-data";
 import { getTodayLocal } from "@/lib/time-utils";
@@ -75,7 +77,17 @@ const FALLBACK_UNASSIGNED = {
   dseMembers: [] as DseMember[],
 };
 
+// ── Performance rank colors ──
+const RANK_COLORS = [
+  { bg: "bg-yellow-500/20", text: "text-yellow-400", border: "border-yellow-500/30", medal: "🥇" },
+  { bg: "bg-gray-300/20", text: "text-gray-300", border: "border-gray-400/30", medal: "🥈" },
+  { bg: "bg-amber-700/20", text: "text-amber-600", border: "border-amber-700/30", medal: "🥉" },
+  { bg: "bg-blue-500/10", text: "text-blue-400", border: "border-blue-500/20", medal: "4" },
+  { bg: "bg-blue-500/10", text: "text-blue-400", border: "border-blue-500/20", medal: "5" },
+];
+
 export default function DeveloperDashboardPage() {
+  const router = useRouter();
   const today = useMemo(() => {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -93,17 +105,23 @@ export default function DeveloperDashboardPage() {
 
   const [expandedTeams, setExpandedTeams] = useState<Record<string, boolean>>({});
   const [showActiveUsers, setShowActiveUsers] = useState(false);
+  const [showSupervisorList, setShowSupervisorList] = useState(false);
+  const [showDseList, setShowDseList] = useState(false);
 
   const toggleTeam = (name: string) => {
     setExpandedTeams((prev) => ({ ...prev, [name]: !prev[name] }));
   };
 
-  // Close modal on Escape key
+  // Close modals on Escape key
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setShowActiveUsers(false);
+      if (e.key === 'Escape') {
+        setShowActiveUsers(false);
+        setShowSupervisorList(false);
+        setShowDseList(false);
+      }
     };
-    if (showActiveUsers) {
+    if (showActiveUsers || showSupervisorList || showDseList) {
       document.addEventListener('keydown', handler);
       document.body.style.overflow = 'hidden';
     }
@@ -111,7 +129,7 @@ export default function DeveloperDashboardPage() {
       document.removeEventListener('keydown', handler);
       document.body.style.overflow = '';
     };
-  }, [showActiveUsers]);
+  }, [showActiveUsers, showSupervisorList, showDseList]);
 
   const stats = useMemo(() => {
     const users = usersData.users;
@@ -134,15 +152,68 @@ export default function DeveloperDashboardPage() {
       }
     }
 
-    // Active supervisors from users data
-    const activeSupervisors = users.filter((u) => u.role === "SUPERVISOR" && u.lastActiveAt?.startsWith(today)).map((u) => ({
+    // Active supervisors from users data — BOTH lastActiveAt AND lastLogin
+    const activeSupervisors = users.filter((u) => u.role === "SUPERVISOR" && (u.lastActiveAt?.startsWith(today) || u.lastLogin?.startsWith(today))).map((u) => ({
       name: u.name,
       region: u.region,
       cugSuffix: u.cugSuffix,
-      lastLogin: u.lastActiveAt || "",
+      lastLogin: u.lastActiveAt || u.lastLogin || "",
     }));
 
-    let activeToday = activeDses.length + activeSupervisors.length;
+    // Also count DSEs that logged in today but may not have heartbeat yet
+    const dseLoggedInToday = users.filter((u) => u.role === "DSE" && u.lastLogin?.startsWith(today) && !u.lastActiveAt?.startsWith(today));
+    const activeToday = activeDses.length + activeSupervisors.length + dseLoggedInToday.length;
+
+    // ── Build list of ALL DSEs with their supervisor ──
+    const allDseList: { name: string; cugSuffix: string; region: string; supervisor: string; salesMonth: number; salesToday: number; prospectsMonth: number }[] = [];
+    for (const team of groupedData.teams) {
+      for (const dse of team.dseMembers) {
+        allDseList.push({
+          name: dse.name,
+          cugSuffix: dse.cugSuffix,
+          region: dse.region,
+          supervisor: team.supervisor.name,
+          salesMonth: dse.stats.salesMonth,
+          salesToday: dse.stats.salesToday,
+          prospectsMonth: dse.stats.prospectsMonth,
+        });
+      }
+    }
+    for (const dse of groupedData.unassigned.dseMembers) {
+      allDseList.push({
+        name: dse.name,
+        cugSuffix: dse.cugSuffix,
+        region: dse.region,
+        supervisor: "Unassigned",
+        salesMonth: dse.stats.salesMonth,
+        salesToday: dse.stats.salesToday,
+        prospectsMonth: dse.stats.prospectsMonth,
+      });
+    }
+
+    // ── Top 5 performers by monthly sales ──
+    const topPerformers = [...allDseList]
+      .sort((a, b) => b.salesMonth - a.salesMonth)
+      .slice(0, 5)
+      .filter((d) => d.salesMonth > 0);
+
+    // ── Build supervisor list with team info ──
+    const supervisorList = groupedData.teams.map((team) => ({
+      name: team.supervisor.name,
+      region: team.supervisor.region,
+      cugSuffix: team.supervisor.cugSuffix,
+      totalDse: team.stats.totalDse,
+      activeToday: team.stats.activeToday ?? 0,
+      salesMonth: team.stats.salesMonth,
+      prospectsMonth: team.stats.prospectsMonth,
+      dseMembers: team.dseMembers.map((d) => d.name),
+    }));
+
+    console.log(`[DASHBOARD] Stats computed at ${new Date().toLocaleTimeString()}`);
+    console.log(`[DASHBOARD] Users: ${users.length} | DSEs: ${allDseList.length} | Sup: ${supervisorList.length}`);
+    console.log(`[DASHBOARD] Active Today: ${activeToday} (${activeDses.length} DSEs + ${activeSupervisors.length} Sup + ${dseLoggedInToday.length} logged-in)`);
+    console.log(`[DASHBOARD] Prospects: ${prospects.length} | Sales: ${sales.length} | Follow-ups: ${followUps.length}`);
+    console.log(`[DASHBOARD] Top performers:`, topPerformers.map((d) => `${d.name} (${d.salesMonth} sales)`));
 
     return {
       totalDse: users.filter((u) => u.role === "DSE").length,
@@ -159,6 +230,9 @@ export default function DeveloperDashboardPage() {
       activeToday,
       activeDses,
       activeSupervisors,
+      topPerformers,
+      supervisorList,
+      allDseList: allDseList.sort((a, b) => b.salesMonth - a.salesMonth),
     };
   }, [usersData, prospectsData, salesData, followUpsData, groupedData, today, currentMonth]);
 
@@ -178,6 +252,7 @@ export default function DeveloperDashboardPage() {
       subtitle: `${stats.prospectsToday} today · ${stats.prospectsMonth} this month`,
       icon: Target,
       gradient: "from-blue-600 to-cyan-600",
+      onClick: () => router.push("/developer/prospects"),
     },
     {
       title: "Sales",
@@ -185,6 +260,7 @@ export default function DeveloperDashboardPage() {
       subtitle: `${stats.salesToday} today · ${stats.salesMonth} this month`,
       icon: ShoppingCart,
       gradient: "from-emerald-600 to-teal-600",
+      onClick: () => router.push("/developer/sales"),
     },
     {
       title: "Active Today",
@@ -196,18 +272,24 @@ export default function DeveloperDashboardPage() {
     },
   ];
 
-  // Compute top performer
-  const topPerformer = useMemo(() => {
-    let best: { name: string; sales: number } | null = null;
-    for (const team of groupedData.teams) {
-      for (const dse of team.dseMembers) {
-        if (!best || dse.stats.salesMonth > best.sales) {
-          best = { name: dse.name, sales: dse.stats.salesMonth };
-        }
-      }
-    }
-    return best;
-  }, [groupedData]);
+  const secondaryCards = [
+    {
+      title: "Supervisors",
+      value: stats.totalSupervisors,
+      subtitle: `${stats.supervisorList.length} with teams`,
+      icon: Shield,
+      gradient: "from-blue-600 to-indigo-600",
+      onClick: () => setShowSupervisorList(true),
+    },
+    {
+      title: "Follow-ups",
+      value: stats.totalFollowUps,
+      subtitle: `${stats.openFollowUps} open (TODAY/OVERDUE)`,
+      icon: Clock,
+      gradient: "from-orange-600 to-red-600",
+      onClick: () => router.push("/developer/followups"),
+    },
+  ];
 
   return (
     <div className="space-y-6">
@@ -231,55 +313,98 @@ export default function DeveloperDashboardPage() {
         </div>
       ) : (
         <>
-          {/* Stats Grid */}
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {/* ── Stats Grid ── */}
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
             {statCards.map((card) => (
               <div
                 key={card.title}
                 onClick={card.onClick}
-                className={`group relative overflow-hidden rounded-2xl border border-gray-700/50 bg-[#1a1a3e] p-5 transition hover:border-purple-500/30 hover:shadow-lg hover:shadow-purple-500/5 ${card.onClick ? 'cursor-pointer' : ''}`}
+                className={`group relative overflow-hidden rounded-2xl border border-gray-700/50 bg-[#1a1a3e] p-4 transition hover:border-purple-500/30 hover:shadow-lg hover:shadow-purple-500/5 ${typeof card.onClick === 'function' ? 'cursor-pointer' : ''}`}
               >
                 <div className={`absolute inset-0 bg-gradient-to-br ${card.gradient} opacity-[0.03]`} />
                 <div className="relative">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold uppercase tracking-wider text-gray-400">
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">
                       {card.title}
                     </span>
-                    <card.icon className="h-4 w-4 text-purple-400" />
+                    <card.icon className="h-3.5 w-3.5 text-purple-400" />
                   </div>
-                  <p className="mt-3 text-3xl font-bold text-white">{card.value}</p>
-                  <p className="mt-1 text-xs text-gray-400">{card.subtitle}</p>
+                  <p className="mt-2 text-2xl font-bold text-white">{card.value}</p>
+                  <p className="mt-0.5 text-[10px] text-gray-400">{card.subtitle}</p>
+                </div>
+              </div>
+            ))}
+            {secondaryCards.map((card) => (
+              <div
+                key={card.title}
+                onClick={card.onClick}
+                className={`group relative overflow-hidden rounded-2xl border border-gray-700/50 bg-[#1a1a3e] p-4 transition hover:border-purple-500/30 hover:shadow-lg hover:shadow-purple-500/5 ${typeof card.onClick === 'function' ? 'cursor-pointer' : ''}`}
+              >
+                <div className={`absolute inset-0 bg-gradient-to-br ${card.gradient} opacity-[0.03]`} />
+                <div className="relative">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">
+                      {card.title}
+                    </span>
+                    <card.icon className="h-3.5 w-3.5 text-purple-400" />
+                  </div>
+                  <p className="mt-2 text-2xl font-bold text-white">{card.value}</p>
+                  <p className="mt-0.5 text-[10px] text-gray-400">{card.subtitle}</p>
                 </div>
               </div>
             ))}
           </div>
 
-          {/* Spotlight: Top Performer & Activity Pulse */}
+          {/* ── Middle row: Top 5 Performers + User Breakdown + Today's Pulse ── */}
           <div className="grid gap-4 lg:grid-cols-3">
-            {/* Top Performer */}
-            <div className="rounded-2xl border border-yellow-500/30 bg-gradient-to-br from-[#1a1a3e] to-[#252550] p-5 lg:col-span-1">
-              <div className="flex items-center gap-2 mb-3">
-                <TrendingUp className="h-4 w-4 text-yellow-400" />
-                <h3 className="text-sm font-semibold text-white">Top Performer</h3>
+            {/* ═══ TOP 5 PERFORMERS ═══ */}
+            <div className="rounded-2xl border border-gray-700/50 bg-[#1a1a3e] p-5 lg:col-span-1">
+              <div className="flex items-center gap-2 mb-4">
+                <Trophy className="h-4 w-4 text-yellow-400" />
+                <h3 className="text-sm font-semibold text-white">Top 5 Performers</h3>
+                <span className="ml-auto text-[10px] text-gray-500">Monthly sales</span>
               </div>
-              {topPerformer ? (
-                <div>
-                  <div className="flex items-center gap-3 rounded-xl bg-yellow-500/10 border border-yellow-500/20 p-3">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-yellow-500/20 text-lg font-bold text-yellow-400">
-                      {topPerformer.name.charAt(0)}
-                    </div>
-                    <div>
-                      <p className="font-semibold text-white">{topPerformer.name}</p>
-                      <p className="text-sm text-yellow-400">{topPerformer.sales} sales this month</p>
-                    </div>
-                  </div>
+
+              {stats.topPerformers.length > 0 ? (
+                <div className="space-y-2">
+                  {stats.topPerformers.map((dse, idx) => {
+                    const rank = RANK_COLORS[idx] || RANK_COLORS[4];
+                    return (
+                      <div
+                        key={dse.name}
+                        className={`flex items-center gap-3 rounded-xl ${rank.bg} ${rank.border} p-2.5 transition hover:opacity-80`}
+                      >
+                        <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${rank.bg} text-xs font-bold ${rank.text}`}>
+                          {rank.medal === "4" || rank.medal === "5" ? rank.medal : <span className="text-base">{rank.medal}</span>}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-sm font-medium text-white">{dse.name}</span>
+                            {dse.salesToday > 0 && (
+                              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" title="Has sales today" />
+                            )}
+                          </div>
+                          <p className="text-[10px] text-gray-400">
+                            {dse.salesMonth} sales · Sup: {dse.supervisor}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className={`text-sm font-bold ${rank.text}`}>{dse.salesMonth}</p>
+                          <p className="text-[9px] text-gray-500">sales</p>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               ) : (
-                <p className="text-sm text-gray-500">No sales data yet.</p>
+                <div className="flex flex-col items-center py-6 text-center">
+                  <TrendingUp className="h-8 w-8 text-gray-600" />
+                  <p className="mt-2 text-xs text-gray-500">No sales data yet this month.</p>
+                </div>
               )}
             </div>
 
-            {/* User Breakdown */}
+            {/* ═══ USER BREAKDOWN ═══ */}
             <div className="rounded-2xl border border-gray-700/50 bg-[#1a1a3e] p-5 lg:col-span-1">
               <div className="flex items-center gap-2 mb-4">
                 <Users className="h-4 w-4 text-purple-400" />
@@ -287,7 +412,10 @@ export default function DeveloperDashboardPage() {
               </div>
 
               <div className="space-y-3">
-                <div className="flex items-center gap-3 rounded-xl bg-[#252550] p-3">
+                <div
+                  onClick={() => setShowDseList(true)}
+                  className="flex items-center gap-3 rounded-xl bg-[#252550] p-3 transition hover:bg-[#2f2f60] cursor-pointer"
+                >
                   <div className="flex h-10 w-10 items-center justify-center rounded-full bg-purple-500/20">
                     <UserPlus className="h-5 w-5 text-purple-400" />
                   </div>
@@ -303,9 +431,13 @@ export default function DeveloperDashboardPage() {
                       <span className="text-xs text-gray-400">{stats.totalDse}</span>
                     </div>
                   </div>
+                  <ArrowUpRight className="h-3.5 w-3.5 text-gray-500" />
                 </div>
 
-                <div className="flex items-center gap-3 rounded-xl bg-[#252550] p-3">
+                <div
+                  onClick={() => setShowSupervisorList(true)}
+                  className="flex items-center gap-3 rounded-xl bg-[#252550] p-3 transition hover:bg-[#2f2f60] cursor-pointer"
+                >
                   <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-500/20">
                     <Shield className="h-5 w-5 text-blue-400" />
                   </div>
@@ -321,18 +453,22 @@ export default function DeveloperDashboardPage() {
                       <span className="text-xs text-gray-400">{stats.totalSupervisors}</span>
                     </div>
                   </div>
+                  <ArrowUpRight className="h-3.5 w-3.5 text-gray-500" />
                 </div>
               </div>
             </div>
 
-            {/* Activity Pulse */}
+            {/* ═══ TODAY'S PULSE ═══ */}
             <div className="rounded-2xl border border-gray-700/50 bg-[#1a1a3e] p-5 lg:col-span-1">
               <div className="flex items-center gap-2 mb-3">
                 <Activity className="h-4 w-4 text-purple-400" />
                 <h3 className="text-sm font-semibold text-white">Today&apos;s Pulse</h3>
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <div className="rounded-xl bg-[#252550] p-3 text-center">
+                <div
+                  onClick={() => setShowActiveUsers(true)}
+                  className="rounded-xl bg-[#252550] p-3 text-center transition hover:bg-[#2f2f60] cursor-pointer"
+                >
                   <Clock className="mx-auto h-5 w-5 text-emerald-400" />
                   <p className="mt-1 text-2xl font-bold text-white">{stats.activeToday}</p>
                   <p className="text-[10px] text-gray-400">Active Now</p>
@@ -347,7 +483,10 @@ export default function DeveloperDashboardPage() {
                   <p className="mt-1 text-2xl font-bold text-white">{stats.salesToday}</p>
                   <p className="text-[10px] text-gray-400">Sales Today</p>
                 </div>
-                <div className="rounded-xl bg-[#252550] p-3 text-center">
+                <div
+                  onClick={() => router.push("/developer/followups")}
+                  className="rounded-xl bg-[#252550] p-3 text-center transition hover:bg-[#2f2f60] cursor-pointer"
+                >
                   <Activity className="mx-auto h-5 w-5 text-orange-400" />
                   <p className="mt-1 text-2xl font-bold text-white">{stats.openFollowUps}</p>
                   <p className="text-[10px] text-gray-400">Open F/Up</p>
@@ -356,7 +495,7 @@ export default function DeveloperDashboardPage() {
             </div>
           </div>
 
-          {/* Quick Actions */}
+          {/* ── Quick Actions ── */}
           <div className="rounded-2xl border border-gray-700/50 bg-[#1a1a3e] p-5">
             <div className="flex items-center gap-2 mb-4">
               <Zap className="h-4 w-4 text-purple-400" />
@@ -371,6 +510,27 @@ export default function DeveloperDashboardPage() {
                 Manage Users
               </a>
               <a
+                href="/developer/prospects"
+                className="inline-flex items-center gap-2 rounded-xl bg-[#252550] px-4 py-2.5 text-sm text-gray-300 transition hover:bg-blue-600/20 hover:text-blue-400"
+              >
+                <Target className="h-4 w-4" />
+                All Prospects
+              </a>
+              <a
+                href="/developer/sales"
+                className="inline-flex items-center gap-2 rounded-xl bg-[#252550] px-4 py-2.5 text-sm text-gray-300 transition hover:bg-emerald-600/20 hover:text-emerald-400"
+              >
+                <ShoppingCart className="h-4 w-4" />
+                All Sales
+              </a>
+              <a
+                href="/developer/followups"
+                className="inline-flex items-center gap-2 rounded-xl bg-[#252550] px-4 py-2.5 text-sm text-gray-300 transition hover:bg-orange-600/20 hover:text-orange-400"
+              >
+                <Clock className="h-4 w-4" />
+                Follow-ups
+              </a>
+              <a
                 href="/developer/settings"
                 className="inline-flex items-center gap-2 rounded-xl bg-[#252550] px-4 py-2.5 text-sm text-gray-300 transition hover:bg-purple-600/20 hover:text-purple-400"
               >
@@ -382,7 +542,7 @@ export default function DeveloperDashboardPage() {
         </>
       )}
 
-      {/* Supervisor Teams Section */}
+      {/* ═══ Supervisor Teams Section ═══ */}
       <div className="rounded-2xl border border-gray-700/50 bg-[#1a1a3e] p-5">
         <div className="flex items-center gap-2 mb-4">
           <Users2 className="h-4 w-4 text-purple-400" />
@@ -443,7 +603,10 @@ export default function DeveloperDashboardPage() {
                 <div key={team.supervisor.name} className="rounded-xl border border-gray-700/50 bg-[#252550]/50">
                   <button
                     type="button"
-                    onClick={() => toggleTeam(team.supervisor.name)}
+                    onClick={() => {
+                      toggleTeam(team.supervisor.name);
+                      console.log(`[DASHBOARD] Toggled supervisor: ${team.supervisor.name} (${team.stats.totalDse} DSEs, ${team.stats.salesMonth} sales, ${team.stats.activeToday} active)`);
+                    }}
                     className="flex w-full items-center gap-3 p-3 text-left"
                   >
                     <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-500/20">
@@ -512,18 +675,27 @@ export default function DeveloperDashboardPage() {
         )}
       </div>
 
+      {/* Debug Console Section */}
+      <div className="rounded-2xl border border-gray-700/50 bg-[#1a1a3e] p-4">
+        <div className="flex items-center gap-2 mb-3">
+          <TerminalIcon className="h-4 w-4 text-gray-500" />
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Debug Console</p>
+        </div>
+        <pre className="text-[10px] text-gray-500 font-mono leading-relaxed">
+{`[DASHBOARD] Users: ${stats.totalUsers} | DSEs: ${stats.totalDse} | Sup: ${stats.totalSupervisors}
+[DASHBOARD] Active Today: ${stats.activeToday} | Prospects: ${stats.totalProspects} | Sales: ${stats.totalSales}
+[DASHBOARD] Today: ${stats.prospectsToday} prosp / ${stats.salesToday} sales | Month: ${stats.prospectsMonth} prosp / ${stats.salesMonth} sales
+[DASHBOARD] Follow-ups: ${stats.totalFollowUps} total / ${stats.openFollowUps} open | Teams: ${groupedData.teams.length} sup / ${groupedData.unassigned.stats.totalDse} unassigned
+[DASHBOARD] Top 5: ${stats.topPerformers.map(d => `${d.name}(${d.salesMonth})`).join(" / ") || "none"}
+[DASHBOARD] Last updated: ${new Date().toLocaleTimeString("en-ZM", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}`}
+        </pre>
+      </div>
+
       {/* ── Active Users Modal ── */}
       {showActiveUsers && (
         <div className="fixed inset-0 z-[99999] flex items-start justify-center overflow-y-auto pt-4 pb-8 sm:pt-10">
-          {/* Backdrop */}
-          <div
-            className="fixed inset-0 bg-black/70 backdrop-blur-sm"
-            onClick={() => setShowActiveUsers(false)}
-          />
-
-          {/* Modal */}
+          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setShowActiveUsers(false)} />
           <div className="relative z-10 w-[calc(100%-2rem)] max-w-2xl rounded-2xl border border-gray-700/50 bg-[#1a1a3e] shadow-2xl shadow-purple-500/10">
-            {/* Header */}
             <div className="flex items-center justify-between border-b border-gray-700/50 px-5 py-4">
               <div className="flex items-center gap-2">
                 <Zap className="h-5 w-5 text-orange-400" />
@@ -532,63 +704,36 @@ export default function DeveloperDashboardPage() {
                   {stats.activeToday} user{stats.activeToday !== 1 ? "s" : ""}
                 </span>
               </div>
-              <button
-                type="button"
-                onClick={() => setShowActiveUsers(false)}
-                className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-700/50 text-gray-400 transition hover:bg-gray-600 hover:text-white"
-              >
+              <button type="button" onClick={() => setShowActiveUsers(false)} className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-700/50 text-gray-400 transition hover:bg-gray-600 hover:text-white">
                 <X className="h-4 w-4" />
               </button>
             </div>
-
             <div className="max-h-[70vh] overflow-y-auto p-5 space-y-5">
-              {/* Active DSEs */}
               {stats.activeDses.length > 0 && (
                 <section>
                   <div className="mb-3 flex items-center gap-2">
                     <Users className="h-4 w-4 text-purple-400" />
-                    <h3 className="text-sm font-semibold text-white">
-                      Direct Sales Executives
-                    </h3>
+                    <h3 className="text-sm font-semibold text-white">Direct Sales Executives</h3>
                     <span className="ml-auto text-xs text-gray-500">{stats.activeDses.length} active</span>
                   </div>
                   <div className="space-y-2">
                     {stats.activeDses.map((dse) => {
                       const loginTime = dse.lastLogin ? new Date(dse.lastLogin).toLocaleTimeString("en-ZM", { hour: "2-digit", minute: "2-digit", hour12: true }) : "—";
                       return (
-                        <Link
-                          key={dse.name}
-                          href={`/developer/dse/${encodeURIComponent(dse.name)}`}
-                          className="flex items-center gap-3 rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3 transition hover:bg-emerald-500/10"
-                        >
-                          {/* Avatar */}
-                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-500/20 text-sm font-bold text-emerald-400">
-                            {dse.name.charAt(0)}
-                          </div>
-
-                          {/* Info */}
+                        <Link key={dse.name} href={`/developer/dse/${encodeURIComponent(dse.name)}`} className="flex items-center gap-3 rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3 transition hover:bg-emerald-500/10">
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-500/20 text-sm font-bold text-emerald-400">{dse.name.charAt(0)}</div>
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-2">
                               <span className="text-sm font-medium text-white">{dse.name}</span>
-                              <span className="rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[9px] font-medium text-emerald-400">
-                                DSE
-                              </span>
+                              <span className="rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[9px] font-medium text-emerald-400">DSE</span>
                             </div>
                             <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[10px] text-gray-400">
-                              <span className="inline-flex items-center gap-1">
-                                <MapPin className="h-2.5 w-2.5" />{dse.region}
-                              </span>
-                              <span className="inline-flex items-center gap-1">
-                                <Phone className="h-2.5 w-2.5" />CUG: {dse.cugSuffix}
-                              </span>
-                              <span className="inline-flex items-center gap-1">
-                                <LogIn className="h-2.5 w-2.5" />{loginTime}
-                              </span>
+                              <span className="inline-flex items-center gap-1"><MapPin className="h-2.5 w-2.5" />{dse.region}</span>
+                              <span className="inline-flex items-center gap-1"><Phone className="h-2.5 w-2.5" />CUG: {dse.cugSuffix}</span>
+                              <span className="inline-flex items-center gap-1"><LogIn className="h-2.5 w-2.5" />{loginTime}</span>
                               <span className="text-gray-500">· Sup: {dse.supervisor}</span>
                             </div>
                           </div>
-
-                          {/* Mini stats */}
                           <div className="flex shrink-0 items-center gap-2.5 text-xs">
                             <div className="text-center">
                               <p className={`font-semibold ${dse.stats.prospectsToday > 0 ? "text-blue-400" : "text-gray-500"}`}>{dse.stats.prospectsToday}</p>
@@ -606,45 +751,28 @@ export default function DeveloperDashboardPage() {
                   </div>
                 </section>
               )}
-
-              {/* Active Supervisors */}
               {stats.activeSupervisors && stats.activeSupervisors.length > 0 && (
                 <section>
                   <div className="mb-3 flex items-center gap-2">
                     <Shield className="h-4 w-4 text-blue-400" />
-                    <h3 className="text-sm font-semibold text-white">
-                      Supervisors
-                    </h3>
+                    <h3 className="text-sm font-semibold text-white">Supervisors</h3>
                     <span className="ml-auto text-xs text-gray-500">{stats.activeSupervisors.length} active</span>
                   </div>
                   <div className="space-y-2">
                     {stats.activeSupervisors.map((sup: { name: string; region: string; cugSuffix: string; lastLogin: string }) => {
                       const loginTime = sup.lastLogin ? new Date(sup.lastLogin).toLocaleTimeString("en-ZM", { hour: "2-digit", minute: "2-digit", hour12: true }) : "—";
                       return (
-                        <div
-                          key={sup.name}
-                          className="flex items-center gap-3 rounded-xl border border-blue-500/20 bg-blue-500/5 p-3"
-                        >
-                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-500/20 text-sm font-bold text-blue-400">
-                            {sup.name.charAt(0)}
-                          </div>
+                        <div key={sup.name} className="flex items-center gap-3 rounded-xl border border-blue-500/20 bg-blue-500/5 p-3">
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-500/20 text-sm font-bold text-blue-400">{sup.name.charAt(0)}</div>
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-2">
                               <span className="text-sm font-medium text-white">{sup.name}</span>
-                              <span className="rounded-full bg-blue-500/15 px-1.5 py-0.5 text-[9px] font-medium text-blue-400">
-                                Supervisor
-                              </span>
+                              <span className="rounded-full bg-blue-500/15 px-1.5 py-0.5 text-[9px] font-medium text-blue-400">Supervisor</span>
                             </div>
                             <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[10px] text-gray-400">
-                              <span className="inline-flex items-center gap-1">
-                                <MapPin className="h-2.5 w-2.5" />{sup.region}
-                              </span>
-                              <span className="inline-flex items-center gap-1">
-                                <Phone className="h-2.5 w-2.5" />CUG: {sup.cugSuffix}
-                              </span>
-                              <span className="inline-flex items-center gap-1">
-                                <LogIn className="h-2.5 w-2.5" />{loginTime}
-                              </span>
+                              <span className="inline-flex items-center gap-1"><MapPin className="h-2.5 w-2.5" />{sup.region}</span>
+                              <span className="inline-flex items-center gap-1"><Phone className="h-2.5 w-2.5" />CUG: {sup.cugSuffix}</span>
+                              <span className="inline-flex items-center gap-1"><LogIn className="h-2.5 w-2.5" />{loginTime}</span>
                             </div>
                           </div>
                           <Award className="h-4 w-4 shrink-0 text-blue-400" />
@@ -654,13 +782,142 @@ export default function DeveloperDashboardPage() {
                   </div>
                 </section>
               )}
-
-              {/* Empty state */}
               {stats.activeDses.length === 0 && (!stats.activeSupervisors || stats.activeSupervisors.length === 0) && (
                 <div className="flex flex-col items-center justify-center py-10 text-center">
                   <Zap className="h-12 w-12 text-gray-600" />
                   <p className="mt-3 text-sm text-gray-400">No active users today yet.</p>
                   <p className="text-xs text-gray-500">Activity data will appear once users log in.</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Supervisor List Modal ── */}
+      {showSupervisorList && (
+        <div className="fixed inset-0 z-[99999] flex items-start justify-center overflow-y-auto pt-4 pb-8 sm:pt-10">
+          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setShowSupervisorList(false)} />
+          <div className="relative z-10 w-[calc(100%-2rem)] max-w-2xl rounded-2xl border border-gray-700/50 bg-[#1a1a3e] shadow-2xl shadow-purple-500/10">
+            <div className="flex items-center justify-between border-b border-gray-700/50 px-5 py-4">
+              <div className="flex items-center gap-2">
+                <Shield className="h-5 w-5 text-blue-400" />
+                <h2 className="text-lg font-bold text-white">All Supervisors</h2>
+                <span className="rounded-full bg-blue-500/20 px-2.5 py-0.5 text-xs font-medium text-blue-300">{stats.supervisorList.length}</span>
+              </div>
+              <button type="button" onClick={() => setShowSupervisorList(false)} className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-700/50 text-gray-400 transition hover:bg-gray-600 hover:text-white">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="max-h-[70vh] overflow-y-auto p-5 space-y-3">
+              {stats.supervisorList.length > 0 ? (
+                stats.supervisorList.map((sup) => (
+                  <div key={sup.name} className="rounded-xl border border-gray-700/50 bg-[#252550]/50 p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-500/20 text-sm font-bold text-blue-400">
+                          {sup.name.charAt(0)}
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-white">{sup.name}</p>
+                          <p className="text-xs text-gray-400">{sup.region} · CUG: {sup.cugSuffix}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3 text-xs">
+                        <div className="text-center">
+                          <p className="font-semibold text-blue-400">{sup.totalDse}</p>
+                          <p className="text-[9px] text-gray-500">DSEs</p>
+                        </div>
+                        <div className="text-center">
+                          <p className="font-semibold text-emerald-400">{sup.salesMonth}</p>
+                          <p className="text-[9px] text-gray-500">Sales</p>
+                        </div>
+                        <div className="text-center">
+                          <p className="font-semibold text-orange-400">{sup.activeToday}</p>
+                          <p className="text-[9px] text-gray-500">Active</p>
+                        </div>
+                      </div>
+                    </div>
+                    {/* Team members */}
+                    {sup.dseMembers.length > 0 && (
+                      <div className="mt-3 pt-3 border-t border-gray-700/30">
+                        <p className="text-[10px] font-semibold text-gray-500 mb-1.5">Team members:</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {sup.dseMembers.map((name) => (
+                            <Link
+                              key={name}
+                              href={`/developer/dse/${encodeURIComponent(name)}`}
+                              className="inline-flex items-center gap-1 rounded-full bg-purple-500/10 px-2.5 py-1 text-[10px] text-purple-300 transition hover:bg-purple-500/20"
+                            >
+                              <UserPlus className="h-2.5 w-2.5" />
+                              {name}
+                            </Link>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))
+              ) : (
+                <div className="flex flex-col items-center py-10 text-center">
+                  <Shield className="h-12 w-12 text-gray-600" />
+                  <p className="mt-2 text-sm text-gray-500">No supervisors registered yet.</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── DSE List Modal ── */}
+      {showDseList && (
+        <div className="fixed inset-0 z-[99999] flex items-start justify-center overflow-y-auto pt-4 pb-8 sm:pt-10">
+          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setShowDseList(false)} />
+          <div className="relative z-10 w-[calc(100%-2rem)] max-w-2xl rounded-2xl border border-gray-700/50 bg-[#1a1a3e] shadow-2xl shadow-purple-500/10">
+            <div className="flex items-center justify-between border-b border-gray-700/50 px-5 py-4">
+              <div className="flex items-center gap-2">
+                <UserPlus className="h-5 w-5 text-purple-400" />
+                <h2 className="text-lg font-bold text-white">All DSEs</h2>
+                <span className="rounded-full bg-purple-500/20 px-2.5 py-0.5 text-xs font-medium text-purple-300">{stats.allDseList.length}</span>
+              </div>
+              <button type="button" onClick={() => setShowDseList(false)} className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-700/50 text-gray-400 transition hover:bg-gray-600 hover:text-white">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="max-h-[70vh] overflow-y-auto p-5 space-y-2">
+              {stats.allDseList.length > 0 ? (
+                stats.allDseList.map((dse) => (
+                  <Link
+                    key={dse.name}
+                    href={`/developer/dse/${encodeURIComponent(dse.name)}`}
+                    className="flex items-center gap-3 rounded-xl border border-gray-700/50 bg-[#252550]/50 p-3 transition hover:bg-[#2f2f60]"
+                  >
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-purple-500/20 text-sm font-bold text-purple-400">
+                      {dse.name.charAt(0)}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-white">{dse.name}</p>
+                      <p className="text-xs text-gray-400">
+                        Sup: {dse.supervisor} · {dse.region} · CUG: {dse.cugSuffix}
+                      </p>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-3 text-xs">
+                      <div className="text-center">
+                        <p className={`font-semibold ${dse.salesMonth > 0 ? "text-emerald-400" : "text-gray-500"}`}>{dse.salesMonth}</p>
+                        <p className="text-[9px] text-gray-600">Sales</p>
+                      </div>
+                      <div className="text-center">
+                        <p className={`font-semibold ${dse.prospectsMonth > 0 ? "text-blue-400" : "text-gray-500"}`}>{dse.prospectsMonth}</p>
+                        <p className="text-[9px] text-gray-600">Prosp.</p>
+                      </div>
+                      <ArrowUpRight className="h-3.5 w-3.5 text-gray-500" />
+                    </div>
+                  </Link>
+                ))
+              ) : (
+                <div className="flex flex-col items-center py-10 text-center">
+                  <UserPlus className="h-12 w-12 text-gray-600" />
+                  <p className="mt-2 text-sm text-gray-500">No DSEs registered yet.</p>
                 </div>
               )}
             </div>
@@ -717,5 +974,13 @@ function DseRow({ dse, teamColor }: { dse: DseMember; teamColor: "purple" | "amb
       {/* Arrow */}
       <ArrowUpRight className="h-3.5 w-3.5 shrink-0 text-gray-500" />
     </Link>
+  );
+}
+
+function TerminalIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" d="m6.75 7.5 3 2.25-3 2.25m4.5 0h3m-9 8.25h13.5A2.25 2.25 0 0 0 21 18V6a2.25 2.25 0 0 0-2.25-2.25H5.25A2.25 2.25 0 0 0 3 6v12a2.25 2.25 0 0 0 2.25 2.25Z" />
+    </svg>
   );
 }

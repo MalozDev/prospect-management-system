@@ -11,6 +11,8 @@ import {
   ChevronUp,
   ArrowUpRight,
   StickyNote,
+  Settings,
+  Zap,
 } from "lucide-react";
 
 import { PageShell } from "@/components/shared/PageShell";
@@ -21,6 +23,7 @@ import { useApiData } from "@/lib/use-api-data";
 import type { IProspect } from "@/lib/models/Prospect";
 import type { ISale } from "@/lib/models/Sale";
 import type { IActivity } from "@/lib/models/Activity";
+import type { IFollowUp } from "@/lib/models/FollowUp";
 import { COMMISSION_PER_SALE } from "@/lib/supervisor-utils";
 import { useTargets } from "@/lib/use-targets";
 import { formatRelativeTime } from "@/lib/time-utils";
@@ -33,6 +36,7 @@ export default function SupervisorDashboardPage() {
   const { data: prospectsData } = useApiData<{ prospects: IProspect[] }>("/api/prospects", { prospects: [] });
   const { data: salesData } = useApiData<{ sales: ISale[] }>("/api/sales", { sales: [] });
   const { data: activitiesData } = useApiData<{ activities: IActivity[] }>("/api/activities?limit=8", { activities: [] });
+  const { data: followUpsData } = useApiData<{ followUps: IFollowUp[] }>("/api/followups", { followUps: [] });
 
   const today = useMemo(() => {
     const d = new Date();
@@ -117,8 +121,24 @@ export default function SupervisorDashboardPage() {
     const teamTarget = targets.team;
     const teamProgress = teamTarget > 0 ? Math.min(100, Math.round((teamMonthSales / teamTarget) * 100)) : 0;
 
-    return { totalDse, todayProspects, todaySales: todaySalesCount, totalRevenue, teamMonthSales, teamTarget, teamProgress };
-  }, [prospectsData.prospects, salesData.sales, today, dseUsersData.dseUsers.length, targets]);
+    // Follow-ups stats
+    const followUps = followUpsData.followUps;
+    const todayFollowUps = followUps.filter((f) => f.status === "TODAY").length;
+    const overdueFollowUps = followUps.filter((f) => f.status === "OVERDUE").length;
+    const completedFollowUps = followUps.filter((f) => f.status === "COMPLETED").length;
+    const totalFollowUps = followUps.length;
+
+    console.log(`[SUPERVISOR DASHBOARD] Stats computed at ${new Date().toLocaleTimeString()}`);
+    console.log(`[SUPERVISOR DASHBOARD] DSEs: ${totalDse} | Prospects: ${prospectsData.prospects.length} | Sales: ${salesData.sales.length}`);
+    console.log(`[SUPERVISOR DASHBOARD] Today: ${todayProspects} prosp / ${todaySalesCount} sales | Month: ${teamMonthSales}/${teamTarget} (${teamProgress}%)`);
+    console.log(`[SUPERVISOR DASHBOARD] Follow-ups: ${totalFollowUps} total (${todayFollowUps} today, ${overdueFollowUps} overdue, ${completedFollowUps} completed)`);
+
+    return {
+      totalDse, todayProspects, todaySales: todaySalesCount, totalRevenue,
+      teamMonthSales, teamTarget, teamProgress,
+      todayFollowUps, overdueFollowUps, completedFollowUps, totalFollowUps,
+    };
+  }, [prospectsData.prospects, salesData.sales, today, dseUsersData.dseUsers.length, targets, followUpsData]);
 
   const targetZoneColor = (progress: number) => {
     if (progress >= 75) return "#16a34a";
@@ -295,6 +315,59 @@ export default function SupervisorDashboardPage() {
         <p className="mb-4 text-xs text-gray-500">Prospect created &amp; follow-up activity only</p>
         <ActivityTimeline activities={liveFeed} compact filterable />
       </div>
+
+      {/* ── Quick Links ── */}
+      <div className="mt-4 rounded-3xl border border-gray-200 bg-white p-4 shadow-sm sm:mt-6 sm:p-5">
+        <div className="flex items-center gap-2 mb-3">
+          <Zap className="h-4 w-4 text-[#E60012]" />
+          <h3 className="text-sm font-semibold text-gray-900">Quick Links</h3>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Link
+            href="/supervisor/dse"
+            className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-gray-50 px-3.5 py-2 text-xs font-medium text-gray-700 transition hover:border-[#E60012]/30 hover:bg-red-50 hover:text-[#E60012]"
+          >
+            <Users className="h-3.5 w-3.5" />
+            DSE Team
+          </Link>
+          <Link
+            href="/supervisor/prospects"
+            className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-gray-50 px-3.5 py-2 text-xs font-medium text-gray-700 transition hover:border-[#E60012]/30 hover:bg-red-50 hover:text-[#E60012]"
+          >
+            <ClipboardList className="h-3.5 w-3.5" />
+            All Prospects
+          </Link>
+          <Link
+            href="/supervisor/sales"
+            className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-gray-50 px-3.5 py-2 text-xs font-medium text-gray-700 transition hover:border-[#E60012]/30 hover:bg-red-50 hover:text-[#E60012]"
+          >
+            <TrendingUp className="h-3.5 w-3.5" />
+            All Sales
+          </Link>
+          <Link
+            href="/supervisor/settings"
+            className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-gray-50 px-3.5 py-2 text-xs font-medium text-gray-700 transition hover:border-[#E60012]/30 hover:bg-red-50 hover:text-[#E60012]"
+          >
+            <Settings className="h-3.5 w-3.5" />
+            Settings
+          </Link>
+        </div>
+      </div>
+
+      {/* ── Debug Console ── */}
+      <div className="mt-4 rounded-3xl border border-gray-200 bg-gray-50 p-4 shadow-sm sm:mt-6 sm:p-5">
+        <div className="flex items-center gap-2 mb-2">
+          <TerminalIcon className="h-4 w-4 text-gray-400" />
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Debug Console</p>
+        </div>
+        <pre className="text-[10px] text-gray-400 font-mono leading-relaxed">
+{`[SUPERVISOR DASHBOARD] DSEs: ${stats.totalDse} | Prospects: ${prospectsData.prospects.length} | Sales: ${salesData.sales.length}
+[SUPERVISOR DASHBOARD] Today: ${stats.todayProspects} prosp / ${stats.todaySales} sales | Month: ${stats.teamMonthSales}/${stats.teamTarget} (${stats.teamProgress}%)
+[SUPERVISOR DASHBOARD] Follow-ups: ${stats.totalFollowUps} total (${stats.todayFollowUps} today, ${stats.overdueFollowUps} overdue)
+[SUPERVISOR DASHBOARD] DSE Performance: ${dseStats.length} active | Top: ${dseStats[0]?.name || "none"} (${dseStats[0]?.monthSales || 0} monthly sales)
+[SUPERVISOR DASHBOARD] Last updated: ${new Date().toLocaleTimeString()}`}
+        </pre>
+      </div>
     </PageShell>
   );
 }
@@ -372,5 +445,13 @@ function TargetBar({ label, current, remaining, progress }: { label: string; cur
       </div>
       <p className="mt-0.5 text-[9px] text-gray-500">{remaining > 0 ? `${remaining} left` : "Done"}</p>
     </div>
+  );
+}
+
+function TerminalIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" d="m6.75 7.5 3 2.25-3 2.25m4.5 0h3m-9 8.25h13.5A2.25 2.25 0 0 0 21 18V6a2.25 2.25 0 0 0-2.25-2.25H5.25A2.25 2.25 0 0 0 3 6v12a2.25 2.25 0 0 0 2.25 2.25Z" />
+    </svg>
   );
 }

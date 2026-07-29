@@ -144,6 +144,24 @@ export default function FollowUpsPage() {
     [futureGroups]
   );
 
+  // ═══ AUTO-SEEN: Mark all follow-ups as acknowledged when DSE opens this page ═══
+  // This lets the supervisor/developer know the DSE has seen/viewed their follow-ups.
+  useEffect(() => {
+    const markSeen = async () => {
+      try {
+        const res = await apiFetch<{ ok: boolean; marked: number }>("/api/followups/seen", {
+          method: "POST",
+        });
+        if (res.marked > 0) {
+          console.log(`[SEEN] Auto-marked ${res.marked} follow-ups as seen`);
+        }
+      } catch {
+        // Silent fail — non-critical
+      }
+    };
+    markSeen();
+  }, []);
+
   // Check for pending review items on load (only if no explicit contact is pending)
   useEffect(() => {
     if (pendingReviewItems.length > 0 && showFeedback && !pendingContactId) {

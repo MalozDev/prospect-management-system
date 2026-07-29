@@ -18,6 +18,7 @@ export interface IFollowUp extends Document {
   visitDate: string;
   notes: string;
   lastRemindedAt: string;
+  followUpSeenAt: string;
 }
 
 const FollowUpSchema = new Schema<IFollowUp>(
@@ -53,6 +54,11 @@ const FollowUpSchema = new Schema<IFollowUp>(
    * Empty string means never reminded.
    */
   lastRemindedAt: { type: String, default: "" },
+  /**
+   * ISO timestamp when the DSE last opened/seen this follow-up.
+   * Empty string means never seen.
+   */
+  followUpSeenAt: { type: String, default: "" },
   },
   { timestamps: true }
 );
