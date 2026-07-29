@@ -126,9 +126,9 @@ export default function DeveloperProspectsPage() {
   }, [prospects]);
 
   return (
-    <div className="space-y-6">
+    <div className="max-w-full overflow-x-hidden space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
           <Target className="h-5 w-5 text-purple-400" />
           <div>
@@ -169,22 +169,23 @@ export default function DeveloperProspectsPage() {
       </div>
 
       {/* Filters */}
-      <div className="flex flex-wrap gap-3">
-        <div className="relative flex-1 min-w-[200px]">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+        <div className="relative flex-1">
           <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search prospects by name, DSE, location..."
-            className="h-11 w-full rounded-xl border border-gray-700/50 bg-[#1a1a3e] pl-10 pr-4 text-sm text-white placeholder-gray-500 outline-none transition focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/30"
+            className="h-10 w-full rounded-xl border border-gray-700/50 bg-[#1a1a3e] pl-9 pr-3 text-xs text-white placeholder-gray-500 outline-none transition focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/30 sm:h-11 sm:pl-10 sm:pr-4 sm:text-sm"
           />
         </div>
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          className="h-11 rounded-xl border border-gray-700/50 bg-[#1a1a3e] px-4 text-sm text-gray-200 outline-none transition focus:border-purple-500/50"
-        >
+        <div className="flex gap-2">
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="flex-1 h-10 rounded-xl border border-gray-700/50 bg-[#1a1a3e] px-3 text-xs text-gray-200 outline-none transition focus:border-purple-500/50 sm:h-11 sm:px-4 sm:text-sm"
+          >
           <option value="all">All Statuses</option>
           <option value="NEW">New</option>
           <option value="CONTACTED">Contacted</option>
@@ -196,16 +197,17 @@ export default function DeveloperProspectsPage() {
           <option value="SOLD">Sold</option>
           <option value="LOST">Lost</option>
         </select>
-        <select
-          value={dseFilter}
-          onChange={(e) => setDseFilter(e.target.value)}
-          className="h-11 rounded-xl border border-gray-700/50 bg-[#1a1a3e] px-4 text-sm text-gray-200 outline-none transition focus:border-purple-500/50"
-        >
-          <option value="all">All DSEs</option>
-          {dseNames.map((name) => (
-            <option key={name} value={name}>{name}</option>
-          ))}
-        </select>
+          <select
+            value={dseFilter}
+            onChange={(e) => setDseFilter(e.target.value)}
+            className="flex-1 h-10 rounded-xl border border-gray-700/50 bg-[#1a1a3e] px-3 text-xs text-gray-200 outline-none transition focus:border-purple-500/50 sm:h-11 sm:px-4 sm:text-sm"
+          >
+            <option value="all">All DSEs</option>
+            {dseNames.map((name) => (
+              <option key={name} value={name}>{name}</option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {/* Loading */}
@@ -285,12 +287,12 @@ export default function DeveloperProspectsPage() {
       )}
 
       {/* Console log */}
-      <div className="rounded-2xl border border-gray-700/50 bg-[#1a1a3e] p-4">
+      <div className="rounded-2xl border border-gray-700/50 bg-[#1a1a3e] p-3 sm:p-4">
         <div className="flex items-center gap-2 mb-2">
-          <TerminalIcon className="h-4 w-4 text-gray-500" />
-          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Debug Console</p>
+          <TerminalIcon className="h-3.5 w-3.5 text-gray-500 sm:h-4 sm:w-4" />
+          <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider sm:text-xs">Debug Console</p>
         </div>
-        <pre className="text-[10px] text-gray-500 font-mono leading-relaxed">
+        <pre className="text-[9px] sm:text-[10px] text-gray-500 font-mono leading-relaxed whitespace-pre-wrap break-all overflow-x-auto max-w-full">
 {`[PROSPECTS] Total: ${stats.total} | Today: ${stats.today} | Active: ${stats.active} | Sold: ${stats.sold}
 [PROSPECTS] Date groups: ${groupedByDate.length} | Filtered: ${filteredProspects.length}
 [PROSPECTS] Filters: status=${statusFilter} | dse=${dseFilter} | search="${search || "none"}"`}

@@ -121,9 +121,9 @@ export default function DeveloperSalesPage() {
   }, [sales, todayLocal, currentMonth]);
 
   return (
-    <div className="space-y-6">
+    <div className="max-w-full overflow-x-hidden space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
           <ShoppingCart className="h-5 w-5 text-purple-400" />
           <div>
@@ -270,12 +270,12 @@ export default function DeveloperSalesPage() {
       )}
 
       {/* Console log */}
-      <div className="rounded-2xl border border-gray-700/50 bg-[#1a1a3e] p-4">
+      <div className="rounded-2xl border border-gray-700/50 bg-[#1a1a3e] p-3 sm:p-4">
         <div className="flex items-center gap-2 mb-2">
-          <TerminalIcon className="h-4 w-4 text-gray-500" />
-          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Debug Console</p>
+          <TerminalIcon className="h-3.5 w-3.5 text-gray-500 sm:h-4 sm:w-4" />
+          <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider sm:text-xs">Debug Console</p>
         </div>
-        <pre className="text-[10px] text-gray-500 font-mono leading-relaxed">
+        <pre className="text-[9px] sm:text-[10px] text-gray-500 font-mono leading-relaxed whitespace-pre-wrap break-all overflow-x-auto max-w-full">
 {`[SALES] Total: ${stats.total} | Today: ${stats.today} | Month: ${stats.monthSales} | Revenue: K${stats.revenue}
 [SALES] Date groups: ${groupedByDate.length} | Filtered: ${filteredSales.length}
 [SALES] Filters: dse=${dseFilter} | search="${search || "none"}"`}

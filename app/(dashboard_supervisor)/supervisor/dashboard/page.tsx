@@ -360,7 +360,7 @@ export default function SupervisorDashboardPage() {
           <TerminalIcon className="h-4 w-4 text-gray-400" />
           <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Debug Console</p>
         </div>
-        <pre className="text-[10px] text-gray-400 font-mono leading-relaxed">
+        <pre className="text-[9px] sm:text-[10px] text-gray-400 font-mono leading-relaxed whitespace-pre-wrap break-all overflow-x-auto max-w-full">
 {`[SUPERVISOR DASHBOARD] DSEs: ${stats.totalDse} | Prospects: ${prospectsData.prospects.length} | Sales: ${salesData.sales.length}
 [SUPERVISOR DASHBOARD] Today: ${stats.todayProspects} prosp / ${stats.todaySales} sales | Month: ${stats.teamMonthSales}/${stats.teamTarget} (${stats.teamProgress}%)
 [SUPERVISOR DASHBOARD] Follow-ups: ${stats.totalFollowUps} total (${stats.todayFollowUps} today, ${stats.overdueFollowUps} overdue)

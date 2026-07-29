@@ -292,18 +292,18 @@ export default function DeveloperDashboardPage() {
   ];
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-bold text-white">System Overview</h2>
-          <p className="mt-1 text-sm text-gray-400">
+    <div className="max-w-full overflow-x-hidden space-y-6">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
+          <h2 className="text-lg font-bold text-white sm:text-xl">System Overview</h2>
+          <p className="mt-0.5 text-xs text-gray-400 sm:mt-1 sm:text-sm">
             Full visibility into your CRM platform at a glance.
           </p>
         </div>
         {/* Pulse indicator */}
-        <div className="flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3 py-2">
-          <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-400" />
-          <span className="text-xs font-medium text-emerald-300">Live</span>
+        <div className="self-start shrink-0 flex items-center gap-1.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1.5 sm:px-3 sm:py-2">
+          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400 sm:h-2 sm:w-2" />
+          <span className="text-[10px] font-medium text-emerald-300 sm:text-xs">Live</span>
         </div>
       </div>
 
@@ -314,42 +314,23 @@ export default function DeveloperDashboardPage() {
       ) : (
         <>
           {/* ── Stats Grid ── */}
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-            {statCards.map((card) => (
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6 sm:gap-4">
+            {[...statCards, ...secondaryCards].map((card) => (
               <div
                 key={card.title}
                 onClick={card.onClick}
-                className={`group relative overflow-hidden rounded-2xl border border-gray-700/50 bg-[#1a1a3e] p-4 transition hover:border-purple-500/30 hover:shadow-lg hover:shadow-purple-500/5 ${typeof card.onClick === 'function' ? 'cursor-pointer' : ''}`}
+                className={`group relative overflow-hidden rounded-xl border border-gray-700/50 bg-[#1a1a3e] p-3 transition hover:border-purple-500/30 hover:shadow-lg hover:shadow-purple-500/5 sm:rounded-2xl sm:p-4 ${typeof card.onClick === 'function' ? 'cursor-pointer active:scale-[0.98]' : ''}`}
               >
                 <div className={`absolute inset-0 bg-gradient-to-br ${card.gradient} opacity-[0.03]`} />
                 <div className="relative">
                   <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">
+                    <span className="text-[9px] font-semibold uppercase tracking-wider text-gray-400 sm:text-[10px]">
                       {card.title}
                     </span>
-                    <card.icon className="h-3.5 w-3.5 text-purple-400" />
+                    <card.icon className="h-3 w-3 text-purple-400 sm:h-3.5 sm:w-3.5" />
                   </div>
-                  <p className="mt-2 text-2xl font-bold text-white">{card.value}</p>
-                  <p className="mt-0.5 text-[10px] text-gray-400">{card.subtitle}</p>
-                </div>
-              </div>
-            ))}
-            {secondaryCards.map((card) => (
-              <div
-                key={card.title}
-                onClick={card.onClick}
-                className={`group relative overflow-hidden rounded-2xl border border-gray-700/50 bg-[#1a1a3e] p-4 transition hover:border-purple-500/30 hover:shadow-lg hover:shadow-purple-500/5 ${typeof card.onClick === 'function' ? 'cursor-pointer' : ''}`}
-              >
-                <div className={`absolute inset-0 bg-gradient-to-br ${card.gradient} opacity-[0.03]`} />
-                <div className="relative">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">
-                      {card.title}
-                    </span>
-                    <card.icon className="h-3.5 w-3.5 text-purple-400" />
-                  </div>
-                  <p className="mt-2 text-2xl font-bold text-white">{card.value}</p>
-                  <p className="mt-0.5 text-[10px] text-gray-400">{card.subtitle}</p>
+                  <p className="mt-1.5 text-xl font-bold text-white sm:mt-2 sm:text-2xl">{card.value}</p>
+                  <p className="mt-0.5 text-[9px] text-gray-400 sm:text-[10px]">{card.subtitle}</p>
                 </div>
               </div>
             ))}
@@ -676,12 +657,12 @@ export default function DeveloperDashboardPage() {
       </div>
 
       {/* Debug Console Section */}
-      <div className="rounded-2xl border border-gray-700/50 bg-[#1a1a3e] p-4">
-        <div className="flex items-center gap-2 mb-3">
-          <TerminalIcon className="h-4 w-4 text-gray-500" />
-          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Debug Console</p>
+      <div className="rounded-2xl border border-gray-700/50 bg-[#1a1a3e] p-3 sm:p-4">
+        <div className="flex items-center gap-2 mb-2">
+          <TerminalIcon className="h-3.5 w-3.5 text-gray-500 sm:h-4 sm:w-4" />
+          <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider sm:text-xs">Debug Console</p>
         </div>
-        <pre className="text-[10px] text-gray-500 font-mono leading-relaxed">
+        <pre className="text-[9px] sm:text-[10px] text-gray-500 font-mono leading-relaxed whitespace-pre-wrap break-all overflow-x-auto max-w-full">
 {`[DASHBOARD] Users: ${stats.totalUsers} | DSEs: ${stats.totalDse} | Sup: ${stats.totalSupervisors}
 [DASHBOARD] Active Today: ${stats.activeToday} | Prospects: ${stats.totalProspects} | Sales: ${stats.totalSales}
 [DASHBOARD] Today: ${stats.prospectsToday} prosp / ${stats.salesToday} sales | Month: ${stats.prospectsMonth} prosp / ${stats.salesMonth} sales
@@ -695,55 +676,54 @@ export default function DeveloperDashboardPage() {
       {showActiveUsers && (
         <div className="fixed inset-0 z-[99999] flex items-start justify-center overflow-y-auto pt-4 pb-8 sm:pt-10">
           <div className="fixed inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setShowActiveUsers(false)} />
-          <div className="relative z-10 w-[calc(100%-2rem)] max-w-2xl rounded-2xl border border-gray-700/50 bg-[#1a1a3e] shadow-2xl shadow-purple-500/10">
-            <div className="flex items-center justify-between border-b border-gray-700/50 px-5 py-4">
-              <div className="flex items-center gap-2">
-                <Zap className="h-5 w-5 text-orange-400" />
-                <h2 className="text-lg font-bold text-white">Active Today</h2>
-                <span className="rounded-full bg-orange-500/20 px-2.5 py-0.5 text-xs font-medium text-orange-300">
+          <div className="relative z-10 mx-auto w-[calc(100%-1rem)] max-w-2xl rounded-2xl border border-gray-700/50 bg-[#1a1a3e] shadow-2xl shadow-purple-500/10 sm:w-[calc(100%-2rem)]">
+            <div className="flex items-center justify-between border-b border-gray-700/50 px-4 py-3 sm:px-5 sm:py-4">
+              <div className="flex items-center gap-2 min-w-0">
+                <Zap className="h-4 w-4 shrink-0 text-orange-400 sm:h-5 sm:w-5" />
+                <h2 className="text-base font-bold text-white truncate sm:text-lg">Active Today</h2>
+                <span className="shrink-0 rounded-full bg-orange-500/20 px-2 py-0.5 text-[10px] font-medium text-orange-300 sm:text-xs sm:px-2.5">
                   {stats.activeToday} user{stats.activeToday !== 1 ? "s" : ""}
                 </span>
               </div>
-              <button type="button" onClick={() => setShowActiveUsers(false)} className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-700/50 text-gray-400 transition hover:bg-gray-600 hover:text-white">
-                <X className="h-4 w-4" />
+              <button type="button" onClick={() => setShowActiveUsers(false)} className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gray-700/50 text-gray-400 transition hover:bg-gray-600 hover:text-white sm:h-8 sm:w-8">
+                <X className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               </button>
             </div>
-            <div className="max-h-[70vh] overflow-y-auto p-5 space-y-5">
+            <div className="max-h-[70vh] overflow-y-auto p-4 space-y-4 sm:p-5 sm:space-y-5">
               {stats.activeDses.length > 0 && (
                 <section>
-                  <div className="mb-3 flex items-center gap-2">
-                    <Users className="h-4 w-4 text-purple-400" />
-                    <h3 className="text-sm font-semibold text-white">Direct Sales Executives</h3>
-                    <span className="ml-auto text-xs text-gray-500">{stats.activeDses.length} active</span>
+                  <div className="mb-2 flex items-center gap-2 sm:mb-3">
+                    <Users className="h-3.5 w-3.5 text-purple-400 sm:h-4 sm:w-4" />
+                    <h3 className="text-xs font-semibold text-white sm:text-sm">Direct Sales Executives</h3>
+                    <span className="ml-auto text-[10px] text-gray-500 sm:text-xs">{stats.activeDses.length} active</span>
                   </div>
-                  <div className="space-y-2">
+                  <div className="space-y-1.5 sm:space-y-2">
                     {stats.activeDses.map((dse) => {
                       const loginTime = dse.lastLogin ? new Date(dse.lastLogin).toLocaleTimeString("en-ZM", { hour: "2-digit", minute: "2-digit", hour12: true }) : "—";
                       return (
-                        <Link key={dse.name} href={`/developer/dse/${encodeURIComponent(dse.name)}`} className="flex items-center gap-3 rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3 transition hover:bg-emerald-500/10">
-                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-500/20 text-sm font-bold text-emerald-400">{dse.name.charAt(0)}</div>
+                        <Link key={dse.name} href={`/developer/dse/${encodeURIComponent(dse.name)}`} className="flex items-center gap-2 rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-2.5 transition hover:bg-emerald-500/10 sm:p-3 sm:gap-3">
+                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-500/20 text-xs font-bold text-emerald-400 sm:h-10 sm:w-10 sm:text-sm">{dse.name.charAt(0)}</div>
                           <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-2">
-                              <span className="text-sm font-medium text-white">{dse.name}</span>
-                              <span className="rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[9px] font-medium text-emerald-400">DSE</span>
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-xs font-medium text-white truncate sm:text-sm">{dse.name}</span>
+                              <span className="shrink-0 rounded-full bg-emerald-500/15 px-1 py-0.5 text-[8px] font-medium text-emerald-400 sm:px-1.5 sm:text-[9px]">DSE</span>
                             </div>
-                            <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[10px] text-gray-400">
-                              <span className="inline-flex items-center gap-1"><MapPin className="h-2.5 w-2.5" />{dse.region}</span>
-                              <span className="inline-flex items-center gap-1"><Phone className="h-2.5 w-2.5" />CUG: {dse.cugSuffix}</span>
-                              <span className="inline-flex items-center gap-1"><LogIn className="h-2.5 w-2.5" />{loginTime}</span>
-                              <span className="text-gray-500">· Sup: {dse.supervisor}</span>
+                            <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[9px] text-gray-400 sm:text-[10px] sm:gap-x-3">
+                              <span className="inline-flex items-center gap-0.5"><MapPin className="h-2 w-2 sm:h-2.5 sm:w-2.5" />{dse.region}</span>
+                              <span className="inline-flex items-center gap-0.5"><Phone className="h-2 w-2 sm:h-2.5 sm:w-2.5" />CUG: {dse.cugSuffix}</span>
+                              <span className="inline-flex items-center gap-0.5 hidden sm:inline-flex"><LogIn className="h-2 w-2 sm:h-2.5 sm:w-2.5" />{loginTime}</span>
+                              <span className="text-gray-500 hidden sm:inline">· Sup: {dse.supervisor}</span>
                             </div>
                           </div>
-                          <div className="flex shrink-0 items-center gap-2.5 text-xs">
+                          <div className="flex shrink-0 items-center gap-1.5 text-[10px] sm:text-xs sm:gap-2.5">
                             <div className="text-center">
-                              <p className={`font-semibold ${dse.stats.prospectsToday > 0 ? "text-blue-400" : "text-gray-500"}`}>{dse.stats.prospectsToday}</p>
-                              <p className="text-[9px] text-gray-600">Prosp.</p>
+                              <p className={`font-semibold leading-tight ${dse.stats.prospectsToday > 0 ? "text-blue-400" : "text-gray-500"}`}>{dse.stats.prospectsToday}</p>
+                              <p className="text-[8px] text-gray-600 sm:text-[9px]">Pr.</p>
                             </div>
                             <div className="text-center">
-                              <p className={`font-semibold ${dse.stats.salesToday > 0 ? "text-emerald-400" : "text-gray-500"}`}>{dse.stats.salesToday}</p>
-                              <p className="text-[9px] text-gray-600">Sold</p>
+                              <p className={`font-semibold leading-tight ${dse.stats.salesToday > 0 ? "text-emerald-400" : "text-gray-500"}`}>{dse.stats.salesToday}</p>
+                              <p className="text-[8px] text-gray-600 sm:text-[9px]">Sld</p>
                             </div>
-                            <ArrowUpRight className="h-3 w-3 text-gray-500" />
                           </div>
                         </Link>
                       );
@@ -753,29 +733,29 @@ export default function DeveloperDashboardPage() {
               )}
               {stats.activeSupervisors && stats.activeSupervisors.length > 0 && (
                 <section>
-                  <div className="mb-3 flex items-center gap-2">
-                    <Shield className="h-4 w-4 text-blue-400" />
-                    <h3 className="text-sm font-semibold text-white">Supervisors</h3>
-                    <span className="ml-auto text-xs text-gray-500">{stats.activeSupervisors.length} active</span>
+                  <div className="mb-2 flex items-center gap-2 sm:mb-3">
+                    <Shield className="h-3.5 w-3.5 text-blue-400 sm:h-4 sm:w-4" />
+                    <h3 className="text-xs font-semibold text-white sm:text-sm">Supervisors</h3>
+                    <span className="ml-auto text-[10px] text-gray-500 sm:text-xs">{stats.activeSupervisors.length} active</span>
                   </div>
-                  <div className="space-y-2">
+                  <div className="space-y-1.5 sm:space-y-2">
                     {stats.activeSupervisors.map((sup: { name: string; region: string; cugSuffix: string; lastLogin: string }) => {
                       const loginTime = sup.lastLogin ? new Date(sup.lastLogin).toLocaleTimeString("en-ZM", { hour: "2-digit", minute: "2-digit", hour12: true }) : "—";
                       return (
-                        <div key={sup.name} className="flex items-center gap-3 rounded-xl border border-blue-500/20 bg-blue-500/5 p-3">
-                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-500/20 text-sm font-bold text-blue-400">{sup.name.charAt(0)}</div>
+                        <div key={sup.name} className="flex items-center gap-2 rounded-xl border border-blue-500/20 bg-blue-500/5 p-2.5 sm:p-3 sm:gap-3">
+                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-500/20 text-xs font-bold text-blue-400 sm:h-10 sm:w-10 sm:text-sm">{sup.name.charAt(0)}</div>
                           <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-2">
-                              <span className="text-sm font-medium text-white">{sup.name}</span>
-                              <span className="rounded-full bg-blue-500/15 px-1.5 py-0.5 text-[9px] font-medium text-blue-400">Supervisor</span>
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-xs font-medium text-white truncate sm:text-sm">{sup.name}</span>
+                              <span className="shrink-0 rounded-full bg-blue-500/15 px-1 py-0.5 text-[8px] font-medium text-blue-400 sm:px-1.5 sm:text-[9px]">Supervisor</span>
                             </div>
-                            <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[10px] text-gray-400">
-                              <span className="inline-flex items-center gap-1"><MapPin className="h-2.5 w-2.5" />{sup.region}</span>
-                              <span className="inline-flex items-center gap-1"><Phone className="h-2.5 w-2.5" />CUG: {sup.cugSuffix}</span>
-                              <span className="inline-flex items-center gap-1"><LogIn className="h-2.5 w-2.5" />{loginTime}</span>
+                            <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[9px] text-gray-400 sm:text-[10px] sm:gap-x-3">
+                              <span className="inline-flex items-center gap-0.5"><MapPin className="h-2 w-2 sm:h-2.5 sm:w-2.5" />{sup.region}</span>
+                              <span className="inline-flex items-center gap-0.5"><Phone className="h-2 w-2 sm:h-2.5 sm:w-2.5" />CUG: {sup.cugSuffix}</span>
+                              <span className="inline-flex items-center gap-0.5 hidden sm:inline-flex"><LogIn className="h-2 w-2 sm:h-2.5 sm:w-2.5" />{loginTime}</span>
                             </div>
                           </div>
-                          <Award className="h-4 w-4 shrink-0 text-blue-400" />
+                          <Award className="h-3.5 w-3.5 shrink-0 text-blue-400 sm:h-4 sm:w-4" />
                         </div>
                       );
                     })}
@@ -783,10 +763,10 @@ export default function DeveloperDashboardPage() {
                 </section>
               )}
               {stats.activeDses.length === 0 && (!stats.activeSupervisors || stats.activeSupervisors.length === 0) && (
-                <div className="flex flex-col items-center justify-center py-10 text-center">
-                  <Zap className="h-12 w-12 text-gray-600" />
-                  <p className="mt-3 text-sm text-gray-400">No active users today yet.</p>
-                  <p className="text-xs text-gray-500">Activity data will appear once users log in.</p>
+                <div className="flex flex-col items-center justify-center py-6 text-center sm:py-10">
+                  <Zap className="h-8 w-8 text-gray-600 sm:h-12 sm:w-12" />
+                  <p className="mt-2 text-xs text-gray-400 sm:mt-3 sm:text-sm">No active users today yet.</p>
+                  <p className="text-[10px] text-gray-500 sm:text-xs">Activity data will appear once users log in.</p>
                 </div>
               )}
             </div>
@@ -798,58 +778,58 @@ export default function DeveloperDashboardPage() {
       {showSupervisorList && (
         <div className="fixed inset-0 z-[99999] flex items-start justify-center overflow-y-auto pt-4 pb-8 sm:pt-10">
           <div className="fixed inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setShowSupervisorList(false)} />
-          <div className="relative z-10 w-[calc(100%-2rem)] max-w-2xl rounded-2xl border border-gray-700/50 bg-[#1a1a3e] shadow-2xl shadow-purple-500/10">
-            <div className="flex items-center justify-between border-b border-gray-700/50 px-5 py-4">
-              <div className="flex items-center gap-2">
-                <Shield className="h-5 w-5 text-blue-400" />
-                <h2 className="text-lg font-bold text-white">All Supervisors</h2>
-                <span className="rounded-full bg-blue-500/20 px-2.5 py-0.5 text-xs font-medium text-blue-300">{stats.supervisorList.length}</span>
+          <div className="relative z-10 mx-auto w-[calc(100%-1rem)] max-w-2xl rounded-2xl border border-gray-700/50 bg-[#1a1a3e] shadow-2xl shadow-purple-500/10 sm:w-[calc(100%-2rem)]">
+            <div className="flex items-center justify-between border-b border-gray-700/50 px-4 py-3 sm:px-5 sm:py-4">
+              <div className="flex items-center gap-2 min-w-0">
+                <Shield className="h-4 w-4 shrink-0 text-blue-400 sm:h-5 sm:w-5" />
+                <h2 className="text-base font-bold text-white truncate sm:text-lg">All Supervisors</h2>
+                <span className="shrink-0 rounded-full bg-blue-500/20 px-2 py-0.5 text-[10px] font-medium text-blue-300 sm:text-xs sm:px-2.5">{stats.supervisorList.length}</span>
               </div>
-              <button type="button" onClick={() => setShowSupervisorList(false)} className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-700/50 text-gray-400 transition hover:bg-gray-600 hover:text-white">
-                <X className="h-4 w-4" />
+              <button type="button" onClick={() => setShowSupervisorList(false)} className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gray-700/50 text-gray-400 transition hover:bg-gray-600 hover:text-white sm:h-8 sm:w-8">
+                <X className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               </button>
             </div>
-            <div className="max-h-[70vh] overflow-y-auto p-5 space-y-3">
+            <div className="max-h-[70vh] overflow-y-auto p-4 space-y-3 sm:p-5">
               {stats.supervisorList.length > 0 ? (
                 stats.supervisorList.map((sup) => (
-                  <div key={sup.name} className="rounded-xl border border-gray-700/50 bg-[#252550]/50 p-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-500/20 text-sm font-bold text-blue-400">
+                  <div key={sup.name} className="rounded-xl border border-gray-700/50 bg-[#252550]/50 p-3 sm:p-4">
+                    <div className="flex items-start justify-between gap-2 sm:items-center">
+                      <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-500/20 text-[10px] font-bold text-blue-400 sm:h-10 sm:w-10 sm:text-sm">
                           {sup.name.charAt(0)}
                         </div>
-                        <div>
-                          <p className="text-sm font-medium text-white">{sup.name}</p>
-                          <p className="text-xs text-gray-400">{sup.region} · CUG: {sup.cugSuffix}</p>
+                        <div className="min-w-0">
+                          <p className="text-xs font-medium text-white truncate sm:text-sm">{sup.name}</p>
+                          <p className="text-[9px] text-gray-400 truncate sm:text-xs">{sup.region} · CUG: {sup.cugSuffix}</p>
                         </div>
                       </div>
-                      <div className="flex items-center gap-3 text-xs">
+                      <div className="flex shrink-0 items-center gap-2 text-[10px] sm:gap-3 sm:text-xs">
                         <div className="text-center">
                           <p className="font-semibold text-blue-400">{sup.totalDse}</p>
-                          <p className="text-[9px] text-gray-500">DSEs</p>
+                          <p className="text-[8px] text-gray-500 sm:text-[9px]">DSEs</p>
                         </div>
                         <div className="text-center">
                           <p className="font-semibold text-emerald-400">{sup.salesMonth}</p>
-                          <p className="text-[9px] text-gray-500">Sales</p>
+                          <p className="text-[8px] text-gray-500 sm:text-[9px]">Sales</p>
                         </div>
                         <div className="text-center">
                           <p className="font-semibold text-orange-400">{sup.activeToday}</p>
-                          <p className="text-[9px] text-gray-500">Active</p>
+                          <p className="text-[8px] text-gray-500 sm:text-[9px]">Active</p>
                         </div>
                       </div>
                     </div>
                     {/* Team members */}
                     {sup.dseMembers.length > 0 && (
-                      <div className="mt-3 pt-3 border-t border-gray-700/30">
-                        <p className="text-[10px] font-semibold text-gray-500 mb-1.5">Team members:</p>
-                        <div className="flex flex-wrap gap-1.5">
+                      <div className="mt-2 pt-2 border-t border-gray-700/30 sm:mt-3 sm:pt-3">
+                        <p className="text-[9px] font-semibold text-gray-500 mb-1 sm:text-[10px] sm:mb-1.5">Team members:</p>
+                        <div className="flex flex-wrap gap-1">
                           {sup.dseMembers.map((name) => (
                             <Link
                               key={name}
                               href={`/developer/dse/${encodeURIComponent(name)}`}
-                              className="inline-flex items-center gap-1 rounded-full bg-purple-500/10 px-2.5 py-1 text-[10px] text-purple-300 transition hover:bg-purple-500/20"
+                              className="inline-flex items-center gap-0.5 rounded-full bg-purple-500/10 px-1.5 py-0.5 text-[8px] text-purple-300 transition hover:bg-purple-500/20 sm:gap-1 sm:px-2.5 sm:py-1 sm:text-[10px]"
                             >
-                              <UserPlus className="h-2.5 w-2.5" />
+                              <UserPlus className="h-2 w-2 sm:h-2.5 sm:w-2.5" />
                               {name}
                             </Link>
                           ))}
@@ -859,9 +839,9 @@ export default function DeveloperDashboardPage() {
                   </div>
                 ))
               ) : (
-                <div className="flex flex-col items-center py-10 text-center">
-                  <Shield className="h-12 w-12 text-gray-600" />
-                  <p className="mt-2 text-sm text-gray-500">No supervisors registered yet.</p>
+                <div className="flex flex-col items-center py-6 text-center sm:py-10">
+                  <Shield className="h-8 w-8 text-gray-600 sm:h-12 sm:w-12" />
+                  <p className="mt-2 text-xs text-gray-500 sm:text-sm">No supervisors registered yet.</p>
                 </div>
               )}
             </div>
@@ -873,51 +853,50 @@ export default function DeveloperDashboardPage() {
       {showDseList && (
         <div className="fixed inset-0 z-[99999] flex items-start justify-center overflow-y-auto pt-4 pb-8 sm:pt-10">
           <div className="fixed inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setShowDseList(false)} />
-          <div className="relative z-10 w-[calc(100%-2rem)] max-w-2xl rounded-2xl border border-gray-700/50 bg-[#1a1a3e] shadow-2xl shadow-purple-500/10">
-            <div className="flex items-center justify-between border-b border-gray-700/50 px-5 py-4">
-              <div className="flex items-center gap-2">
-                <UserPlus className="h-5 w-5 text-purple-400" />
-                <h2 className="text-lg font-bold text-white">All DSEs</h2>
-                <span className="rounded-full bg-purple-500/20 px-2.5 py-0.5 text-xs font-medium text-purple-300">{stats.allDseList.length}</span>
+          <div className="relative z-10 mx-auto w-[calc(100%-1rem)] max-w-2xl rounded-2xl border border-gray-700/50 bg-[#1a1a3e] shadow-2xl shadow-purple-500/10 sm:w-[calc(100%-2rem)]">
+            <div className="flex items-center justify-between border-b border-gray-700/50 px-4 py-3 sm:px-5 sm:py-4">
+              <div className="flex items-center gap-2 min-w-0">
+                <UserPlus className="h-4 w-4 shrink-0 text-purple-400 sm:h-5 sm:w-5" />
+                <h2 className="text-base font-bold text-white truncate sm:text-lg">All DSEs</h2>
+                <span className="shrink-0 rounded-full bg-purple-500/20 px-2 py-0.5 text-[10px] font-medium text-purple-300 sm:text-xs sm:px-2.5">{stats.allDseList.length}</span>
               </div>
-              <button type="button" onClick={() => setShowDseList(false)} className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-700/50 text-gray-400 transition hover:bg-gray-600 hover:text-white">
-                <X className="h-4 w-4" />
+              <button type="button" onClick={() => setShowDseList(false)} className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gray-700/50 text-gray-400 transition hover:bg-gray-600 hover:text-white sm:h-8 sm:w-8">
+                <X className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               </button>
             </div>
-            <div className="max-h-[70vh] overflow-y-auto p-5 space-y-2">
+            <div className="max-h-[70vh] overflow-y-auto p-4 space-y-2 sm:p-5">
               {stats.allDseList.length > 0 ? (
                 stats.allDseList.map((dse) => (
                   <Link
                     key={dse.name}
                     href={`/developer/dse/${encodeURIComponent(dse.name)}`}
-                    className="flex items-center gap-3 rounded-xl border border-gray-700/50 bg-[#252550]/50 p-3 transition hover:bg-[#2f2f60]"
+                    className="flex items-center gap-2 rounded-xl border border-gray-700/50 bg-[#252550]/50 p-2.5 transition hover:bg-[#2f2f60] sm:p-3 sm:gap-3"
                   >
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-purple-500/20 text-sm font-bold text-purple-400">
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-purple-500/20 text-[10px] font-bold text-purple-400 sm:h-10 sm:w-10 sm:text-sm">
                       {dse.name.charAt(0)}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium text-white">{dse.name}</p>
-                      <p className="text-xs text-gray-400">
+                      <p className="text-xs font-medium text-white truncate sm:text-sm">{dse.name}</p>
+                      <p className="text-[9px] text-gray-400 truncate sm:text-xs">
                         Sup: {dse.supervisor} · {dse.region} · CUG: {dse.cugSuffix}
                       </p>
                     </div>
-                    <div className="flex shrink-0 items-center gap-3 text-xs">
+                    <div className="flex shrink-0 items-center gap-2 text-[10px] sm:gap-3 sm:text-xs">
                       <div className="text-center">
-                        <p className={`font-semibold ${dse.salesMonth > 0 ? "text-emerald-400" : "text-gray-500"}`}>{dse.salesMonth}</p>
-                        <p className="text-[9px] text-gray-600">Sales</p>
+                        <p className={`font-semibold leading-tight ${dse.salesMonth > 0 ? "text-emerald-400" : "text-gray-500"}`}>{dse.salesMonth}</p>
+                        <p className="text-[8px] text-gray-600 sm:text-[9px]">Sales</p>
                       </div>
                       <div className="text-center">
-                        <p className={`font-semibold ${dse.prospectsMonth > 0 ? "text-blue-400" : "text-gray-500"}`}>{dse.prospectsMonth}</p>
-                        <p className="text-[9px] text-gray-600">Prosp.</p>
+                        <p className={`font-semibold leading-tight ${dse.prospectsMonth > 0 ? "text-blue-400" : "text-gray-500"}`}>{dse.prospectsMonth}</p>
+                        <p className="text-[8px] text-gray-600 sm:text-[9px]">Prosp.</p>
                       </div>
-                      <ArrowUpRight className="h-3.5 w-3.5 text-gray-500" />
                     </div>
                   </Link>
                 ))
               ) : (
-                <div className="flex flex-col items-center py-10 text-center">
-                  <UserPlus className="h-12 w-12 text-gray-600" />
-                  <p className="mt-2 text-sm text-gray-500">No DSEs registered yet.</p>
+                <div className="flex flex-col items-center py-6 text-center sm:py-10">
+                  <UserPlus className="h-8 w-8 text-gray-600 sm:h-12 sm:w-12" />
+                  <p className="mt-2 text-xs text-gray-500 sm:text-sm">No DSEs registered yet.</p>
                 </div>
               )}
             </div>
