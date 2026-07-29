@@ -217,7 +217,7 @@ export default function DevDseDetailPage({ params }: PageProps) {
   const toggleSection = (section: string) => setExpandedSection(expandedSection === section ? null : section);
 
   return (
-    <div className="text-gray-100">
+    <div className="max-w-full overflow-x-hidden text-gray-100">
       <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6 sm:py-8">
         {/* Back link */}
         <Link

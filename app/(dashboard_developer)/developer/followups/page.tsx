@@ -217,7 +217,7 @@ export default function DeveloperFollowupsPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="max-w-full overflow-x-hidden space-y-6">
       {/* Page Header */}
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-2 sm:gap-3 min-w-0">
@@ -510,7 +510,7 @@ export default function DeveloperFollowupsPage() {
       {showBatchModal && (
         <div className="fixed inset-0 z-[99999] flex items-start justify-center overflow-y-auto pt-4 pb-8 sm:pt-10">
           <div className="fixed inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setShowBatchModal(false)} />
-          <div className="relative z-10 w-[calc(100%-2rem)] max-w-2xl rounded-2xl border border-gray-700/50 bg-[#1a1a3e] shadow-2xl shadow-emerald-500/10">
+          <div className="relative z-10 mx-auto w-[calc(100%-1rem)] max-w-2xl rounded-2xl border border-gray-700/50 bg-[#1a1a3e] shadow-2xl shadow-emerald-500/10 sm:w-[calc(100%-2rem)]">
             {/* Header */}
             <div className="flex items-center justify-between border-b border-gray-700/50 px-5 py-4">
               <div className="flex items-center gap-2">
@@ -634,7 +634,7 @@ export default function DeveloperFollowupsPage() {
           <Terminal className="h-4 w-4 text-gray-500" />
           <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Debug Console</p>
         </div>
-        <pre className="text-[10px] text-gray-500 font-mono leading-relaxed">
+        <pre className="text-[9px] sm:text-[10px] text-gray-500 font-mono leading-relaxed whitespace-pre-wrap break-all overflow-x-auto max-w-full">
 {`[FOLLOWUPS] Total: ${stats.total} | Today: ${stats.today} | Overdue: ${stats.overdue} | Unseen: ${stats.unseen}
 [FOLLOWUPS] DSEs with follow-ups: ${dseNames.length}
 [FOLLOWUPS] Active filters: status=${statusFilter} | dse=${selectedDse} | search="${search || "none"}"

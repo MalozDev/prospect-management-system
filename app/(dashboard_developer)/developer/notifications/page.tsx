@@ -84,10 +84,10 @@ export default function DeveloperNotificationsPage() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="max-w-full overflow-x-hidden space-y-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
-          <BellRing className="h-5 w-5 text-purple-400" />
+          <BellRing className="h-5 w-5 text-purple-400 shrink-0" />
           <div>
             <h2 className="text-xl font-bold text-white">Notifications</h2>
             <p className="mt-1 text-sm text-gray-400">

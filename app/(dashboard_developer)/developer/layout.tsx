@@ -12,7 +12,6 @@ import {
   ChevronDown,
   ClipboardList,
   ShoppingCart,
-  Bell,
   PhoneCall,
 } from "lucide-react";
 
@@ -25,7 +24,6 @@ const navItems = [
   { href: "/developer/prospects", label: "Prospects", icon: ClipboardList },
   { href: "/developer/sales", label: "Sales", icon: ShoppingCart },
   { href: "/developer/followups", label: "Follow Ups", icon: PhoneCall },
-  { href: "/developer/notifications", label: "Notifications", icon: Bell },
   { href: "/developer/settings", label: "Settings", icon: Settings },
 ];
 

@@ -68,7 +68,7 @@ export default function DeveloperSettingsPage() {
   const hasChanges = forgotMessage !== originalMessage;
 
   return (
-    <div className="space-y-6">
+    <div className="max-w-full overflow-x-hidden space-y-6">
       <div>
         <h2 className="text-xl font-bold text-white">System Settings</h2>
         <p className="mt-1 text-sm text-gray-400">

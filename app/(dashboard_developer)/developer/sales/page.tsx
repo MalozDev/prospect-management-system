@@ -167,21 +167,21 @@ export default function DeveloperSalesPage() {
       </div>
 
       {/* Filters */}
-      <div className="flex flex-wrap gap-3">
-        <div className="relative flex-1 min-w-[200px]">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+        <div className="relative flex-1">
           <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search sales by customer, DSE, package..."
-            className="h-11 w-full rounded-xl border border-gray-700/50 bg-[#1a1a3e] pl-10 pr-4 text-sm text-white placeholder-gray-500 outline-none transition focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/30"
+            className="h-10 sm:h-11 w-full rounded-xl border border-gray-700/50 bg-[#1a1a3e] pl-9 sm:pl-10 pr-3 sm:pr-4 text-xs sm:text-sm text-white placeholder-gray-500 outline-none transition focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/30"
           />
         </div>
         <select
           value={dseFilter}
           onChange={(e) => setDseFilter(e.target.value)}
-          className="h-11 rounded-xl border border-gray-700/50 bg-[#1a1a3e] px-4 text-sm text-gray-200 outline-none transition focus:border-purple-500/50"
+          className="h-10 sm:h-11 rounded-xl border border-gray-700/50 bg-[#1a1a3e] px-3 text-xs sm:px-4 sm:text-sm text-gray-200 outline-none transition focus:border-purple-500/50"
         >
           <option value="all">All DSEs</option>
           {dseNames.map((name) => (
