@@ -478,13 +478,52 @@ export default function FollowUpsPage() {
             </button>
           </div>
           <div className="mt-4">
-            <label className="mb-2 block text-sm font-medium text-gray-700">Visit time (today)</label>
-            <input
-              type="time"
-              value={visitTime}
-              onChange={(e) => setVisitTime(e.target.value)}
-              className="w-full max-w-xs rounded-xl border border-gray-300 px-4 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
-            />
+            <label className="mb-2 block text-sm font-medium text-gray-700">
+              Visit time (today)
+              {visitTime && (
+                <span className="ml-2 rounded-full bg-blue-600 px-2.5 py-0.5 text-xs font-semibold text-white">
+                  {formatTime(visitTime)}
+                </span>
+              )}
+            </label>
+            {/* Quick-select time chips — always visible and easy to tap */}
+            <div className="flex flex-wrap gap-2">
+              {["09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00"].map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => setVisitTime(t)}
+                  className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-2 text-sm font-medium transition ${
+                    visitTime === t
+                      ? "border-blue-600 bg-blue-600 text-white shadow-sm"
+                      : "border-blue-200 bg-white text-blue-700 hover:border-blue-400 hover:bg-blue-100"
+                  }`}
+                >
+                  <Clock className="h-3.5 w-3.5" />
+                  {formatTime(t)}
+                </button>
+              ))}
+            </div>
+            <div className="mt-3 flex items-center gap-2">
+              <input
+                type="time"
+                value={visitTime}
+                onChange={(e) => setVisitTime(e.target.value)}
+                className="w-full max-w-xs rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+              />
+              {visitTime && (
+                <button
+                  type="button"
+                  onClick={() => setVisitTime("")}
+                  className="rounded-full p-2 text-xs font-medium text-gray-500 hover:text-gray-700"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+            <p className="mt-2 text-xs text-blue-700">
+              Tap a suggested time above, or use the field to pick an exact time.
+            </p>
           </div>
           <div className="mt-4 flex gap-2">
             <button
