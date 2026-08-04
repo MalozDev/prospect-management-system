@@ -11,9 +11,10 @@ import { FollowUp } from "./models/FollowUp";
 import { Notification } from "./models/Notification";
 import { User } from "./models/User";
 import { sendPushToUser } from "./push-notification";
-import { getNowLocalISO } from "./time-utils";
+import { getNowLocalISO, getTodayLocal } from "./time-utils";
 
 const REMINDER_INTERVAL_MS = 15 * 60 * 1000; // 15 minutes
+const VISIT_CHECK_INTERVAL_MS = 60 * 1000; // 1 minute
 
 /**
  * Find all uncontacted follow-ups that are due TODAY or OVERDUE,
@@ -126,19 +127,128 @@ export async function sendFollowUpReminders(): Promise<void> {
 }
 
 /**
+ * Send a push notification to the DSE the moment a same-day scheduled
+ * visit's time arrives (e.g. visit scheduled for today at 14:30 fires
+ * at 14:30).
+ *
+ * Runs on a fast (1-minute) tick so the notification lands right when
+ * the visit time is reached. Each visit is reminded only once — tracked
+ * via `visitRemindedAt`.
+ */
+export async function sendVisitTimeReminders(): Promise<void> {
+  try {
+    await connectToDatabase();
+
+    const now = getNowLocalISO();
+    const today = getTodayLocal();
+    const nowMs = Date.now();
+
+    // Same-day VISIT follow-ups with a scheduled time that haven't been
+    // completed/resolved yet.
+    // NOTE: we intentionally do NOT filter on `lastContacted` — the
+    // schedule_visit flow creates the VISIT follow-up with lastContacted
+    // already set (the DSE just spoke to the customer), so filtering on it
+    // would prevent the reminder from ever firing. Completed visits are
+    // excluded via `status: "TODAY"` (visiting sets status to COMPLETED).
+    const visitFollowUps = await FollowUp.find({
+      category: "VISIT",
+      status: "TODAY",
+      visitDate: today,
+      visitTime: { $ne: "" },
+      outcome: { $nin: ["SOLD", "LOST"] },
+    }).lean();
+
+    const dueVisits: typeof visitFollowUps = [];
+    const remindedIds: string[] = [];
+
+    for (const fu of visitFollowUps) {
+      const [h, m] = fu.visitTime.split(":").map(Number);
+      if (Number.isNaN(h) || Number.isNaN(m)) continue;
+
+      // Visit datetime in LOCAL time: today's date + the picked time
+      const visitDateObj = new Date(`${fu.visitDate}T00:00:00`);
+      visitDateObj.setHours(h, m, 0, 0);
+      const visitMs = visitDateObj.getTime();
+
+      // Only fire once the visit time has arrived
+      if (nowMs < visitMs) continue;
+
+      // Skip if already reminded at/after the visit time
+      const remindedAt = fu.visitRemindedAt ? new Date(fu.visitRemindedAt).getTime() : 0;
+      if (remindedAt >= visitMs) continue;
+
+      dueVisits.push(fu);
+      remindedIds.push(String(fu._id));
+    }
+
+    if (dueVisits.length === 0) return;
+
+    for (const fu of dueVisits) {
+      const dseUser = await User.findOne({ name: fu.assignedDse, role: "DSE" })
+        .select("_id")
+        .lean();
+
+      if (!dseUser) {
+        console.warn(`[VISIT-REMINDER] ⚠️ DSE user "${fu.assignedDse}" not found — skipping visit reminder.`);
+        continue;
+      }
+
+      const userId = String(dseUser._id);
+      const title = "Visit Time";
+      const message = `Your visit with ${fu.customerName} is due now at ${fu.visitTime}.`;
+
+      await Notification.create({
+        title,
+        message,
+        time: now,
+        unread: true,
+        userId,
+        url: "/followups",
+      });
+
+      await sendPushToUser(userId, {
+        title,
+        message,
+        url: "/followups",
+        tag: "visit-time",
+      });
+
+      console.log(`[VISIT-REMINDER] 🔔 Visit reminder sent to ${fu.assignedDse} for ${fu.customerName} at ${fu.visitTime}.`);
+    }
+
+    if (remindedIds.length > 0) {
+      await FollowUp.updateMany(
+        { _id: { $in: remindedIds } },
+        { $set: { visitRemindedAt: now } }
+      );
+    }
+  } catch (error) {
+    console.error("[VISIT-REMINDER] Error sending visit-time reminders:", error);
+  }
+}
+
+/**
  * Start the recurring reminder scheduler.
- * Runs every 15 minutes (first run after 1 minute delay).
+ * - Follow-up reminders: every 15 minutes (first run after 1 minute).
+ * - Visit-time reminders: every 1 minute so they fire right when the
+ *   scheduled visit time arrives (first run after 30 seconds).
  */
 export function startReminderScheduler(): void {
-  // First run after 1 minute (gives the server time to initialize)
+  // Follow-up reminders — first run after 1 minute, then every 15 minutes
   setTimeout(() => {
     sendFollowUpReminders().catch(() => {});
   }, 60_000);
-
-  // Then every 15 minutes
   setInterval(() => {
     sendFollowUpReminders().catch(() => {});
   }, REMINDER_INTERVAL_MS);
 
-  console.log("[REMINDER] ⏰ Scheduler started — will check every 15 minutes.");
+  // Visit-time reminders — first run after 30 seconds, then every minute
+  setTimeout(() => {
+    sendVisitTimeReminders().catch(() => {});
+  }, 30_000);
+  setInterval(() => {
+    sendVisitTimeReminders().catch(() => {});
+  }, VISIT_CHECK_INTERVAL_MS);
+
+  console.log("[REMINDER] ⏰ Scheduler started — follow-ups every 15 min, visit times every minute.");
 }

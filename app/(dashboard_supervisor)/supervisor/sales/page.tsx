@@ -73,6 +73,7 @@ export default function SupervisorSalesPage() {
     [allSales, currentMonth]
   );
   const thisMonthCount = currentMonthSales.length;
+  const thisMonthCommission = thisMonthCount * COMMISSION_PER_SALE;
   const targets = useTargets();
   const targetProgress = Math.min(100, Math.round((thisMonthCount / targets.team) * 100));
 
@@ -148,7 +149,7 @@ export default function SupervisorSalesPage() {
         <div className="rounded-2xl border border-gray-200 bg-white p-3 shadow-sm sm:rounded-3xl sm:p-4">
           <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">This Month</p>
           <p className="mt-2 text-2xl font-bold text-gray-900">{thisMonthCount}</p>
-          <p className="mt-1 text-xs text-gray-500">of {targets.team} target</p>
+          <p className="mt-1 text-xs text-gray-500">K{thisMonthCommission.toLocaleString()} commission · of {targets.team} target</p>
         </div>
         <div className="rounded-2xl border border-gray-200 bg-white p-3 shadow-sm sm:rounded-3xl sm:p-4">
           <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">Target</p>

@@ -19,11 +19,11 @@ import {
   ArrowUp,
   ArrowDown,
   X,
-  LogIn,
   MapPin,
   Phone,
   Award,
   Trophy,
+  DollarSign,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -31,6 +31,7 @@ import { useMemo, useState, useEffect } from "react";
 
 import { useApiData } from "@/lib/use-api-data";
 import { getTodayLocal } from "@/lib/time-utils";
+import { COMMISSION_PER_SALE } from "@/lib/supervisor-utils";
 import type { IUser } from "@/lib/models/User";
 import type { IProspect } from "@/lib/models/Prospect";
 import type { ISale } from "@/lib/models/Sale";
@@ -49,6 +50,7 @@ interface DseMember {
   cugSuffix: string;
   region: string;
   lastLogin: string;
+  lastActiveAt: string;
   activeToday: boolean;
   stats: DseStats;
 }
@@ -77,6 +79,24 @@ const FALLBACK_UNASSIGNED = {
   dseMembers: [] as DseMember[],
 };
 
+// A user is "online" when their last heartbeat/last-seen is within 5 minutes
+// (heartbeats are sent every 2 minutes while the app is open).
+const ONLINE_WINDOW_MS = 5 * 60 * 1000;
+
+function isOnline(lastSeen: string, now: number): boolean {
+  if (!lastSeen) return false;
+  const t = new Date(lastSeen).getTime();
+  if (Number.isNaN(t)) return false;
+  return now - t < ONLINE_WINDOW_MS;
+}
+
+function formatClockTime(iso: string): string {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "—";
+  return d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true });
+}
+
 // ── Performance rank colors ──
 const RANK_COLORS = [
   { bg: "bg-yellow-500/20", text: "text-yellow-400", border: "border-yellow-500/30", medal: "🥇" },
@@ -94,11 +114,11 @@ export default function DeveloperDashboardPage() {
   }, []);
   const currentMonth = today.slice(0, 7);
 
-  const { data: usersData, loading: loadingUsers } = useApiData<{ users: IUser[] }>("/api/users", { users: [] });
+  const { data: usersData, loading: loadingUsers, refetch: refetchUsers } = useApiData<{ users: IUser[] }>("/api/users", { users: [] });
   const { data: prospectsData, loading: loadingProspects } = useApiData<{ prospects: IProspect[] }>("/api/prospects", { prospects: [] });
   const { data: salesData, loading: loadingSales } = useApiData<{ sales: ISale[] }>("/api/sales", { sales: [] });
   const { data: followUpsData, loading: loadingFollowUps } = useApiData<{ followUps: IFollowUp[] }>("/api/followups", { followUps: [] });
-  const { data: groupedData, loading: loadingGrouped } = useApiData<{ teams: SupervisorTeam[]; unassigned: SupervisorTeam }>(
+  const { data: groupedData, loading: loadingGrouped, refetch: refetchGrouped } = useApiData<{ teams: SupervisorTeam[]; unassigned: SupervisorTeam }>(
     "/api/supervisors/grouped",
     { teams: [], unassigned: FALLBACK_UNASSIGNED }
   );
@@ -107,6 +127,23 @@ export default function DeveloperDashboardPage() {
   const [showActiveUsers, setShowActiveUsers] = useState(false);
   const [showSupervisorList, setShowSupervisorList] = useState(false);
   const [showDseList, setShowDseList] = useState(false);
+
+  // Live clock used for online/last-seen status in the Active Today modal.
+  // Only ticks while the modal is open to avoid needless re-renders.
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!showActiveUsers) return;
+    const tick = setInterval(() => setNow(Date.now()), 30_000);
+    return () => clearInterval(tick);
+  }, [showActiveUsers]);
+
+  // Refresh activity data so the Active Today modal shows up-to-date statuses
+  const openActiveUsers = () => {
+    setNow(Date.now());
+    setShowActiveUsers(true);
+    refetchUsers().catch(() => {});
+    refetchGrouped().catch(() => {});
+  };
 
   const toggleTeam = (name: string) => {
     setExpandedTeams((prev) => ({ ...prev, [name]: !prev[name] }));
@@ -138,7 +175,7 @@ export default function DeveloperDashboardPage() {
     const followUps = followUpsData.followUps;
 
     // Collect all active DSEs from grouped data
-    const activeDses: { name: string; region: string; cugSuffix: string; lastLogin: string; supervisor: string; stats: DseStats }[] = [];
+    const activeDses: { name: string; region: string; cugSuffix: string; lastLogin: string; lastActiveAt: string; supervisor: string; stats: DseStats }[] = [];
     for (const team of groupedData.teams) {
       for (const dse of team.dseMembers) {
         if (dse.activeToday) {
@@ -163,6 +200,24 @@ export default function DeveloperDashboardPage() {
     // Also count DSEs that logged in today but may not have heartbeat yet
     const dseLoggedInToday = users.filter((u) => u.role === "DSE" && u.lastLogin?.startsWith(today) && !u.lastActiveAt?.startsWith(today));
     const activeToday = activeDses.length + activeSupervisors.length + dseLoggedInToday.length;
+
+    // Logged-in-today DSEs (no heartbeat yet) — shown in the Active Today modal
+    // with their last-login as the last-seen time.
+    const dseLoggedInTodayList: { name: string; region: string; cugSuffix: string; lastLogin: string; lastActiveAt: string; supervisor: string; stats: DseStats }[] = dseLoggedInToday.map((u) => ({
+      name: u.name,
+      region: u.region,
+      cugSuffix: u.cugSuffix,
+      lastLogin: u.lastLogin || "",
+      lastActiveAt: "",
+      supervisor: u.supervisor || "Unassigned",
+      stats: {
+        prospectsToday: prospects.filter((p) => p.assignedDse === u.name && p.createdAt === today).length,
+        prospectsMonth: prospects.filter((p) => p.assignedDse === u.name && p.createdAt?.slice(0, 7) === currentMonth).length,
+        salesToday: sales.filter((s) => s.soldBy === u.name && s.date === today).length,
+        salesWeek: 0,
+        salesMonth: sales.filter((s) => s.soldBy === u.name && s.date.slice(0, 7) === currentMonth).length,
+      },
+    }));
 
     // ── Build list of ALL DSEs with their supervisor ──
     const allDseList: { name: string; cugSuffix: string; region: string; supervisor: string; salesMonth: number; salesToday: number; prospectsMonth: number }[] = [];
@@ -225,16 +280,25 @@ export default function DeveloperDashboardPage() {
       totalSales: sales.length,
       salesToday: sales.filter((s) => s.date === today).length,
       salesMonth: sales.filter((s) => s.date.slice(0, 7) === currentMonth).length,
+      monthRevenue: sales.filter((s) => s.date.slice(0, 7) === currentMonth).length * COMMISSION_PER_SALE,
+      allTimeRevenue: sales.length * COMMISSION_PER_SALE,
       totalFollowUps: followUps.length,
       openFollowUps: followUps.filter((f) => f.status === "TODAY" || f.status === "OVERDUE").length,
       activeToday,
       activeDses,
       activeSupervisors,
+      dseLoggedInTodayList,
       topPerformers,
       supervisorList,
       allDseList: allDseList.sort((a, b) => b.salesMonth - a.salesMonth),
     };
   }, [usersData, prospectsData, salesData, followUpsData, groupedData, today, currentMonth]);
+
+  // Every DSE that was active at some point today (heartbeat today OR logged in today)
+  const allActiveDses = useMemo(
+    () => [...stats.activeDses, ...stats.dseLoggedInTodayList],
+    [stats.activeDses, stats.dseLoggedInTodayList]
+  );
 
   const isLoading = loadingUsers || loadingProspects || loadingSales || loadingFollowUps;
 
@@ -263,12 +327,28 @@ export default function DeveloperDashboardPage() {
       onClick: () => router.push("/developer/sales"),
     },
     {
+      title: "Commission (Month)",
+      value: `K${stats.monthRevenue.toLocaleString()}`,
+      subtitle: "This month's sales · all DSEs",
+      icon: DollarSign,
+      gradient: "from-emerald-600 to-cyan-600",
+      onClick: () => router.push("/developer/sales"),
+    },
+    {
+      title: "Commission (All-time)",
+      value: `K${stats.allTimeRevenue.toLocaleString()}`,
+      subtitle: "Every sale across the system",
+      icon: DollarSign,
+      gradient: "from-teal-600 to-blue-600",
+      onClick: () => router.push("/developer/sales"),
+    },
+    {
       title: "Active Today",
       value: stats.activeToday,
       subtitle: `${stats.totalDse > 0 ? Math.round((stats.activeToday / stats.totalDse) * 100) : 0}% of DSEs active`,
       icon: Zap,
       gradient: "from-orange-600 to-pink-600",
-      onClick: stats.activeToday > 0 ? () => setShowActiveUsers(true) : undefined,
+      onClick: stats.activeToday > 0 ? openActiveUsers : undefined,
     },
   ];
 
@@ -314,7 +394,7 @@ export default function DeveloperDashboardPage() {
       ) : (
         <>
           {/* ── Stats Grid ── */}
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6 sm:gap-4">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
             {[...statCards, ...secondaryCards].map((card) => (
               <div
                 key={card.title}
@@ -447,7 +527,7 @@ export default function DeveloperDashboardPage() {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div
-                  onClick={() => setShowActiveUsers(true)}
+                  onClick={openActiveUsers}
                   className="rounded-xl bg-[#252550] p-3 text-center transition hover:bg-[#2f2f60] cursor-pointer"
                 >
                   <Clock className="mx-auto h-5 w-5 text-emerald-400" />
@@ -690,30 +770,48 @@ export default function DeveloperDashboardPage() {
               </button>
             </div>
             <div className="max-h-[70vh] overflow-y-auto p-4 space-y-4 sm:p-5 sm:space-y-5">
-              {stats.activeDses.length > 0 && (
+              {allActiveDses.length > 0 && (
                 <section>
                   <div className="mb-2 flex items-center gap-2 sm:mb-3">
                     <Users className="h-3.5 w-3.5 text-purple-400 sm:h-4 sm:w-4" />
                     <h3 className="text-xs font-semibold text-white sm:text-sm">Direct Sales Executives</h3>
-                    <span className="ml-auto text-[10px] text-gray-500 sm:text-xs">{stats.activeDses.length} active</span>
+                    <span className="ml-auto text-[10px] text-gray-500 sm:text-xs">{allActiveDses.length} active today</span>
                   </div>
                   <div className="space-y-1.5 sm:space-y-2">
-                    {stats.activeDses.map((dse) => {
-                      const loginTime = dse.lastLogin ? new Date(dse.lastLogin).toLocaleTimeString("en-ZM", { hour: "2-digit", minute: "2-digit", hour12: true }) : "—";
+                    {allActiveDses.map((dse) => {
+                      const lastSeen = dse.lastActiveAt || dse.lastLogin || "";
+                      const online = isOnline(lastSeen, now);
                       return (
-                        <Link key={dse.name} href={`/developer/dse/${encodeURIComponent(dse.name)}`} className="flex items-center gap-2 rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-2.5 transition hover:bg-emerald-500/10 sm:p-3 sm:gap-3">
-                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-500/20 text-xs font-bold text-emerald-400 sm:h-10 sm:w-10 sm:text-sm">{dse.name.charAt(0)}</div>
+                        <Link
+                          key={dse.name}
+                          href={`/developer/dse/${encodeURIComponent(dse.name)}`}
+                          className={`flex items-center gap-2 rounded-xl border p-2.5 transition hover:bg-emerald-500/10 sm:p-3 sm:gap-3 ${
+                            online ? "border-emerald-500/30 bg-emerald-500/5" : "border-gray-700/50 bg-[#252550]/40"
+                          }`}
+                        >
+                          <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold sm:h-10 sm:w-10 sm:text-sm ${online ? "bg-emerald-500/20 text-emerald-400" : "bg-gray-600/30 text-gray-300"}`}>{dse.name.charAt(0)}</div>
                           <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-1.5">
+                            <div className="flex flex-wrap items-center gap-1.5">
                               <span className="text-xs font-medium text-white truncate sm:text-sm">{dse.name}</span>
                               <span className="shrink-0 rounded-full bg-emerald-500/15 px-1 py-0.5 text-[8px] font-medium text-emerald-400 sm:px-1.5 sm:text-[9px]">DSE</span>
+                              {online ? (
+                                <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[8px] font-semibold text-emerald-300 sm:px-2 sm:text-[9px]">
+                                  <span className="h-1 w-1 animate-pulse rounded-full bg-emerald-400" /> Online
+                                </span>
+                              ) : (
+                                <span className="shrink-0 rounded-full bg-gray-600/40 px-1.5 py-0.5 text-[8px] font-medium text-gray-400 sm:px-2 sm:text-[9px]">Offline</span>
+                              )}
                             </div>
                             <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[9px] text-gray-400 sm:text-[10px] sm:gap-x-3">
                               <span className="inline-flex items-center gap-0.5"><MapPin className="h-2 w-2 sm:h-2.5 sm:w-2.5" />{dse.region}</span>
                               <span className="inline-flex items-center gap-0.5"><Phone className="h-2 w-2 sm:h-2.5 sm:w-2.5" />CUG: {dse.cugSuffix}</span>
-                              <span className="inline-flex items-center gap-0.5 hidden sm:inline-flex"><LogIn className="h-2 w-2 sm:h-2.5 sm:w-2.5" />{loginTime}</span>
-                              <span className="text-gray-500 hidden sm:inline">· Sup: {dse.supervisor}</span>
+                              <span className="hidden text-gray-500 sm:inline">· Sup: {dse.supervisor}</span>
                             </div>
+                            <p className="mt-0.5 flex items-center gap-1 text-[9px] text-gray-500 sm:text-[10px]">
+                              <Clock className="h-2.5 w-2.5 shrink-0" />
+                              Last seen at {formatClockTime(lastSeen)}
+                              {online ? " · Online now" : ""}
+                            </p>
                           </div>
                           <div className="flex shrink-0 items-center gap-1.5 text-[10px] sm:text-xs sm:gap-2.5">
                             <div className="text-center">
@@ -740,20 +838,32 @@ export default function DeveloperDashboardPage() {
                   </div>
                   <div className="space-y-1.5 sm:space-y-2">
                     {stats.activeSupervisors.map((sup: { name: string; region: string; cugSuffix: string; lastLogin: string }) => {
-                      const loginTime = sup.lastLogin ? new Date(sup.lastLogin).toLocaleTimeString("en-ZM", { hour: "2-digit", minute: "2-digit", hour12: true }) : "—";
+                      const lastSeen = sup.lastLogin || "";
+                      const online = isOnline(lastSeen, now);
                       return (
                         <div key={sup.name} className="flex items-center gap-2 rounded-xl border border-blue-500/20 bg-blue-500/5 p-2.5 sm:p-3 sm:gap-3">
                           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-500/20 text-xs font-bold text-blue-400 sm:h-10 sm:w-10 sm:text-sm">{sup.name.charAt(0)}</div>
                           <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-1.5">
+                            <div className="flex flex-wrap items-center gap-1.5">
                               <span className="text-xs font-medium text-white truncate sm:text-sm">{sup.name}</span>
                               <span className="shrink-0 rounded-full bg-blue-500/15 px-1 py-0.5 text-[8px] font-medium text-blue-400 sm:px-1.5 sm:text-[9px]">Supervisor</span>
+                              {online ? (
+                                <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[8px] font-semibold text-emerald-300 sm:px-2 sm:text-[9px]">
+                                  <span className="h-1 w-1 animate-pulse rounded-full bg-emerald-400" /> Online
+                                </span>
+                              ) : (
+                                <span className="shrink-0 rounded-full bg-gray-600/40 px-1.5 py-0.5 text-[8px] font-medium text-gray-400 sm:px-2 sm:text-[9px]">Offline</span>
+                              )}
                             </div>
                             <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[9px] text-gray-400 sm:text-[10px] sm:gap-x-3">
                               <span className="inline-flex items-center gap-0.5"><MapPin className="h-2 w-2 sm:h-2.5 sm:w-2.5" />{sup.region}</span>
                               <span className="inline-flex items-center gap-0.5"><Phone className="h-2 w-2 sm:h-2.5 sm:w-2.5" />CUG: {sup.cugSuffix}</span>
-                              <span className="inline-flex items-center gap-0.5 hidden sm:inline-flex"><LogIn className="h-2 w-2 sm:h-2.5 sm:w-2.5" />{loginTime}</span>
                             </div>
+                            <p className="mt-0.5 flex items-center gap-1 text-[9px] text-gray-500 sm:text-[10px]">
+                              <Clock className="h-2.5 w-2.5 shrink-0" />
+                              Last seen at {formatClockTime(lastSeen)}
+                              {online ? " · Online now" : ""}
+                            </p>
                           </div>
                           <Award className="h-3.5 w-3.5 shrink-0 text-blue-400 sm:h-4 sm:w-4" />
                         </div>
@@ -762,7 +872,7 @@ export default function DeveloperDashboardPage() {
                   </div>
                 </section>
               )}
-              {stats.activeDses.length === 0 && (!stats.activeSupervisors || stats.activeSupervisors.length === 0) && (
+              {allActiveDses.length === 0 && (!stats.activeSupervisors || stats.activeSupervisors.length === 0) && (
                 <div className="flex flex-col items-center justify-center py-6 text-center sm:py-10">
                   <Zap className="h-8 w-8 text-gray-600 sm:h-12 sm:w-12" />
                   <p className="mt-2 text-xs text-gray-400 sm:mt-3 sm:text-sm">No active users today yet.</p>

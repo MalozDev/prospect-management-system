@@ -16,8 +16,10 @@ export interface IFollowUp extends Document {
   outcome: FollowUpOutcome;
   prospectId: string;
   visitDate: string;
+  visitTime: string;
   notes: string;
   lastRemindedAt: string;
+  visitRemindedAt: string;
   followUpSeenAt: string;
 }
 
@@ -48,12 +50,19 @@ const FollowUpSchema = new Schema<IFollowUp>(
     },
     prospectId: { type: String, default: "" },
   visitDate: { type: String, default: "" },
+  visitTime: { type: String, default: "" },
   notes: { type: String, default: "" },
   /**
    * ISO timestamp of the last time a 15-min push reminder was sent.
    * Empty string means never reminded.
    */
   lastRemindedAt: { type: String, default: "" },
+  /**
+   * ISO timestamp of the last time a visit-time push reminder was sent
+   * (when a same-day visit's scheduled time arrives).
+   * Empty string means never reminded.
+   */
+  visitRemindedAt: { type: String, default: "" },
   /**
    * ISO timestamp when the DSE last opened/seen this follow-up.
    * Empty string means never seen.

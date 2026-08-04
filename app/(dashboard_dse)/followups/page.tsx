@@ -62,6 +62,15 @@ function formatDateShort(dateString: string) {
   return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
+function formatTime(timeStr: string) {
+  if (!timeStr) return "";
+  const [h, m] = timeStr.split(":").map(Number);
+  if (Number.isNaN(h) || Number.isNaN(m)) return timeStr;
+  const period = h >= 12 ? "PM" : "AM";
+  const hour = h % 12 === 0 ? 12 : h % 12;
+  return `${hour}:${String(m).padStart(2, "0")} ${period}`;
+}
+
 function isToday(dateStr: string) {
   const d = new Date();
   const todayLocal = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -74,7 +83,7 @@ export default function FollowUpsPage() {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [feedbackItem, setFeedbackItem] = useState<IFollowUp | null>(null);
   const [feedbackAction, setFeedbackAction] = useState<FeedbackAction>(null);
-  const [visitDate, setVisitDate] = useState("");
+  const [visitTime, setVisitTime] = useState("");
   const [postponeDate, setPostponeDate] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -220,14 +229,14 @@ export default function FollowUpsPage() {
           });
           break;
         case "schedule_visit":
-          if (!visitDate) {
-            setError("Please select a visit date.");
+          if (!visitTime) {
+            setError("Please select a visit time.");
             setSubmitting(false);
             return;
           }
           await apiFetch(`/api/followups/${id}`, {
             method: "PATCH",
-            body: JSON.stringify({ action: "schedule_visit", visitDate }),
+            body: JSON.stringify({ action: "schedule_visit", visitTime }),
           });
           break;
         case "postpone":
@@ -245,8 +254,8 @@ export default function FollowUpsPage() {
       // Show outcome popup
       if (feedbackAction && feedbackItem) {
         let detail = "";
-        if (feedbackAction === "schedule_visit" && visitDate) {
-          detail = formatDate(visitDate);
+        if (feedbackAction === "schedule_visit" && visitTime) {
+          detail = `Today at ${formatTime(visitTime)}`;
         } else if (feedbackAction === "postpone" && postponeDate) {
           detail = formatDate(postponeDate);
         }
@@ -260,7 +269,7 @@ export default function FollowUpsPage() {
       setFeedbackItem(null);
       setFeedbackAction(null);
       setPendingContactId(null);
-      setVisitDate("");
+      setVisitTime("");
       setPostponeDate("");
       setContactError("");
       refetch();
@@ -269,12 +278,12 @@ export default function FollowUpsPage() {
     } finally {
       setSubmitting(false);
     }
-  }, [feedbackItem, feedbackAction, visitDate, postponeDate, refetch]);
+  }, [feedbackItem, feedbackAction, visitTime, postponeDate, refetch]);
 
   const dismissFeedback = useCallback(() => {
     setFeedbackItem(null);
     setFeedbackAction(null);
-    setVisitDate("");
+    setVisitTime("");
     setPostponeDate("");
     setError("");
     setShowFeedback(false);
@@ -285,7 +294,7 @@ export default function FollowUpsPage() {
     setPendingContactId(null);
     setFeedbackItem(null);
     setFeedbackAction(null);
-    setVisitDate("");
+    setVisitTime("");
     setPostponeDate("");
     setError("");
     setShowFeedback(false);
@@ -462,19 +471,18 @@ export default function FollowUpsPage() {
           <div className="flex items-center justify-between gap-3">
             <div>
               <p className="font-semibold text-gray-900">Schedule a visit with {feedbackItem.customerName}</p>
-              <p className="mt-1 text-sm text-gray-600">Pick a date for the in-person visit.</p>
+              <p className="mt-1 text-sm text-gray-600">Pick the time for today&rsquo;s in-person visit.</p>
             </div>
             <button type="button" onClick={dismissFeedback} className="rounded-full p-1 text-gray-400 hover:text-gray-600">
               <X className="h-5 w-5" />
             </button>
           </div>
           <div className="mt-4">
-            <label className="mb-2 block text-sm font-medium text-gray-700">Visit date</label>
+            <label className="mb-2 block text-sm font-medium text-gray-700">Visit time (today)</label>
             <input
-              type="date"
-              value={visitDate}
-              onChange={(e) => setVisitDate(e.target.value)}
-              min={today}
+              type="time"
+              value={visitTime}
+              onChange={(e) => setVisitTime(e.target.value)}
               className="w-full max-w-xs rounded-xl border border-gray-300 px-4 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
             />
           </div>
@@ -482,7 +490,7 @@ export default function FollowUpsPage() {
             <button
               type="button"
               onClick={handleFeedbackSubmit}
-              disabled={submitting || !visitDate}
+              disabled={submitting || !visitTime}
               className="inline-flex items-center gap-2 rounded-full bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700 disabled:opacity-50"
             >
               {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <MapPin className="h-4 w-4" />}
@@ -648,11 +656,15 @@ export default function FollowUpsPage() {
                   </div>
                   <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-gray-500">
                     <span>{item.phone}</span>
-                    {item.visitDate && (
+                    {item.visitTime ? (
+                      <span className="flex items-center gap-1 text-blue-600">
+                        <Clock className="h-3.5 w-3.5" /> Visit today at {formatTime(item.visitTime)}
+                      </span>
+                    ) : item.visitDate ? (
                       <span className="flex items-center gap-1 text-blue-600">
                         <CalendarDays className="h-3.5 w-3.5" /> Visit: {formatDateShort(item.visitDate)}
                       </span>
-                    )}
+                    ) : null}
                   </div>
                   <p className="mt-1 text-sm text-gray-600">
                     Expected purchase: {formatDate(item.expectedPurchaseDate)}

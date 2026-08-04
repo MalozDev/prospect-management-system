@@ -115,9 +115,10 @@ export default function SupervisorDashboardPage() {
     const totalDse = dseUsersData.dseUsers.length;
     const todayProspects = prospectsData.prospects.filter((p) => p.createdAt === today && p.status !== "POSTPONED").length;
     const todaySalesCount = salesData.sales.filter((s) => s.date === today).length;
-    const totalRevenue = salesData.sales.length * COMMISSION_PER_SALE;
+    const allTimeRevenue = salesData.sales.length * COMMISSION_PER_SALE;
     const currentMonth = today.slice(0, 7);
     const teamMonthSales = salesData.sales.filter((s) => s.date.slice(0, 7) === currentMonth).length;
+    const monthRevenue = teamMonthSales * COMMISSION_PER_SALE;
     const teamTarget = targets.team;
     const teamProgress = teamTarget > 0 ? Math.min(100, Math.round((teamMonthSales / teamTarget) * 100)) : 0;
 
@@ -134,7 +135,7 @@ export default function SupervisorDashboardPage() {
     console.log(`[SUPERVISOR DASHBOARD] Follow-ups: ${totalFollowUps} total (${todayFollowUps} today, ${overdueFollowUps} overdue, ${completedFollowUps} completed)`);
 
     return {
-      totalDse, todayProspects, todaySales: todaySalesCount, totalRevenue,
+      totalDse, todayProspects, todaySales: todaySalesCount, allTimeRevenue, monthRevenue,
       teamMonthSales, teamTarget, teamProgress,
       todayFollowUps, overdueFollowUps, completedFollowUps, totalFollowUps,
     };
@@ -167,7 +168,7 @@ export default function SupervisorDashboardPage() {
         <MetricCard icon={Users} label="DSE on Board" value={String(stats.totalDse)} hint="Total team members" href="/supervisor/dse" />
         <MetricCard icon={ClipboardList} label="Today's Prospects" value={String(stats.todayProspects)} hint="Captured today" />
         <MetricCard icon={TrendingUp} label="Today's Sales" value={String(stats.todaySales)} hint="ODU sold today" />
-        <MetricCard icon={DollarSign} label="Total Revenue" value={`K${stats.totalRevenue.toLocaleString()}`} hint="K200 per ODU sale" />
+        <MetricCard icon={DollarSign} label="Monthly Commission" value={`K${stats.monthRevenue.toLocaleString()}`} hint={`K${stats.allTimeRevenue.toLocaleString()} all-time · K${COMMISSION_PER_SALE}/sale`} />
       </div>
 
       <div className="mt-4 rounded-3xl border border-gray-200 bg-white p-4 shadow-sm sm:mt-6 sm:p-5">
@@ -277,7 +278,7 @@ export default function SupervisorDashboardPage() {
                   <th className="px-3 py-2.5 text-center">Daily</th>
                   <th className="px-3 py-2.5 text-center">Weekly</th>
                   <th className="px-3 py-2.5 text-center">Monthly</th>
-                  <th className="px-3 py-2.5 text-right">Revenue</th>
+                  <th className="px-3 py-2.5 text-right">Commission</th>
                   <th className="px-3 py-2.5 text-right" />
                 </tr>
               </thead>
@@ -296,7 +297,10 @@ export default function SupervisorDashboardPage() {
                     <td className="px-3 py-3 text-center"><TargetBarInline current={dse.todaySales} remaining={dse.dailyRemaining} progress={dse.dailyProgress} /></td>
                     <td className="px-3 py-3 text-center"><TargetBarInline current={dse.weekSales} remaining={dse.weeklyRemaining} progress={dse.weeklyProgress} /></td>
                     <td className="px-3 py-3 text-center"><TargetBarInline current={dse.monthSales} remaining={dse.monthlyRemaining} progress={dse.monthlyProgress} /></td>
-                    <td className="px-3 py-3 text-right font-medium text-gray-900">K{dse.revenue.toLocaleString()}</td>
+                    <td className="px-3 py-3 text-right">
+                      <p className="font-medium text-gray-900">K{dse.revenue.toLocaleString()}</p>
+                      <p className="text-[10px] text-gray-500">K{(dse.monthSales * COMMISSION_PER_SALE).toLocaleString()} this month</p>
+                    </td>
                     <td className="px-3 py-3 text-right">
                       <Link href={`/supervisor/dse/${encodeURIComponent(dse.name)}`} className="inline-flex items-center gap-0.5 text-xs font-semibold text-[#E60012]">
                         Details <ArrowUpRight className="h-3 w-3" />
@@ -427,9 +431,14 @@ function DsePerformanceCard({ dse }: { dse: { name: string; prospectsCount: numb
         <TargetBar label="Weekly" current={dse.weekSales} remaining={dse.weeklyRemaining} progress={dse.weeklyProgress} />
         <TargetBar label="Monthly" current={dse.monthSales} remaining={dse.monthlyRemaining} progress={dse.monthlyProgress} />
       </div>
-      <div className="mt-2 flex items-center justify-between text-xs">
+      <div className="mt-2 flex items-center justify-between gap-2 text-xs">
         <span className="text-gray-500">+{dse.todayProspects} prospects today</span>
-        <span className="font-semibold text-gray-900">K{dse.revenue.toLocaleString()}</span>
+        <div className="text-right leading-tight">
+          <p className="font-semibold text-gray-900">
+            K{dse.revenue.toLocaleString()} <span className="text-[10px] font-normal text-gray-500">all-time</span>
+          </p>
+          <p className="text-[10px] text-gray-500">K{(dse.monthSales * COMMISSION_PER_SALE).toLocaleString()} this month</p>
+        </div>
       </div>
     </div>
   );

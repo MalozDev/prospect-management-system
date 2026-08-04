@@ -20,7 +20,10 @@
  */
 
 import { NextRequest } from "next/server";
-import { sendFollowUpReminders } from "@/lib/followup-reminder";
+import {
+  sendFollowUpReminders,
+  sendVisitTimeReminders,
+} from "@/lib/followup-reminder";
 import { getUserFromRequest, unauthorizedResponse } from "@/lib/auth";
 
 export async function POST(request: NextRequest) {
@@ -31,6 +34,7 @@ export async function POST(request: NextRequest) {
   if (cronSecret === internalSecret) {
     // Internal cron — trigger reminders
     await sendFollowUpReminders();
+    await sendVisitTimeReminders();
     return Response.json({ success: true, message: "Follow-up reminders sent." });
   }
 
@@ -43,6 +47,7 @@ export async function POST(request: NextRequest) {
   }
 
   await sendFollowUpReminders();
+  await sendVisitTimeReminders();
 
   return Response.json({ success: true, message: "Follow-up reminders sent." });
 }

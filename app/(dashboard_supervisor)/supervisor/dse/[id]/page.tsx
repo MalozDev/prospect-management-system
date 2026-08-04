@@ -349,12 +349,13 @@ export default function DseDetailPage({ params }: PageProps) {
           <p className="mt-1 text-xl font-bold text-gray-900 sm:text-2xl">{stats.conversionRate}%</p>
         </div>
         <div className="rounded-2xl border border-gray-200 bg-white p-3 shadow-sm sm:rounded-3xl sm:p-4">
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-500 sm:text-[11px]">Revenue</p>
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-500 sm:text-[11px]">Commission (All-time)</p>
           <p className="mt-1 text-xl font-bold text-gray-900 sm:text-2xl">K{stats.revenue.toLocaleString()}</p>
         </div>
         <div className="rounded-2xl border border-gray-200 bg-white p-3 shadow-sm sm:rounded-3xl sm:p-4">
           <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-500 sm:text-[11px]">This Month</p>
           <p className="mt-1 text-xl font-bold text-gray-900 sm:text-2xl">{stats.monthSales}</p>
+          <p className="mt-0.5 text-[10px] font-medium text-gray-500 sm:text-xs">K{(stats.monthSales * COMMISSION_PER_SALE).toLocaleString()}</p>
         </div>
         <div className="rounded-2xl border border-gray-200 bg-white p-3 shadow-sm sm:rounded-3xl sm:p-4">
           <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-500 sm:text-[11px]">Target</p>

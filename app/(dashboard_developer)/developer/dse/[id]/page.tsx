@@ -252,8 +252,8 @@ export default function DevDseDetailPage({ params }: PageProps) {
           <KPICard label="Total Sales" value={String(stats.salesCount)} />
           <KPICard label="Prospects" value={String(stats.prospectsCount)} />
           <KPICard label="Conversion" value={`${stats.conversionRate}%`} />
-          <KPICard label="Revenue" value={`K${stats.revenue.toLocaleString()}`} />
-          <KPICard label="This Month" value={String(stats.monthSales)} />
+          <KPICard label="Commission (All-time)" value={`K${stats.revenue.toLocaleString()}`} />
+          <KPICard label="This Month" value={String(stats.monthSales)} subtitle={`K${(stats.monthSales * COMMISSION_PER_SALE).toLocaleString()}`} />
           <KPICard label="Target" value={`${stats.monthlyProgress}%`} />
         </div>
 
@@ -451,11 +451,12 @@ export default function DevDseDetailPage({ params }: PageProps) {
   );
 }
 
-function KPICard({ label, value }: { label: string; value: string }) {
+function KPICard({ label, value, subtitle }: { label: string; value: string; subtitle?: string }) {
   return (
     <div className="rounded-xl border border-gray-700/50 bg-[#252550] p-3 text-center">
       <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">{label}</p>
       <p className="mt-1 text-xl font-bold text-white">{value}</p>
+      {subtitle && <p className="mt-0.5 text-[10px] font-medium text-emerald-400">{subtitle}</p>}
     </div>
   );
 }

@@ -88,6 +88,7 @@ export async function GET(request: NextRequest) {
             cugSuffix: d.cugSuffix,
             region: d.region,
             lastLogin: d.lastLogin || "",
+            lastActiveAt: d.lastActiveAt || "",
             activeToday: isActive,
             stats: {
               prospectsToday: dseProspects.filter((p) => p.createdAt === today).length,
@@ -133,6 +134,7 @@ export async function GET(request: NextRequest) {
           cugSuffix: d.cugSuffix,
           region: d.region,
           lastLogin: d.lastLogin || "",
+          lastActiveAt: d.lastActiveAt || "",
           activeToday: isActive,
           stats: {
             prospectsToday: dseProspects.filter((p) => p.createdAt === today).length,

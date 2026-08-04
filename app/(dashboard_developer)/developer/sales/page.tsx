@@ -17,6 +17,7 @@ import {
 import { useApiData } from "@/lib/use-api-data";
 import type { ISale } from "@/lib/models/Sale";
 import type { IUser } from "@/lib/models/User";
+import { COMMISSION_PER_SALE } from "@/lib/supervisor-utils";
 
 function formatDateGroup(dateStr: string): string {
   const d = new Date(dateStr + "T00:00:00");
@@ -68,7 +69,7 @@ export default function DeveloperSalesPage() {
   }, [sales]);
 
   // Calculate total revenue (commission)
-  const totalRevenue = useMemo(() => sales.length * 200, [sales]);
+  const totalRevenue = useMemo(() => sales.length * COMMISSION_PER_SALE, [sales]);
 
   // Filter sales
   const filteredSales = useMemo(() => {
@@ -114,9 +115,9 @@ export default function DeveloperSalesPage() {
     const total = sales.length;
     const today = sales.filter((s) => s.date === todayLocal).length;
     const monthSales = sales.filter((s) => s.date.slice(0, 7) === currentMonth).length;
-    const revenue = total * 200;
-    const todayRevenue = today * 200;
-    const monthRevenue = monthSales * 200;
+    const revenue = total * COMMISSION_PER_SALE;
+    const todayRevenue = today * COMMISSION_PER_SALE;
+    const monthRevenue = monthSales * COMMISSION_PER_SALE;
     return { total, today, monthSales, revenue, todayRevenue, monthRevenue };
   }, [sales, todayLocal, currentMonth]);
 
@@ -144,7 +145,7 @@ export default function DeveloperSalesPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid gap-3 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
         <div className="rounded-xl border border-gray-700/50 bg-[#1a1a3e] p-3">
           <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">Total Sales</p>
           <p className="mt-1 text-xl font-bold text-purple-400">{stats.total}</p>
@@ -160,9 +161,16 @@ export default function DeveloperSalesPage() {
         <div className="rounded-xl border border-gray-700/50 bg-[#1a1a3e] p-3">
           <div className="flex items-center gap-1">
             <DollarSign className="h-3 w-3 text-emerald-400" />
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">Commission</p>
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">Commission (This Month)</p>
           </div>
-          <p className="mt-1 text-xl font-bold text-emerald-400">K{stats.revenue.toLocaleString()}</p>
+          <p className="mt-1 text-xl font-bold text-emerald-400">K{stats.monthRevenue.toLocaleString()}</p>
+        </div>
+        <div className="rounded-xl border border-gray-700/50 bg-[#1a1a3e] p-3">
+          <div className="flex items-center gap-1">
+            <DollarSign className="h-3 w-3 text-teal-400" />
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">Commission (All Time)</p>
+          </div>
+          <p className="mt-1 text-xl font-bold text-teal-400">K{stats.revenue.toLocaleString()}</p>
         </div>
       </div>
 
@@ -208,7 +216,7 @@ export default function DeveloperSalesPage() {
                     {items.length} sale{items.length !== 1 ? "s" : ""}
                   </span>
                   <span className="rounded-full bg-purple-500/20 px-2.5 py-0.5 text-[10px] font-medium text-purple-300">
-                    K{(items.length * 200).toLocaleString()}
+                    K{(items.length * COMMISSION_PER_SALE).toLocaleString()}
                   </span>
                 </div>
               </div>
@@ -252,7 +260,7 @@ export default function DeveloperSalesPage() {
 
                       {/* Amount */}
                       <div className="shrink-0 text-right">
-                        <p className="text-sm font-bold text-emerald-400">K200</p>
+                        <p className="text-sm font-bold text-emerald-400">K{COMMISSION_PER_SALE}</p>
                         <p className="text-[10px] text-gray-500">commission</p>
                       </div>
                     </div>
@@ -276,7 +284,7 @@ export default function DeveloperSalesPage() {
           <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider sm:text-xs">Debug Console</p>
         </div>
         <pre className="text-[9px] sm:text-[10px] text-gray-500 font-mono leading-relaxed whitespace-pre-wrap break-all overflow-x-auto max-w-full">
-{`[SALES] Total: ${stats.total} | Today: ${stats.today} | Month: ${stats.monthSales} | Revenue: K${stats.revenue}
+{`[SALES] Total: ${stats.total} | Today: ${stats.today} | Month: ${stats.monthSales} | Commission: K${stats.monthRevenue} this month / K${stats.revenue} all-time
 [SALES] Date groups: ${groupedByDate.length} | Filtered: ${filteredSales.length}
 [SALES] Filters: dse=${dseFilter} | search="${search || "none"}"`}
         </pre>

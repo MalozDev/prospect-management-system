@@ -167,11 +167,15 @@ export async function PATCH(
 
     // === SCHEDULE VISIT ===
     if (body.action === "schedule_visit") {
-      const visitDate = body.visitDate || "";
+      // Visits are scheduled for TODAY — the DSE only picks the time.
+      // Fallback: stale cached clients may still send a visitDate; honor it as legacy behavior.
+      const visitTime = /^\d{2}:\d{2}$/.test(body.visitTime || "") ? body.visitTime : "";
+      const visitDate = visitTime ? today : body.visitDate || today;
+      const visitComputedStatus = visitDate === today ? "TODAY" : "UPCOMING";
 
       const followUp = await FollowUp.findByIdAndUpdate(
         id,
-        { $set: { outcome: "VISIT_SCHEDULED", status: "COMPLETED", lastContacted: today, visitDate } },
+        { $set: { outcome: "VISIT_SCHEDULED", status: "COMPLETED", lastContacted: today, visitDate, visitTime } },
         { new: true }
       ).lean();
 
@@ -182,7 +186,6 @@ export async function PATCH(
         await Prospect.findByIdAndUpdate(followUp.prospectId, { $set: { status: "VISIT SCHEDULED" } });
       }
 
-      const visitComputedStatus = visitDate === today ? "TODAY" : "UPCOMING";
       await FollowUp.create({
         customerName: followUp.customerName,
         phone: followUp.phone,
@@ -194,15 +197,17 @@ export async function PATCH(
         assignedDse: user.name,
         prospectId: followUp.prospectId,
         visitDate,
+        visitTime,
         notes: body.notes || "",
       });
 
       const response = Response.json({ followUp });
 
       defer(async () => {
+        const visitLabel = visitTime ? `today at ${visitTime}` : `on ${visitDate || "soon"}`;
         await Notification.create({
           title: "Visit Scheduled",
-          message: `Visit scheduled for ${followUp.customerName} on ${visitDate || "soon"}`,
+          message: `Visit scheduled for ${followUp.customerName} ${visitLabel}`,
           time: getNowLocalISO(),
           unread: true,
           userId: user.userId,
@@ -210,7 +215,7 @@ export async function PATCH(
 
         await Activity.create({
           title: "Visit scheduled",
-          detail: `Visit scheduled for ${followUp.customerName} on ${visitDate || "soon"}`,
+          detail: `Visit scheduled for ${followUp.customerName} ${visitLabel}`,
           time: getNowLocalISO(),
           type: "visit",
           userId: user.userId,

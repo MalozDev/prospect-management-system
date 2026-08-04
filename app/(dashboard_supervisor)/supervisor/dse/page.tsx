@@ -87,13 +87,14 @@ export default function SupervisorDsePage() {
     total: dseStats.length,
     active: dseStats.filter((d) => d.todaySales > 0 || d.todayProspects > 0).length,
     totalMonthSales: dseStats.reduce((sum, d) => sum + d.monthSales, 0),
-    totalMonthRevenue: dseStats.reduce((sum, d) => sum + d.revenue, 0),
+    totalMonthRevenue: dseStats.reduce((sum, d) => sum + d.monthSales * COMMISSION_PER_SALE, 0),
+    totalAllTimeRevenue: dseStats.reduce((sum, d) => sum + d.revenue, 0),
   }), [dseStats]);
 
   return (
     <PageShell title="DSE on Board" description="View all your DSE team members, their profiles, and performance stats.">
       {/* ── Stats Bar ── */}
-      <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         <div className="rounded-2xl border border-gray-200 bg-white p-3 shadow-sm sm:rounded-3xl sm:p-4">
           <div className="flex items-center gap-2">
             <Users className="h-4 w-4 text-gray-400" />
@@ -118,9 +119,16 @@ export default function SupervisorDsePage() {
         <div className="rounded-2xl border border-gray-200 bg-white p-3 shadow-sm sm:rounded-3xl sm:p-4">
           <div className="flex items-center gap-2">
             <DollarSign className="h-4 w-4 text-amber-500" />
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-500 sm:text-[11px]">Commission</p>
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-500 sm:text-[11px]">Commission (This Month)</p>
           </div>
           <p className="mt-1 text-xl font-bold text-gray-900 sm:text-2xl">K{totals.totalMonthRevenue.toLocaleString()}</p>
+        </div>
+        <div className="rounded-2xl border border-gray-200 bg-white p-3 shadow-sm sm:rounded-3xl sm:p-4">
+          <div className="flex items-center gap-2">
+            <DollarSign className="h-4 w-4 text-emerald-500" />
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-500 sm:text-[11px]">Commission (All-time)</p>
+          </div>
+          <p className="mt-1 text-xl font-bold text-gray-900 sm:text-2xl">K{totals.totalAllTimeRevenue.toLocaleString()}</p>
         </div>
       </div>
 
